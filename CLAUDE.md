@@ -31,7 +31,7 @@ A hello-world Angular 22 app: standalone components, zoneless, Vitest. Needs Nod
 
 ## Testing
 
-- `npx ng test --watch=false` runs the Vitest suite (`src/**/*.spec.ts`) and `npm run build` the type check. Run both before committing. Put new logic where it can be tested, and add tests with it.
+- `npx ng test --watch=false` runs the Vitest suite (`src/**/*.spec.ts`) and `npm run build` the type check. Before a commit, run the specs that cover the change (`--include <spec file>`); run the whole suite and the build before pushing. Put new logic where it can be tested, and add tests with it.
 - A new business case (a new rule, a new state transition, a new edge case in an existing rule) is not done until a test covers it. Pure refactorings, renames and mechanical changes need no new tests.
 - Put a test in the spec of the code whose behavior it proves, not in a caller's spec.
 - Before saying a test helper or pattern doesn't exist, search for its base types and the test setup files, not just one name.
