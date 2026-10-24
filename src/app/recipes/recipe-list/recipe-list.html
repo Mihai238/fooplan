@@ -1,0 +1,14 @@
+<h1>Recipes</h1>
+<div class="grid">
+  @for (recipe of recipes; track recipe.name) {
+    <article>
+      <h2>{{ recipe.name }}</h2>
+      <p class="servings">{{ recipe.servings }} servings</p>
+      <ul>
+        @for (ingredient of recipe.ingredients; track ingredient.name) {
+          <li>{{ ingredient.amount }} {{ ingredient.unit }} {{ ingredient.name }}</li>
+        }
+      </ul>
+    </article>
+  }
+</div>

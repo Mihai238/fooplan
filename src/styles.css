@@ -1,1 +1,31 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  color-scheme: light dark;
+  --text: #1f2328;
+  --muted: #59636e;
+  --background: #f6f7f4;
+  --surface: #ffffff;
+  --border: #d8dcd3;
+  --hover: #eceee8;
+  --accent: #2f7d4f;
+  --on-accent: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6e8e3;
+    --muted: #9ba39a;
+    --background: #161916;
+    --surface: #1f231f;
+    --border: #343a33;
+    --hover: #2a2f29;
+    --accent: #5fb37f;
+    --on-accent: #0d140f;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--background);
+}

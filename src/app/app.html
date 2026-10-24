@@ -1,1 +1,9 @@
-<h1>Hello, {{ title() }}!</h1>
+<header>
+  <span class="brand">Fooplan</span>
+  <nav>
+    <a routerLink="/recipes" routerLinkActive="active" ariaCurrentWhenActive="page">Recipes</a>
+  </nav>
+</header>
+<main>
+  <router-outlet />
+</main>
