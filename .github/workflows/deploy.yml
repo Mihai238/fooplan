@@ -1,0 +1,45 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deployment finish instead of cancelling it halfway
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx ng test --watch=false
+      # Pages serves the app under /fooplan/; local builds stay at /
+      - run: npx ng build --base-href /fooplan/
+      # Pages answers unknown paths with 404.html, so deep links like /fooplan/recipes still boot the app
+      - run: cp dist/fooplan/browser/index.html dist/fooplan/browser/404.html
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist/fooplan/browser
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
