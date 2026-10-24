@@ -1,0 +1,141 @@
+import { TestBed } from '@angular/core/testing';
+import { RECIPES } from '../recipes/recipes';
+import { DEFAULT_DAYS, MealRef, Plan } from './plan';
+import { PlanStore, RANDOM, TODAY } from './plan-store';
+import { DINNER, LUNCH, seededRandom } from './testing';
+
+const STORAGE_KEY = 'fooplan.plan';
+
+describe('PlanStore', () => {
+  let today: string;
+  let seed: number;
+  let store: PlanStore;
+
+  beforeEach(() => {
+    localStorage.clear();
+    today = '2026-10-24';
+    seed = 1;
+    store = createStore();
+  });
+
+  it('starts a plan for today with the default days when nothing is stored', () => {
+    expectFreshPlan(store.plan(), '2026-10-24');
+  });
+
+  it('shows the same fresh plan after a reload without any change', () => {
+    const before = store.plan();
+    expect(reload().plan()).toEqual(before);
+  });
+
+  it('shows the same days, people, picks and suggestions of a plan in progress after a reload', () => {
+    store.setDays(2);
+    store.setPeople(3);
+    pickFirstSuggestion(LUNCH);
+    const before = store.plan();
+    expect(before.days, 'days not set').toHaveLength(2);
+
+    expect(reload().plan()).toEqual(before);
+  });
+
+  it('shows an accepted plan as accepted after a reload', () => {
+    store.setDays(1);
+    pickFirstSuggestion(LUNCH);
+    pickFirstSuggestion(DINNER);
+    store.accept();
+    const before = store.plan();
+    expect(before.accepted, 'plan not accepted').toBe(true);
+
+    expect(reload().plan()).toEqual(before);
+  });
+
+  it('keeps the start date of a stored plan when reloaded on a later day', () => {
+    store.setDays(2);
+    const before = store.plan();
+    expect(before.days, 'days not set').toHaveLength(2);
+    today = '2026-10-27';
+
+    expect(reload().plan()).toEqual(before);
+  });
+
+  it('starts a fresh plan for today when the stored plan is not valid JSON', () => {
+    localStorage.setItem(STORAGE_KEY, '{"days": [');
+    expectFreshPlan(reload().plan(), '2026-10-24');
+  });
+
+  it('starts a fresh plan for today when the stored plan names a recipe that does not exist', () => {
+    const plan: Plan = {
+      days: [
+        {
+          date: '2026-10-20',
+          lunch: { recipe: 'Pizza Hawaii', suggestions: [] },
+          dinner: { recipe: null, suggestions: [RECIPES[0].name, RECIPES[1].name] },
+        },
+      ],
+      people: 2,
+      accepted: false,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
+    expectFreshPlan(reload().plan(), '2026-10-24');
+  });
+
+  it('starts a fresh plan for today on "New plan" and saves it', () => {
+    store.setDays(1);
+    pickFirstSuggestion(LUNCH);
+    pickFirstSuggestion(DINNER);
+    store.accept();
+    expect(store.plan().accepted, 'plan not accepted').toBe(true);
+    today = '2026-10-26';
+
+    store.newPlan();
+    expectFreshPlan(store.plan(), '2026-10-26');
+    expect(reload().plan()).toEqual(store.plan());
+  });
+
+  it('keeps the people on "New plan"', () => {
+    store.setPeople(4);
+    store.setDays(1);
+    pickFirstSuggestion(LUNCH);
+    pickFirstSuggestion(DINNER);
+    store.accept();
+    expect(store.plan().accepted, 'plan not accepted').toBe(true);
+
+    store.newPlan();
+    expect(store.plan().accepted).toBe(false);
+    expect(store.plan().people).toBe(4);
+  });
+
+  function createStore(): PlanStore {
+    TestBed.configureTestingModule({
+      providers: [
+        // A new seed on every load, so a reload draws other suggestions unless the plan was saved
+        { provide: RANDOM, useValue: seededRandom(seed++) },
+        { provide: TODAY, useValue: () => today },
+      ],
+    });
+    return TestBed.inject(PlanStore);
+  }
+
+  // A fresh injector reading the same localStorage, as a page reload would
+  function reload(): PlanStore {
+    TestBed.resetTestingModule();
+    return createStore();
+  }
+
+  function pickFirstSuggestion(meal: MealRef) {
+    const suggestions = store.plan().days[meal.day]?.[meal.kind].suggestions ?? [];
+    expect(suggestions, `no suggestions for day ${meal.day} ${meal.kind}`).not.toEqual([]);
+    store.pick(meal, suggestions[0]);
+  }
+
+  function expectFreshPlan(plan: Plan, startDate: string) {
+    expect(plan.days).toHaveLength(DEFAULT_DAYS);
+    expect(plan.days[0].date).toBe(startDate);
+    expect(plan.accepted).toBe(false);
+    for (const day of plan.days) {
+      for (const meal of [day.lunch, day.dinner]) {
+        expect(meal.recipe, day.date).toBeNull();
+        expect(meal.suggestions, day.date).toHaveLength(2);
+      }
+    }
+  }
+});

@@ -2,7 +2,9 @@
 
 Fooplan plans lunch and dinner for the next few days from a set of built-in recipes, then turns the plan into a grocery list.
 
-So far it ships the recipe list: the "Recipes" page shows the 30 sample recipes from `src/app/recipes/recipes.json` with their servings and ingredients.
+The app opens on the "Plan" page (unknown URLs lead there too). It plans lunch and dinner for 1–5 days starting today (default 5) and for a number of people (default 2). Each open meal offers two recipe suggestions: pick one, or ask for other suggestions; a picked meal can be cleared again. No recipe is used twice in a plan: a picked recipe is never suggested for another meal. Once every meal has a recipe, "Accept plan" makes the plan read-only. "New plan", offered while planning and once accepted, discards the plan after a confirmation and starts an empty one from today for the same number of people. The plan is saved in the browser (`localStorage`), so it survives a reload and keeps its dates when reopened on a later day; "New plan" is the way to start a fresh one from today.
+
+The "Recipes" page shows the 30 sample recipes from `src/app/recipes/recipes.json` with their servings and ingredients.
 
 ## Running it
 

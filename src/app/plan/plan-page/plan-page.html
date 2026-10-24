@@ -1,0 +1,72 @@
+<div class="toolbar">
+  <h1>Plan</h1>
+  @if (plan().accepted) {
+    <p class="summary">
+      {{ plan().days.length }} {{ plan().days.length === 1 ? 'day' : 'days' }} for
+      {{ plan().people }} {{ plan().people === 1 ? 'person' : 'people' }}
+    </p>
+  } @else {
+    <span class="field">
+      <label for="days">Days</label>
+      <input
+        #daysInput
+        type="number"
+        id="days"
+        [min]="minDays"
+        [max]="maxDays"
+        [value]="plan().days.length"
+        (change)="changeDays(daysInput)"
+      />
+    </span>
+    <span class="field">
+      <label for="people">People</label>
+      <input
+        #peopleInput
+        type="number"
+        id="people"
+        min="1"
+        [value]="plan().people"
+        (change)="changePeople(peopleInput)"
+      />
+    </span>
+  }
+  <button type="button" [class]="plan().accepted ? 'primary' : 'link'" (click)="newPlan()">
+    New plan
+  </button>
+</div>
+
+<div class="days">
+  @for (day of plan().days; track day.date; let dayIndex = $index) {
+    <section class="day">
+      <h2>{{ day.date | date: 'EEE d MMM' }}</h2>
+      @for (meal of meals; track meal.kind) {
+        @let current = day[meal.kind];
+        @let ref = { day: dayIndex, kind: meal.kind };
+        <article class="meal">
+          <h3>{{ meal.label }}</h3>
+          @if (current.recipe) {
+            <p class="recipe">{{ current.recipe }}</p>
+            @if (!plan().accepted) {
+              <button type="button" class="link" (click)="store.clear(ref)">Clear</button>
+            }
+          } @else if (!plan().accepted) {
+            @for (recipe of current.suggestions; track $index) {
+              <button type="button" class="suggestion" (click)="store.pick(ref, recipe)">
+                {{ recipe }}
+              </button>
+            }
+            <button type="button" class="link" (click)="store.otherSuggestions(ref)">
+              Other suggestions
+            </button>
+          }
+        </article>
+      }
+    </section>
+  }
+</div>
+
+@if (!plan().accepted) {
+  <button type="button" class="primary accept" [disabled]="!complete()" (click)="store.accept()">
+    Accept plan
+  </button>
+}
