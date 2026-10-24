@@ -9,6 +9,8 @@ export interface PlanDay {
   date: string;
   lunch: Meal;
   dinner: Meal;
+  // The dinner is cooked for twice the people and its leftovers cover the next day's lunch
+  cookExtra: boolean;
 }
 
 export interface Plan {
@@ -50,7 +52,8 @@ export function setDays(
     return plan;
   }
   if (days < plan.days.length) {
-    return { ...plan, days: plan.days.slice(0, days) };
+    // The new last day has no next lunch left to cover
+    return withDay({ ...plan, days: plan.days.slice(0, days) }, days - 1, { cookExtra: false });
   }
   const nextDate = addDays(plan.days[plan.days.length - 1].date, 1);
   const added = openDays(plan, nextDate, days - plan.days.length, recipes, random);
@@ -72,7 +75,12 @@ export function pickRecipe(
   random: Random,
 ): Plan {
   const current = mealAt(plan, meal);
-  if (plan.accepted || current?.recipe !== null || !current.suggestions.includes(recipe)) {
+  if (
+    plan.accepted ||
+    isCovered(plan, meal) ||
+    current?.recipe !== null ||
+    !current.suggestions.includes(recipe)
+  ) {
     return plan;
   }
   const withPick = withMeal(plan, meal, { recipe, suggestions: [] });
@@ -93,11 +101,14 @@ export function clearMeal(
   random: Random,
 ): Plan {
   const current = mealAt(plan, meal);
-  if (plan.accepted || current === undefined || current.recipe === null) {
+  if (plan.accepted || isCovered(plan, meal) || current === undefined || current.recipe === null) {
     return plan;
   }
   const cleared = withMeal(plan, meal, { recipe: null, suggestions: [] });
-  return withMeal(cleared, meal, openMeal(cleared, recipes, random));
+  const opened = withMeal(cleared, meal, openMeal(cleared, recipes, random));
+  return meal.kind === 'dinner' && plan.days[meal.day].cookExtra
+    ? turnCookExtraOff(opened, meal.day, recipes, random)
+    : opened;
 }
 
 export function otherSuggestions(
@@ -107,12 +118,37 @@ export function otherSuggestions(
   random: Random,
 ): Plan {
   const current = mealAt(plan, meal);
-  if (plan.accepted || current?.recipe !== null) {
+  if (plan.accepted || isCovered(plan, meal) || current?.recipe !== null) {
     return plan;
   }
   return withMeal(plan, meal, {
     recipe: null,
     suggestions: drawUnpicked(plan, 2, current.suggestions, recipes, random),
+  });
+}
+
+export function setCookExtra(
+  plan: Plan,
+  day: number,
+  on: boolean,
+  recipes: readonly string[],
+  random: Random,
+): Plan {
+  const current = plan.days[day];
+  if (
+    plan.accepted ||
+    current === undefined ||
+    day === plan.days.length - 1 ||
+    current.dinner.recipe === null ||
+    current.cookExtra === on
+  ) {
+    return plan;
+  }
+  if (!on) {
+    return turnCookExtraOff(plan, day, recipes, random);
+  }
+  return withDay(withDay(plan, day, { cookExtra: true }), day + 1, {
+    lunch: { recipe: null, suggestions: [] },
   });
 }
 
@@ -143,25 +179,46 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
   }
   const plan: Plan = { days: parsedDays as PlanDay[], people, accepted };
   const valid =
-    hasConsecutiveDates(plan) && usesRecipesOnce(plan) && (!accepted || isComplete(plan));
+    hasConsecutiveDates(plan) &&
+    usesRecipesOnce(plan) &&
+    hasValidLeftovers(plan) &&
+    (!accepted || isComplete(plan));
   return valid ? plan : null;
 }
 
 export function isComplete(plan: Plan): boolean {
-  return mealsOf(plan).every((meal) => meal.recipe !== null);
+  return plan.days.every(
+    (day, i) =>
+      day.dinner.recipe !== null && (day.lunch.recipe !== null || isLunchCovered(plan, i)),
+  );
+}
+
+export function leftoversOf(plan: Plan, day: number): string | null {
+  if (plan.days[day] === undefined || !isLunchCovered(plan, day)) {
+    return null;
+  }
+  return plan.days[day - 1].dinner.recipe;
 }
 
 function parseDay(value: unknown, recipes: readonly string[]): PlanDay | null {
   if (!isRecord(value)) {
     return null;
   }
-  const { date } = value;
+  // Plans saved before "Cook extra" existed have no such field
+  const { date, cookExtra = false } = value;
   if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return null;
+  }
+  if (typeof cookExtra !== 'boolean') {
     return null;
   }
   const lunch = parseMeal(value['lunch'], recipes);
   const dinner = parseMeal(value['dinner'], recipes);
-  return lunch && dinner && { date, lunch, dinner };
+  // Only a lunch can be covered by leftovers, so only a lunch can be empty
+  if (lunch === null || dinner === null || isEmpty(dinner)) {
+    return null;
+  }
+  return { date, lunch, dinner, cookExtra };
 }
 
 function parseMeal(value: unknown, recipes: readonly string[]): Meal | null {
@@ -174,8 +231,11 @@ function parseMeal(value: unknown, recipes: readonly string[]): Meal | null {
     return null;
   }
   if (recipe === null) {
+    // An empty meal must be a covered lunch, which parseDay and hasValidLeftovers check
     const isPair = suggestions.length === 2 && suggestions[0] !== suggestions[1];
-    return isPair ? { recipe, suggestions: suggestions as string[] } : null;
+    return isPair || suggestions.length === 0
+      ? { recipe, suggestions: suggestions as string[] }
+      : null;
   }
   if (typeof recipe !== 'string' || !recipes.includes(recipe) || suggestions.length > 0) {
     return null;
@@ -196,6 +256,18 @@ function usesRecipesOnce(plan: Plan): boolean {
   );
 }
 
+function hasValidLeftovers(plan: Plan): boolean {
+  return plan.days.every(
+    (day, i) =>
+      isEmpty(day.lunch) === isLunchCovered(plan, i) &&
+      (!day.cookExtra || (day.dinner.recipe !== null && i < plan.days.length - 1)),
+  );
+}
+
+function isEmpty(meal: Meal): boolean {
+  return meal.recipe === null && meal.suggestions.length === 0;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
@@ -211,6 +283,7 @@ function openDays(
     date: addDays(startDate, i),
     lunch: openMeal(plan, recipes, random),
     dinner: openMeal(plan, recipes, random),
+    cookExtra: false,
   }));
 }
 
@@ -218,6 +291,16 @@ function addDays(date: string, days: number): string {
   // Computed in UTC so a daylight saving change can't shift the date
   const [year, month, day] = date.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
+
+function turnCookExtraOff(
+  plan: Plan,
+  day: number,
+  recipes: readonly string[],
+  random: Random,
+): Plan {
+  const off = withDay(plan, day, { cookExtra: false });
+  return withDay(off, day + 1, { lunch: openMeal(off, recipes, random) });
 }
 
 function openMeal(plan: Plan, recipes: readonly string[], random: Random): Meal {
@@ -228,10 +311,22 @@ function mealAt(plan: Plan, meal: MealRef): Meal | undefined {
   return plan.days[meal.day]?.[meal.kind];
 }
 
+function isCovered(plan: Plan, ref: MealRef): boolean {
+  return ref.kind === 'lunch' && isLunchCovered(plan, ref.day);
+}
+
+function isLunchCovered(plan: Plan, day: number): boolean {
+  return plan.days[day - 1]?.cookExtra === true;
+}
+
 function withMeal(plan: Plan, ref: MealRef, meal: Meal): Plan {
+  return withDay(plan, ref.day, { [ref.kind]: meal });
+}
+
+function withDay(plan: Plan, index: number, patch: Partial<PlanDay>): Plan {
   return {
     ...plan,
-    days: plan.days.map((day, i) => (i === ref.day ? { ...day, [ref.kind]: meal } : day)),
+    days: plan.days.map((day, i) => (i === index ? { ...day, ...patch } : day)),
   };
 }
 

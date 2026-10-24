@@ -48,6 +48,17 @@ describe('PlanStore', () => {
     expect(reload().plan()).toEqual(before);
   });
 
+  it('turns on "Cook extra" for a dinner, covering the next lunch, and keeps it after a reload', () => {
+    store.setDays(2);
+    pickFirstSuggestion(DINNER);
+    store.setCookExtra(0, true);
+    const before = store.plan();
+    expect(before.days[0].cookExtra).toBe(true);
+    expect(before.days[1].lunch).toEqual({ recipe: null, suggestions: [] });
+
+    expect(reload().plan()).toEqual(before);
+  });
+
   it('keeps the start date of a stored plan when reloaded on a later day', () => {
     store.setDays(2);
     const before = store.plan();
@@ -69,6 +80,7 @@ describe('PlanStore', () => {
           date: '2026-10-20',
           lunch: { recipe: 'Pizza Hawaii', suggestions: [] },
           dinner: { recipe: null, suggestions: [RECIPES[0].name, RECIPES[1].name] },
+          cookExtra: false,
         },
       ],
       people: 2,

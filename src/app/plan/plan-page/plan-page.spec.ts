@@ -88,6 +88,65 @@ describe('PlanPage', () => {
     expect(button(element, 'Accept plan').disabled).toBe(false);
   });
 
+  it('shows "Leftovers: <recipe>" without suggestions or buttons for the next lunch when the user turns on "Cook extra for tomorrow\'s lunch"', async () => {
+    await setInput('days', '2');
+    const recipe = await pickFirstSuggestion(1);
+    const label = element.querySelector('article.meal label.cook-extra');
+    expect(textOf(label)).toBe("Cook extra for tomorrow's lunch");
+    expect(label?.querySelector('input[type="checkbox"]#cook-extra-0')).not.toBeNull();
+    expect(input('cook-extra-0').checked).toBe(false);
+
+    await setCookExtra(0, true);
+    expect(input('cook-extra-0').checked).toBe(true);
+    expect(textOf(meal(2).querySelector('p.recipe'))).toBe(`Leftovers: ${recipe}`);
+    expect(suggestionsOf(meal(2))).toEqual([]);
+    expect(meal(2).querySelectorAll('button')).toHaveLength(0);
+  });
+
+  it('offers "Cook extra" only on a picked dinner that is not on the last day', async () => {
+    await setInput('days', '2');
+    await pickFirstSuggestion(0);
+    expect(element.querySelector('#cook-extra-0'), 'open dinner').toBeNull();
+    await pickFirstSuggestion(1);
+    expect(meal(1).querySelector('input#cook-extra-0'), 'picked dinner').not.toBeNull();
+    await pickFirstSuggestion(3);
+    expect(element.querySelector('#cook-extra-1'), 'dinner on the last day').toBeNull();
+    expect(meal(3).querySelector('label.cook-extra')).toBeNull();
+    for (const index of [0, 2]) {
+      expect(meal(index).querySelector('label.cook-extra'), `lunch ${index}`).toBeNull();
+    }
+  });
+
+  it('enables "Accept plan" when the only unfilled lunch is covered by leftovers', async () => {
+    await setInput('days', '2');
+    await pickFirstSuggestion(0);
+    await pickFirstSuggestion(1);
+    await pickFirstSuggestion(3);
+    expect(button(element, 'Accept plan').disabled).toBe(true);
+    await setCookExtra(0, true);
+    expect(button(element, 'Accept plan').disabled).toBe(false);
+  });
+
+  it('shows "Cook extra" of an accepted plan as a note on its dinner only, without the option', async () => {
+    await setInput('days', '3');
+    await pickFirstSuggestion(0);
+    const recipe = await pickFirstSuggestion(1);
+    await setCookExtra(0, true);
+    for (const index of [3, 4, 5]) {
+      await pickFirstSuggestion(index);
+    }
+    await click(button(element, 'Accept plan'));
+    expect(buttonTexts(), 'plan not accepted').not.toContain('Accept plan');
+
+    expect(element.querySelectorAll('input[type="checkbox"]')).toHaveLength(0);
+    expect(element.querySelectorAll('label.cook-extra')).toHaveLength(0);
+    expect(Array.from(element.querySelectorAll('p.note')).map(textOf)).toEqual([
+      "Cooking extra for tomorrow's lunch",
+    ]);
+    expect(meal(1).querySelector('p.note')).not.toBeNull();
+    expect(textOf(meal(2).querySelector('p.recipe'))).toBe(`Leftovers: ${recipe}`);
+  });
+
   it('shows an accepted plan read-only, without day, people, pick, "Clear", "Other suggestions" or "Accept plan" controls', async () => {
     const recipes = await acceptOneDayPlan();
     expect(Array.from(element.querySelectorAll('p.recipe')).map(textOf)).toEqual(recipes);
@@ -166,6 +225,13 @@ describe('PlanPage', () => {
     const recipe = textOf(suggestions[0]);
     await click(suggestions[0]);
     return recipe;
+  }
+
+  async function setCookExtra(dayIndex: number, on: boolean) {
+    const checkbox = input(`cook-extra-${dayIndex}`);
+    checkbox.checked = on;
+    checkbox.dispatchEvent(new Event('change'));
+    await fixture.whenStable();
   }
 
   async function setInput(id: string, value: string) {

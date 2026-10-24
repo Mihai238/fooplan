@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
-import { isComplete, MAX_DAYS, MealKind, MIN_DAYS } from '../plan';
+import { isComplete, leftoversOf, MAX_DAYS, MealKind, MIN_DAYS } from '../plan';
 import { PlanStore } from '../plan-store';
 
 @Component({
@@ -28,6 +28,10 @@ export class PlanPage {
   protected changePeople(input: HTMLInputElement): void {
     this.store.setPeople(Number(input.value));
     this.resetRejected(input, this.plan().people);
+  }
+
+  protected leftovers(kind: MealKind, day: number): string | null {
+    return kind === 'lunch' ? leftoversOf(this.plan(), day) : null;
   }
 
   protected newPlan(): void {

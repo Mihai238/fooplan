@@ -10,6 +10,7 @@ import {
   pickRecipe,
   Plan,
   Random,
+  setCookExtra,
   setDays,
   setPeople,
 } from './plan';
@@ -57,6 +58,10 @@ export class PlanStore {
 
   otherSuggestions(meal: MealRef): void {
     this.update((plan) => otherSuggestions(plan, meal, RECIPE_NAMES, this.random));
+  }
+
+  setCookExtra(day: number, on: boolean): void {
+    this.update((plan) => setCookExtra(plan, day, on, RECIPE_NAMES, this.random));
   }
 
   accept(): void {

@@ -36,19 +36,40 @@
 </div>
 
 <div class="days">
-  @for (day of plan().days; track day.date; let dayIndex = $index) {
+  @for (day of plan().days; track day.date; let dayIndex = $index, lastDay = $last) {
     <section class="day">
       <h2>{{ day.date | date: 'EEE d MMM' }}</h2>
       @for (meal of meals; track meal.kind) {
         @let current = day[meal.kind];
         @let ref = { day: dayIndex, kind: meal.kind };
+        @let leftoverRecipe = leftovers(meal.kind, dayIndex);
         <article class="meal">
           <h3>{{ meal.label }}</h3>
           @if (current.recipe) {
             <p class="recipe">{{ current.recipe }}</p>
+            @if (meal.kind === 'dinner') {
+              @if (plan().accepted) {
+                @if (day.cookExtra) {
+                  <p class="note">Cooking extra for tomorrow's lunch</p>
+                }
+              } @else if (!lastDay) {
+                <label class="cook-extra">
+                  <input
+                    #cookExtraInput
+                    type="checkbox"
+                    [id]="'cook-extra-' + dayIndex"
+                    [checked]="day.cookExtra"
+                    (change)="store.setCookExtra(dayIndex, cookExtraInput.checked)"
+                  />
+                  Cook extra for tomorrow's lunch
+                </label>
+              }
+            }
             @if (!plan().accepted) {
               <button type="button" class="link" (click)="store.clear(ref)">Clear</button>
             }
+          } @else if (leftoverRecipe) {
+            <p class="recipe">Leftovers: {{ leftoverRecipe }}</p>
           } @else if (!plan().accepted) {
             @for (recipe of current.suggestions; track $index) {
               <button type="button" class="suggestion" (click)="store.pick(ref, recipe)">
