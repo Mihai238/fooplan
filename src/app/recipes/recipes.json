@@ -8,7 +8,6 @@
       { "name": "garlic clove", "amount": 2, "unit": "pc" },
       { "name": "olive oil", "amount": 2, "unit": "tbsp" },
       { "name": "basil", "amount": 10, "unit": "g" },
-      { "name": "sugar", "amount": 0.5, "unit": "tsp" },
       { "name": "parmesan", "amount": 30, "unit": "g" }
     ]
   },
@@ -17,9 +16,9 @@
     "servings": 2,
     "ingredients": [
       { "name": "spaghetti", "amount": 200, "unit": "g" },
-      { "name": "bacon", "amount": 100, "unit": "g" },
+      { "name": "guanciale", "amount": 100, "unit": "g" },
       { "name": "egg", "amount": 3, "unit": "pc" },
-      { "name": "parmesan", "amount": 50, "unit": "g" }
+      { "name": "pecorino", "amount": 50, "unit": "g" }
     ]
   },
   {
@@ -41,13 +40,18 @@
       { "name": "lasagne sheet", "amount": 250, "unit": "g" },
       { "name": "ground beef", "amount": 500, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
       { "name": "carrot", "amount": 1, "unit": "pc" },
-      { "name": "canned tomatoes", "amount": 800, "unit": "g" },
-      { "name": "butter", "amount": 50, "unit": "g" },
-      { "name": "flour", "amount": 50, "unit": "g" },
-      { "name": "milk", "amount": 500, "unit": "ml" },
-      { "name": "parmesan", "amount": 50, "unit": "g" }
+      { "name": "celery stalk", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "red wine", "amount": 125, "unit": "ml" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
+      { "name": "butter", "amount": 60, "unit": "g" },
+      { "name": "flour", "amount": 60, "unit": "g" },
+      { "name": "milk", "amount": 750, "unit": "ml" },
+      { "name": "nutmeg", "amount": 0.25, "unit": "tsp" },
+      { "name": "parmesan", "amount": 80, "unit": "g" }
     ]
   },
   {
@@ -57,10 +61,10 @@
       { "name": "flour", "amount": 400, "unit": "g" },
       { "name": "egg", "amount": 4, "unit": "pc" },
       { "name": "milk", "amount": 100, "unit": "ml" },
-      { "name": "emmental", "amount": 200, "unit": "g" },
-      { "name": "onion", "amount": 3, "unit": "pc" },
-      { "name": "butter", "amount": 30, "unit": "g" },
       { "name": "nutmeg", "amount": 0.25, "unit": "tsp" },
+      { "name": "emmental", "amount": 300, "unit": "g" },
+      { "name": "onion", "amount": 3, "unit": "pc" },
+      { "name": "butter", "amount": 40, "unit": "g" },
       { "name": "chive", "amount": 10, "unit": "g" }
     ]
   },
@@ -70,13 +74,15 @@
     "ingredients": [
       { "name": "ground beef", "amount": 500, "unit": "g" },
       { "name": "onion", "amount": 2, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
       { "name": "bell pepper", "amount": 1, "unit": "pc" },
       { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
       { "name": "canned tomatoes", "amount": 400, "unit": "g" },
       { "name": "canned kidney beans", "amount": 400, "unit": "g" },
+      { "name": "beef stock", "amount": 250, "unit": "ml" },
       { "name": "chili powder", "amount": 2, "unit": "tsp" },
-      { "name": "cumin", "amount": 1, "unit": "tsp" },
+      { "name": "cumin", "amount": 2, "unit": "tsp" },
+      { "name": "oregano", "amount": 1, "unit": "tsp" },
       { "name": "olive oil", "amount": 1, "unit": "tbsp" }
     ]
   },
@@ -87,9 +93,10 @@
       { "name": "beef", "amount": 800, "unit": "g" },
       { "name": "onion", "amount": 4, "unit": "pc" },
       { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "vegetable oil", "amount": 2, "unit": "tbsp" },
-      { "name": "paprika", "amount": 3, "unit": "tsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "paprika", "amount": 6, "unit": "tsp" },
       { "name": "caraway", "amount": 1, "unit": "tsp" },
+      { "name": "marjoram", "amount": 1, "unit": "tsp" },
       { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
       { "name": "beef stock", "amount": 500, "unit": "ml" },
       { "name": "bread", "amount": 400, "unit": "g" }
@@ -134,12 +141,14 @@
       { "name": "flour", "amount": 50, "unit": "g" },
       { "name": "egg", "amount": 2, "unit": "pc" },
       { "name": "breadcrumbs", "amount": 100, "unit": "g" },
-      { "name": "vegetable oil", "amount": 8, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 200, "unit": "ml" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
       { "name": "potato", "amount": 1000, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
       { "name": "beef stock", "amount": 250, "unit": "ml" },
       { "name": "white wine vinegar", "amount": 4, "unit": "tbsp" },
-      { "name": "mustard", "amount": 1, "unit": "tbsp" }
+      { "name": "mustard", "amount": 1, "unit": "tbsp" },
+      { "name": "chive", "amount": 10, "unit": "g" }
     ]
   },
   {
@@ -147,13 +156,13 @@
     "servings": 4,
     "ingredients": [
       { "name": "chicken breast", "amount": 600, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "onion", "amount": 2, "unit": "pc" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
       { "name": "ginger", "amount": 20, "unit": "g" },
-      { "name": "curry powder", "amount": 2, "unit": "tsp" },
-      { "name": "canned tomatoes", "amount": 200, "unit": "g" },
+      { "name": "curry powder", "amount": 4, "unit": "tsp" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
       { "name": "coconut milk", "amount": 400, "unit": "ml" },
-      { "name": "vegetable oil", "amount": 2, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
       { "name": "rice", "amount": 300, "unit": "g" }
     ]
   },
@@ -162,11 +171,11 @@
     "servings": 2,
     "ingredients": [
       { "name": "chicken thigh", "amount": 400, "unit": "g" },
-      { "name": "soy sauce", "amount": 4, "unit": "tbsp" },
-      { "name": "honey", "amount": 2, "unit": "tbsp" },
-      { "name": "ginger", "amount": 10, "unit": "g" },
-      { "name": "garlic clove", "amount": 1, "unit": "pc" },
-      { "name": "vegetable oil", "amount": 1, "unit": "tbsp" },
+      { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
+      { "name": "mirin", "amount": 3, "unit": "tbsp" },
+      { "name": "sake", "amount": 2, "unit": "tbsp" },
+      { "name": "sugar", "amount": 1, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
       { "name": "rice", "amount": 150, "unit": "g" },
       { "name": "spring onion", "amount": 2, "unit": "pc" },
       { "name": "sesame seed", "amount": 10, "unit": "g" }
@@ -178,8 +187,9 @@
     "ingredients": [
       { "name": "chicken breast", "amount": 500, "unit": "g" },
       { "name": "bell pepper", "amount": 3, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
       { "name": "red onion", "amount": 1, "unit": "pc" },
-      { "name": "vegetable oil", "amount": 2, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
       { "name": "cumin", "amount": 1, "unit": "tsp" },
       { "name": "paprika", "amount": 2, "unit": "tsp" },
       { "name": "chili powder", "amount": 1, "unit": "tsp" },
@@ -195,25 +205,26 @@
       { "name": "chicken breast", "amount": 300, "unit": "g" },
       { "name": "romaine lettuce", "amount": 1, "unit": "pc" },
       { "name": "bread", "amount": 100, "unit": "g" },
-      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "olive oil", "amount": 6, "unit": "tbsp" },
       { "name": "garlic clove", "amount": 1, "unit": "pc" },
-      { "name": "anchovy", "amount": 2, "unit": "pc" },
-      { "name": "mayonnaise", "amount": 3, "unit": "tbsp" },
+      { "name": "anchovy", "amount": 4, "unit": "pc" },
+      { "name": "egg", "amount": 1, "unit": "pc" },
+      { "name": "worcestershire sauce", "amount": 1, "unit": "tsp" },
       { "name": "lemon", "amount": 1, "unit": "pc" },
       { "name": "parmesan", "amount": 40, "unit": "g" }
     ]
   },
   {
     "name": "Oven-baked salmon with potatoes and green beans",
-    "servings": 2,
+    "servings": 4,
     "ingredients": [
-      { "name": "salmon", "amount": 300, "unit": "g" },
-      { "name": "potato", "amount": 500, "unit": "g" },
-      { "name": "green bean", "amount": 250, "unit": "g" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "lemon", "amount": 1, "unit": "pc" },
-      { "name": "dill", "amount": 10, "unit": "g" }
+      { "name": "salmon", "amount": 600, "unit": "g" },
+      { "name": "potato", "amount": 1000, "unit": "g" },
+      { "name": "green bean", "amount": 500, "unit": "g" },
+      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
+      { "name": "garlic clove", "amount": 4, "unit": "pc" },
+      { "name": "lemon", "amount": 2, "unit": "pc" },
+      { "name": "dill", "amount": 20, "unit": "g" }
     ]
   },
   {
@@ -223,7 +234,7 @@
       { "name": "cod", "amount": 500, "unit": "g" },
       { "name": "cumin", "amount": 1, "unit": "tsp" },
       { "name": "paprika", "amount": 1, "unit": "tsp" },
-      { "name": "vegetable oil", "amount": 2, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
       { "name": "tortilla", "amount": 8, "unit": "pc" },
       { "name": "red cabbage", "amount": 0.5, "unit": "pc" },
       { "name": "avocado", "amount": 2, "unit": "pc" },
@@ -244,7 +255,7 @@
       { "name": "curry powder", "amount": 2, "unit": "tsp" },
       { "name": "canned tomatoes", "amount": 400, "unit": "g" },
       { "name": "coconut milk", "amount": 400, "unit": "ml" },
-      { "name": "vegetable oil", "amount": 2, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
       { "name": "rice", "amount": 300, "unit": "g" }
     ]
   },
@@ -261,7 +272,7 @@
       { "name": "ginger", "amount": 10, "unit": "g" },
       { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
       { "name": "sesame oil", "amount": 1, "unit": "tbsp" },
-      { "name": "vegetable oil", "amount": 1, "unit": "tbsp" }
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" }
     ]
   },
   {
@@ -276,7 +287,7 @@
       { "name": "garlic clove", "amount": 1, "unit": "pc" },
       { "name": "soy sauce", "amount": 2, "unit": "tbsp" },
       { "name": "sesame oil", "amount": 1, "unit": "tbsp" },
-      { "name": "vegetable oil", "amount": 1, "unit": "tbsp" }
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" }
     ]
   },
   {
@@ -288,9 +299,11 @@
       { "name": "bell pepper", "amount": 2, "unit": "pc" },
       { "name": "onion", "amount": 1, "unit": "pc" },
       { "name": "garlic clove", "amount": 3, "unit": "pc" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
-      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
+      { "name": "tomato", "amount": 4, "unit": "pc" },
+      { "name": "olive oil", "amount": 6, "unit": "tbsp" },
       { "name": "thyme", "amount": 1, "unit": "tsp" },
+      { "name": "bay leaf", "amount": 1, "unit": "pc" },
+      { "name": "basil", "amount": 10, "unit": "g" },
       { "name": "rice", "amount": 300, "unit": "g" }
     ]
   },
@@ -393,7 +406,8 @@
       { "name": "garlic clove", "amount": 2, "unit": "pc" },
       { "name": "olive oil", "amount": 2, "unit": "tbsp" },
       { "name": "cumin", "amount": 1, "unit": "tsp" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "paprika", "amount": 1, "unit": "tsp" },
+      { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
       { "name": "vegetable stock", "amount": 1200, "unit": "ml" },
       { "name": "lemon", "amount": 1, "unit": "pc" }
     ]
@@ -406,11 +420,14 @@
       { "name": "carrot", "amount": 2, "unit": "pc" },
       { "name": "celery stalk", "amount": 2, "unit": "pc" },
       { "name": "zucchini", "amount": 1, "unit": "pc" },
+      { "name": "potato", "amount": 200, "unit": "g" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
       { "name": "olive oil", "amount": 2, "unit": "tbsp" },
       { "name": "canned tomatoes", "amount": 400, "unit": "g" },
       { "name": "canned white beans", "amount": 400, "unit": "g" },
       { "name": "vegetable stock", "amount": 1200, "unit": "ml" },
       { "name": "ditalini", "amount": 100, "unit": "g" },
+      { "name": "basil", "amount": 10, "unit": "g" },
       { "name": "parmesan", "amount": 40, "unit": "g" }
     ]
   },
@@ -418,7 +435,7 @@
     "name": "Pumpkin soup",
     "servings": 4,
     "ingredients": [
-      { "name": "pumpkin", "amount": 1, "unit": "pc" },
+      { "name": "pumpkin", "amount": 1200, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
       { "name": "garlic clove", "amount": 1, "unit": "pc" },
       { "name": "ginger", "amount": 20, "unit": "g" },
@@ -431,18 +448,507 @@
   },
   {
     "name": "Tomato soup with grilled cheese",
-    "servings": 2,
+    "servings": 4,
     "ingredients": [
       { "name": "canned tomatoes", "amount": 800, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
       { "name": "garlic clove", "amount": 2, "unit": "pc" },
       { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "vegetable stock", "amount": 300, "unit": "ml" },
-      { "name": "cream", "amount": 50, "unit": "ml" },
+      { "name": "vegetable stock", "amount": 500, "unit": "ml" },
+      { "name": "cream", "amount": 100, "unit": "ml" },
       { "name": "basil", "amount": 10, "unit": "g" },
-      { "name": "bread", "amount": 150, "unit": "g" },
-      { "name": "cheddar", "amount": 100, "unit": "g" },
-      { "name": "butter", "amount": 20, "unit": "g" }
+      { "name": "bread", "amount": 300, "unit": "g" },
+      { "name": "cheddar", "amount": 200, "unit": "g" },
+      { "name": "butter", "amount": 40, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Spaghetti bolognese",
+    "servings": 4,
+    "ingredients": [
+      { "name": "spaghetti", "amount": 400, "unit": "g" },
+      { "name": "ground beef", "amount": 500, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "carrot", "amount": 1, "unit": "pc" },
+      { "name": "celery stalk", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "red wine", "amount": 125, "unit": "ml" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
+      { "name": "milk", "amount": 100, "unit": "ml" },
+      { "name": "parmesan", "amount": 40, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Penne arrabbiata",
+    "servings": 2,
+    "ingredients": [
+      { "name": "penne", "amount": 200, "unit": "g" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
+      { "name": "chili flakes", "amount": 1, "unit": "tsp" },
+      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "parsley", "amount": 10, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Spaghetti aglio e olio",
+    "servings": 2,
+    "ingredients": [
+      { "name": "spaghetti", "amount": 200, "unit": "g" },
+      { "name": "garlic clove", "amount": 4, "unit": "pc" },
+      { "name": "olive oil", "amount": 6, "unit": "tbsp" },
+      { "name": "chili flakes", "amount": 0.5, "unit": "tsp" },
+      { "name": "parsley", "amount": 10, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Mac and cheese",
+    "servings": 4,
+    "ingredients": [
+      { "name": "macaroni", "amount": 400, "unit": "g" },
+      { "name": "butter", "amount": 50, "unit": "g" },
+      { "name": "flour", "amount": 40, "unit": "g" },
+      { "name": "milk", "amount": 700, "unit": "ml" },
+      { "name": "cheddar", "amount": 300, "unit": "g" },
+      { "name": "breadcrumbs", "amount": 40, "unit": "g" },
+      { "name": "paprika", "amount": 0.5, "unit": "tsp" }
+    ]
+  },
+  {
+    "name": "Gnocchi with tomato sauce and mozzarella",
+    "servings": 4,
+    "ingredients": [
+      { "name": "gnocchi", "amount": 1000, "unit": "g" },
+      { "name": "canned tomatoes", "amount": 800, "unit": "g" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "basil", "amount": 10, "unit": "g" },
+      { "name": "mozzarella", "amount": 250, "unit": "g" },
+      { "name": "parmesan", "amount": 40, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Spinach and ricotta cannelloni",
+    "servings": 4,
+    "ingredients": [
+      { "name": "cannelloni tube", "amount": 16, "unit": "pc" },
+      { "name": "spinach", "amount": 500, "unit": "g" },
+      { "name": "ricotta", "amount": 500, "unit": "g" },
+      { "name": "egg", "amount": 1, "unit": "pc" },
+      { "name": "nutmeg", "amount": 0.25, "unit": "tsp" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "basil", "amount": 10, "unit": "g" },
+      { "name": "butter", "amount": 40, "unit": "g" },
+      { "name": "flour", "amount": 40, "unit": "g" },
+      { "name": "milk", "amount": 500, "unit": "ml" },
+      { "name": "parmesan", "amount": 60, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Pizza margherita",
+    "servings": 4,
+    "ingredients": [
+      { "name": "flour", "amount": 500, "unit": "g" },
+      { "name": "dry yeast", "amount": 7, "unit": "g" },
+      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "mozzarella", "amount": 500, "unit": "g" },
+      { "name": "basil", "amount": 10, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Shepherd's pie",
+    "servings": 4,
+    "ingredients": [
+      { "name": "ground lamb", "amount": 600, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "carrot", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 1, "unit": "tbsp" },
+      { "name": "flour", "amount": 10, "unit": "g" },
+      { "name": "tomato paste", "amount": 1, "unit": "tbsp" },
+      { "name": "worcestershire sauce", "amount": 3, "unit": "tsp" },
+      { "name": "beef stock", "amount": 300, "unit": "ml" },
+      { "name": "thyme", "amount": 1, "unit": "tsp" },
+      { "name": "pea", "amount": 150, "unit": "g" },
+      { "name": "potato", "amount": 1000, "unit": "g" },
+      { "name": "butter", "amount": 50, "unit": "g" },
+      { "name": "milk", "amount": 100, "unit": "ml" }
+    ]
+  },
+  {
+    "name": "Meatballs in tomato sauce with rice",
+    "servings": 4,
+    "ingredients": [
+      { "name": "ground beef", "amount": 500, "unit": "g" },
+      { "name": "breadcrumbs", "amount": 50, "unit": "g" },
+      { "name": "egg", "amount": 1, "unit": "pc" },
+      { "name": "parmesan", "amount": 30, "unit": "g" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
+      { "name": "parsley", "amount": 10, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "canned tomatoes", "amount": 800, "unit": "g" },
+      { "name": "basil", "amount": 10, "unit": "g" },
+      { "name": "rice", "amount": 300, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Beef stroganoff with rice",
+    "servings": 4,
+    "ingredients": [
+      { "name": "beef sirloin", "amount": 600, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "mushroom", "amount": 300, "unit": "g" },
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
+      { "name": "butter", "amount": 30, "unit": "g" },
+      { "name": "paprika", "amount": 1, "unit": "tsp" },
+      { "name": "mustard", "amount": 1, "unit": "tbsp" },
+      { "name": "beef stock", "amount": 250, "unit": "ml" },
+      { "name": "sour cream", "amount": 200, "unit": "g" },
+      { "name": "parsley", "amount": 10, "unit": "g" },
+      { "name": "rice", "amount": 300, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Bratwurst with sauerkraut and mashed potatoes",
+    "servings": 4,
+    "ingredients": [
+      { "name": "bratwurst", "amount": 8, "unit": "pc" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "sauerkraut", "amount": 800, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "bay leaf", "amount": 1, "unit": "pc" },
+      { "name": "caraway", "amount": 1, "unit": "tsp" },
+      { "name": "potato", "amount": 1000, "unit": "g" },
+      { "name": "milk", "amount": 200, "unit": "ml" },
+      { "name": "butter", "amount": 50, "unit": "g" },
+      { "name": "nutmeg", "amount": 0.25, "unit": "tsp" },
+      { "name": "mustard", "amount": 2, "unit": "tbsp" }
+    ]
+  },
+  {
+    "name": "Sweet and sour pork with rice",
+    "servings": 4,
+    "ingredients": [
+      { "name": "pork shoulder", "amount": 500, "unit": "g" },
+      { "name": "egg", "amount": 1, "unit": "pc" },
+      { "name": "cornstarch", "amount": 50, "unit": "g" },
+      { "name": "vegetable oil", "amount": 300, "unit": "ml" },
+      { "name": "bell pepper", "amount": 2, "unit": "pc" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "canned pineapple", "amount": 400, "unit": "g" },
+      { "name": "ketchup", "amount": 3, "unit": "tbsp" },
+      { "name": "rice vinegar", "amount": 3, "unit": "tbsp" },
+      { "name": "sugar", "amount": 3, "unit": "tbsp" },
+      { "name": "soy sauce", "amount": 2, "unit": "tbsp" },
+      { "name": "rice", "amount": 300, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Chicken drumsticks with roasted vegetables",
+    "servings": 4,
+    "ingredients": [
+      { "name": "chicken drumstick", "amount": 8, "unit": "pc" },
+      { "name": "potato", "amount": 800, "unit": "g" },
+      { "name": "carrot", "amount": 3, "unit": "pc" },
+      { "name": "bell pepper", "amount": 2, "unit": "pc" },
+      { "name": "zucchini", "amount": 1, "unit": "pc" },
+      { "name": "red onion", "amount": 2, "unit": "pc" },
+      { "name": "garlic clove", "amount": 4, "unit": "pc" },
+      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
+      { "name": "paprika", "amount": 2, "unit": "tsp" },
+      { "name": "thyme", "amount": 1, "unit": "tsp" },
+      { "name": "lemon", "amount": 1, "unit": "pc" }
+    ]
+  },
+  {
+    "name": "Butter chicken with naan",
+    "servings": 4,
+    "ingredients": [
+      { "name": "chicken thigh", "amount": 700, "unit": "g" },
+      { "name": "yogurt", "amount": 150, "unit": "g" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 4, "unit": "pc" },
+      { "name": "ginger", "amount": 30, "unit": "g" },
+      { "name": "garam masala", "amount": 3, "unit": "tsp" },
+      { "name": "chili powder", "amount": 1, "unit": "tsp" },
+      { "name": "cumin", "amount": 1, "unit": "tsp" },
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
+      { "name": "butter", "amount": 50, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "cream", "amount": 150, "unit": "ml" },
+      { "name": "dried fenugreek leaf", "amount": 1, "unit": "tsp" },
+      { "name": "coriander", "amount": 10, "unit": "g" },
+      { "name": "naan", "amount": 4, "unit": "pc" }
+    ]
+  },
+  {
+    "name": "Chicken noodle soup",
+    "servings": 4,
+    "ingredients": [
+      { "name": "chicken thigh", "amount": 500, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "carrot", "amount": 2, "unit": "pc" },
+      { "name": "celery stalk", "amount": 2, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 1, "unit": "tbsp" },
+      { "name": "chicken stock", "amount": 1500, "unit": "ml" },
+      { "name": "thyme", "amount": 1, "unit": "tsp" },
+      { "name": "bay leaf", "amount": 1, "unit": "pc" },
+      { "name": "egg noodle", "amount": 150, "unit": "g" },
+      { "name": "parsley", "amount": 10, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Chicken quesadillas",
+    "servings": 2,
+    "ingredients": [
+      { "name": "chicken breast", "amount": 250, "unit": "g" },
+      { "name": "bell pepper", "amount": 1, "unit": "pc" },
+      { "name": "red onion", "amount": 0.5, "unit": "pc" },
+      { "name": "cumin", "amount": 0.5, "unit": "tsp" },
+      { "name": "chili powder", "amount": 0.5, "unit": "tsp" },
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
+      { "name": "tortilla", "amount": 4, "unit": "pc" },
+      { "name": "cheddar", "amount": 150, "unit": "g" },
+      { "name": "coriander", "amount": 10, "unit": "g" },
+      { "name": "sour cream", "amount": 100, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Pad thai with chicken",
+    "servings": 2,
+    "ingredients": [
+      { "name": "rice noodle", "amount": 200, "unit": "g" },
+      { "name": "chicken breast", "amount": 250, "unit": "g" },
+      { "name": "egg", "amount": 2, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "tamarind paste", "amount": 2, "unit": "tbsp" },
+      { "name": "fish sauce", "amount": 2, "unit": "tbsp" },
+      { "name": "sugar", "amount": 1, "unit": "tbsp" },
+      { "name": "chili flakes", "amount": 0.5, "unit": "tsp" },
+      { "name": "bean sprout", "amount": 100, "unit": "g" },
+      { "name": "spring onion", "amount": 3, "unit": "pc" },
+      { "name": "peanut", "amount": 40, "unit": "g" },
+      { "name": "lime", "amount": 1, "unit": "pc" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" }
+    ]
+  },
+  {
+    "name": "Fish and chips",
+    "servings": 4,
+    "ingredients": [
+      { "name": "cod", "amount": 600, "unit": "g" },
+      { "name": "flour", "amount": 220, "unit": "g" },
+      { "name": "baking powder", "amount": 1, "unit": "tsp" },
+      { "name": "beer", "amount": 300, "unit": "ml" },
+      { "name": "potato", "amount": 1000, "unit": "g" },
+      { "name": "vegetable oil", "amount": 900, "unit": "ml" },
+      { "name": "lemon", "amount": 1, "unit": "pc" }
+    ]
+  },
+  {
+    "name": "Tuna pasta bake",
+    "servings": 4,
+    "ingredients": [
+      { "name": "penne", "amount": 400, "unit": "g" },
+      { "name": "canned tuna", "amount": 320, "unit": "g" },
+      { "name": "canned sweetcorn", "amount": 200, "unit": "g" },
+      { "name": "butter", "amount": 40, "unit": "g" },
+      { "name": "flour", "amount": 40, "unit": "g" },
+      { "name": "milk", "amount": 600, "unit": "ml" },
+      { "name": "cheddar", "amount": 200, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Seafood paella",
+    "servings": 4,
+    "ingredients": [
+      { "name": "paella rice", "amount": 350, "unit": "g" },
+      { "name": "prawn", "amount": 400, "unit": "g" },
+      { "name": "mussel", "amount": 500, "unit": "g" },
+      { "name": "squid", "amount": 300, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
+      { "name": "bell pepper", "amount": 1, "unit": "pc" },
+      { "name": "tomato", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
+      { "name": "paprika", "amount": 1, "unit": "tsp" },
+      { "name": "saffron", "amount": 0.25, "unit": "tsp" },
+      { "name": "fish stock", "amount": 1000, "unit": "ml" },
+      { "name": "pea", "amount": 100, "unit": "g" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "parsley", "amount": 10, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Thai green curry with prawns",
+    "servings": 4,
+    "ingredients": [
+      { "name": "prawn", "amount": 400, "unit": "g" },
+      { "name": "green curry paste", "amount": 3, "unit": "tbsp" },
+      { "name": "coconut milk", "amount": 800, "unit": "ml" },
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
+      { "name": "fish sauce", "amount": 2, "unit": "tbsp" },
+      { "name": "sugar", "amount": 1, "unit": "tbsp" },
+      { "name": "eggplant", "amount": 1, "unit": "pc" },
+      { "name": "green bean", "amount": 150, "unit": "g" },
+      { "name": "makrut lime leaf", "amount": 4, "unit": "pc" },
+      { "name": "thai basil", "amount": 15, "unit": "g" },
+      { "name": "rice", "amount": 300, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Falafel wraps with hummus",
+    "servings": 4,
+    "ingredients": [
+      { "name": "dried chickpeas", "amount": 250, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
+      { "name": "parsley", "amount": 30, "unit": "g" },
+      { "name": "coriander", "amount": 20, "unit": "g" },
+      { "name": "cumin", "amount": 2, "unit": "tsp" },
+      { "name": "baking powder", "amount": 0.5, "unit": "tsp" },
+      { "name": "flour", "amount": 20, "unit": "g" },
+      { "name": "vegetable oil", "amount": 450, "unit": "ml" },
+      { "name": "flatbread", "amount": 4, "unit": "pc" },
+      { "name": "hummus", "amount": 200, "unit": "g" },
+      { "name": "tomato", "amount": 2, "unit": "pc" },
+      { "name": "cucumber", "amount": 1, "unit": "pc" },
+      { "name": "lettuce", "amount": 1, "unit": "pc" }
+    ]
+  },
+  {
+    "name": "Bean burritos",
+    "servings": 4,
+    "ingredients": [
+      { "name": "canned pinto beans", "amount": 800, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "cumin", "amount": 1, "unit": "tsp" },
+      { "name": "chili powder", "amount": 1, "unit": "tsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "rice", "amount": 150, "unit": "g" },
+      { "name": "tortilla", "amount": 4, "unit": "pc" },
+      { "name": "cheddar", "amount": 150, "unit": "g" },
+      { "name": "tomato", "amount": 2, "unit": "pc" },
+      { "name": "lime", "amount": 1, "unit": "pc" },
+      { "name": "coriander", "amount": 10, "unit": "g" },
+      { "name": "sour cream", "amount": 150, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Eggplant parmigiana",
+    "servings": 4,
+    "ingredients": [
+      { "name": "eggplant", "amount": 3, "unit": "pc" },
+      { "name": "vegetable oil", "amount": 150, "unit": "ml" },
+      { "name": "canned tomatoes", "amount": 800, "unit": "g" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "basil", "amount": 15, "unit": "g" },
+      { "name": "mozzarella", "amount": 250, "unit": "g" },
+      { "name": "parmesan", "amount": 100, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Spanish tortilla with salad",
+    "servings": 4,
+    "ingredients": [
+      { "name": "potato", "amount": 800, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "egg", "amount": 6, "unit": "pc" },
+      { "name": "olive oil", "amount": 12, "unit": "tbsp" },
+      { "name": "lettuce", "amount": 1, "unit": "pc" },
+      { "name": "tomato", "amount": 2, "unit": "pc" },
+      { "name": "white wine vinegar", "amount": 1, "unit": "tbsp" }
+    ]
+  },
+  {
+    "name": "Potato and leek soup",
+    "servings": 4,
+    "ingredients": [
+      { "name": "leek", "amount": 2, "unit": "pc" },
+      { "name": "potato", "amount": 600, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "butter", "amount": 40, "unit": "g" },
+      { "name": "vegetable stock", "amount": 1000, "unit": "ml" },
+      { "name": "cream", "amount": 100, "unit": "ml" },
+      { "name": "chive", "amount": 10, "unit": "g" }
+    ]
+  },
+  {
+    "name": "French onion soup",
+    "servings": 4,
+    "ingredients": [
+      { "name": "onion", "amount": 6, "unit": "pc" },
+      { "name": "butter", "amount": 50, "unit": "g" },
+      { "name": "flour", "amount": 10, "unit": "g" },
+      { "name": "white wine", "amount": 150, "unit": "ml" },
+      { "name": "beef stock", "amount": 1200, "unit": "ml" },
+      { "name": "thyme", "amount": 1, "unit": "tsp" },
+      { "name": "bay leaf", "amount": 1, "unit": "pc" },
+      { "name": "bread", "amount": 200, "unit": "g" },
+      { "name": "gruyère", "amount": 150, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Potato goulash",
+    "servings": 4,
+    "ingredients": [
+      { "name": "potato", "amount": 1000, "unit": "g" },
+      { "name": "onion", "amount": 2, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "paprika", "amount": 4, "unit": "tsp" },
+      { "name": "caraway", "amount": 1, "unit": "tsp" },
+      { "name": "marjoram", "amount": 1, "unit": "tsp" },
+      { "name": "tomato paste", "amount": 1, "unit": "tbsp" },
+      { "name": "bay leaf", "amount": 1, "unit": "pc" },
+      { "name": "beef stock", "amount": 1000, "unit": "ml" },
+      { "name": "frankfurter", "amount": 4, "unit": "pc" }
+    ]
+  },
+  {
+    "name": "Sweet potato and black bean chili",
+    "servings": 4,
+    "ingredients": [
+      { "name": "sweet potato", "amount": 800, "unit": "g" },
+      { "name": "canned black beans", "amount": 800, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
+      { "name": "bell pepper", "amount": 1, "unit": "pc" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "chili powder", "amount": 2, "unit": "tsp" },
+      { "name": "cumin", "amount": 2, "unit": "tsp" },
+      { "name": "paprika", "amount": 1, "unit": "tsp" },
+      { "name": "tomato paste", "amount": 1, "unit": "tbsp" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "vegetable stock", "amount": 300, "unit": "ml" },
+      { "name": "lime", "amount": 1, "unit": "pc" },
+      { "name": "coriander", "amount": 10, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Niçoise salad",
+    "servings": 2,
+    "ingredients": [
+      { "name": "canned tuna", "amount": 160, "unit": "g" },
+      { "name": "egg", "amount": 2, "unit": "pc" },
+      { "name": "potato", "amount": 300, "unit": "g" },
+      { "name": "green bean", "amount": 150, "unit": "g" },
+      { "name": "tomato", "amount": 2, "unit": "pc" },
+      { "name": "lettuce", "amount": 1, "unit": "pc" },
+      { "name": "olive", "amount": 50, "unit": "g" },
+      { "name": "anchovy", "amount": 4, "unit": "pc" },
+      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "white wine vinegar", "amount": 1, "unit": "tbsp" }
     ]
   }
 ]

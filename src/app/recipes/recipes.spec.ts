@@ -32,6 +32,36 @@ const SPEC_NAMES = [
   'Minestrone',
   'Pumpkin soup',
   'Tomato soup with grilled cheese',
+  'Spaghetti bolognese',
+  'Penne arrabbiata',
+  'Spaghetti aglio e olio',
+  'Mac and cheese',
+  'Gnocchi with tomato sauce and mozzarella',
+  'Spinach and ricotta cannelloni',
+  'Pizza margherita',
+  "Shepherd's pie",
+  'Meatballs in tomato sauce with rice',
+  'Beef stroganoff with rice',
+  'Bratwurst with sauerkraut and mashed potatoes',
+  'Sweet and sour pork with rice',
+  'Chicken drumsticks with roasted vegetables',
+  'Butter chicken with naan',
+  'Chicken noodle soup',
+  'Chicken quesadillas',
+  'Pad thai with chicken',
+  'Fish and chips',
+  'Tuna pasta bake',
+  'Seafood paella',
+  'Thai green curry with prawns',
+  'Falafel wraps with hummus',
+  'Bean burritos',
+  'Eggplant parmigiana',
+  'Spanish tortilla with salad',
+  'Potato and leek soup',
+  'French onion soup',
+  'Potato goulash',
+  'Sweet potato and black bean chili',
+  'Niçoise salad',
 ];
 
 describe('RECIPES', () => {
@@ -56,7 +86,7 @@ describe('RECIPES', () => {
     expect(problems).toEqual([]);
   });
 
-  it('contains exactly the 30 recipes named in the spec, in the spec order', () => {
+  it('contains exactly the 60 recipes named in the spec, in the spec order', () => {
     expect(RECIPES.map((recipe) => recipe.name)).toEqual(SPEC_NAMES);
   });
 
