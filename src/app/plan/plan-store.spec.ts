@@ -78,6 +78,60 @@ describe('PlanStore', () => {
     }
   });
 
+  it('opens a picked meal with the suggestions it showed when picked, in the same order, on "Undo" after a reload', () => {
+    const suggestions = store.plan().days[0].lunch.suggestions;
+    pickFirstSuggestion(LUNCH);
+
+    store = reload();
+    expect(store.plan().days[0].lunch.recipe, 'pick lost on reload').toBe(suggestions[0]);
+    store.clear(LUNCH);
+    expect(store.plan().days[0].lunch).toEqual({ recipe: null, suggestions });
+  });
+
+  it('loads a plan saved before picked meals remembered their suggestions with its days, picks and accepted state, and opens such a meal with three unpicked suggestions on "Undo"', () => {
+    const [lunch, dinner, other, ...rest] = RECIPES.map((recipe) => recipe.name);
+    const saved = {
+      days: [
+        {
+          date: '2026-10-20',
+          lunch: { recipe: lunch, suggestions: [] },
+          dinner: { recipe: null, suggestions: rest.slice(0, 3) },
+          cookExtra: false,
+        },
+        {
+          date: '2026-10-21',
+          lunch: { recipe: dinner, suggestions: [] },
+          dinner: { recipe: other, suggestions: [] },
+          cookExtra: false,
+        },
+      ],
+      people: 3,
+      accepted: false,
+      ticked: [],
+      added: [],
+      shown: [lunch, dinner, other, ...rest.slice(0, 3)],
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+
+    store = reload();
+    expect(store.plan()).toEqual(saved);
+    store.clear(LUNCH);
+    const suggestions = store.plan().days[0].lunch.suggestions;
+    expect(store.plan().days[0].lunch.recipe).toBeNull();
+    expect(suggestions).toHaveLength(3);
+    expect(new Set(suggestions).size, suggestions.join(', ')).toBe(3);
+    expect(suggestions.filter((name) => [dinner, other].includes(name))).toEqual([]);
+
+    const accepted = {
+      ...saved,
+      days: [{ ...saved.days[1], date: '2026-10-20' }],
+      accepted: true,
+      shown: [dinner, other],
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(accepted));
+    expect(reload().plan()).toEqual(accepted);
+  });
+
   it('keeps the start date of a stored plan when reloaded on a later day', () => {
     store.setDays(2);
     const before = store.plan();

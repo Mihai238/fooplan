@@ -3,6 +3,9 @@ export type MealKind = 'lunch' | 'dinner';
 export interface Meal {
   recipe: string | null;
   suggestions: string[];
+  // The suggestions a picked meal showed when picked, its recipe among them, in their order; absent
+  // on an open meal and when not known (a pick saved before they were kept)
+  offered?: string[];
 }
 
 export interface PlanDay {
@@ -21,7 +24,7 @@ export interface Plan {
   ticked: string[];
   // Items the user added to the grocery list themselves, in the order added
   added: string[];
-  // Recipe names, least recently shown first; a recipe shown again, or whose pick is cleared or
+  // Recipe names, least recently shown first; a recipe drawn again, or whose pick is undone or
   // dropped, moves to the end
   shown: string[];
 }
@@ -99,7 +102,7 @@ export function pickRecipe(
   ) {
     return plan;
   }
-  const withPick = withMeal(plan, meal, { recipe, suggestions: [] });
+  const withPick = withMeal(plan, meal, { recipe, suggestions: [], offered: current.suggestions });
   return mealRefsOf(withPick).reduce(
     (next, ref) => withoutSuggestion(next, ref, recipe, recipes, random),
     withPick,
@@ -116,8 +119,13 @@ export function clearMeal(
   if (plan.accepted || isCovered(plan, meal) || current === undefined || current.recipe === null) {
     return plan;
   }
-  const cleared = withMeal(plan, meal, { recipe: null, suggestions: [] });
-  const opened = openMeal(markUnpicked(cleared, [current.recipe]), meal, recipes, random);
+  const cleared = markUnpicked(withMeal(plan, meal, { recipe: null, suggestions: [] }), [
+    current.recipe,
+  ]);
+  const opened =
+    current.offered === undefined
+      ? openMeal(cleared, meal, recipes, random)
+      : reopenMeal(cleared, meal, current.offered, recipes, random);
   return meal.kind === 'dinner' && plan.days[meal.day].cookExtra
     ? turnCookExtraOff(opened, meal.day, recipes, random)
     : opened;
@@ -245,8 +253,10 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
     added,
     shown,
   };
-  // A record missing what a meal shows (an old or hand-edited save) still counts it as shown
-  const plan = { ...parsed, shown: [...new Set([...shown, ...suggestionsOf(parsed)])] };
+  // A record missing what a meal shows or showed before its pick (an old or hand-edited save) still
+  // counts it as shown
+  const seen = mealsOf(parsed).flatMap((meal) => [...meal.suggestions, ...(meal.offered ?? [])]);
+  const plan = { ...parsed, shown: [...new Set([...shown, ...seen])] };
   const valid =
     hasConsecutiveDates(plan) &&
     usesRecipesOnce(plan) &&
@@ -326,7 +336,7 @@ function parseMeal(value: unknown, recipes: readonly string[]): Meal | null {
   if (!isRecord(value) || !Array.isArray(value['suggestions'])) {
     return null;
   }
-  const { recipe } = value;
+  const { recipe, offered } = value;
   const suggestions: unknown[] = value['suggestions'];
   if (!suggestions.every((name) => typeof name === 'string' && recipes.includes(name))) {
     return null;
@@ -335,14 +345,20 @@ function parseMeal(value: unknown, recipes: readonly string[]): Meal | null {
     // An empty meal must be a covered lunch, which parseDay and hasValidLeftovers check
     const isFullSet =
       suggestions.length === SUGGESTIONS && new Set(suggestions).size === SUGGESTIONS;
-    return isFullSet || suggestions.length === 0
+    return (isFullSet || suggestions.length === 0) && offered === undefined
       ? { recipe, suggestions: suggestions as string[] }
       : null;
   }
   if (typeof recipe !== 'string' || !recipes.includes(recipe) || suggestions.length > 0) {
     return null;
   }
-  return { recipe, suggestions: [] };
+  // Picks saved before they remembered their suggestions have none
+  if (offered === undefined) {
+    return { recipe, suggestions: [] };
+  }
+  const isOfferedSet =
+    isRecipeList(offered, recipes) && offered.length === SUGGESTIONS && offered.includes(recipe);
+  return isOfferedSet ? { recipe, suggestions: [], offered } : null;
 }
 
 // Comparing each date with the one computed from the first also rejects dates like 2026-02-31
@@ -418,6 +434,22 @@ function openMeal(
 ): Plan {
   const [suggestions, drawn] = drawSuggestions(plan, SUGGESTIONS, excluded, recipes, random);
   return withMeal(drawn, ref, { recipe: null, suggestions });
+}
+
+// Restoring a meal's own suggestions isn't suggesting them again, so only those picked for another
+// meal since are replaced
+function reopenMeal(
+  plan: Plan,
+  ref: MealRef,
+  offered: readonly string[],
+  recipes: readonly string[],
+  random: Random,
+): Plan {
+  const reopened = withMeal(plan, ref, { recipe: null, suggestions: [...offered] });
+  const picked = pickedRecipes(reopened);
+  return offered
+    .filter((name) => picked.has(name))
+    .reduce((next, name) => withoutSuggestion(next, ref, name, recipes, random), reopened);
 }
 
 function withoutSuggestion(

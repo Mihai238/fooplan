@@ -91,11 +91,33 @@ describe('PlanPage', () => {
     expect(after.filter((name) => before.includes(name))).toEqual([]);
   });
 
-  it('opens a picked meal again with three suggestions when the user clicks "Clear"', async () => {
+  it('offers "Undo" and no "Clear" on a picked meal of a plan in progress', async () => {
     await pickFirstSuggestion(0);
-    await click(button(meal(0), 'Clear'));
+    expect(buttonTexts(meal(0))).toContain('Undo');
+    expect(buttonTexts(meal(0))).not.toContain('Clear');
+  });
+
+  it('offers "Undo" neither on an open meal nor on any meal once the plan is accepted', async () => {
+    await setInput('days', '1');
+    await pickFirstSuggestion(0);
+    expect(buttonTexts(meal(0)), 'picked meal').toContain('Undo');
+    expect(buttonTexts(meal(1)), 'open meal').not.toContain('Undo');
+    await pickFirstSuggestion(1);
+    await click(button(element, 'Accept plan'));
+    expect(buttonTexts(), 'plan not accepted').not.toContain('Accept plan');
+    expect(buttonTexts()).not.toContain('Undo');
+  });
+
+  it('shows the same three suggestions in the same order, and not while the meal is picked, when the user picks one and clicks "Undo"', async () => {
+    const before = suggestionsOf(meal(0)).map(textOf);
+    expect(before, 'suggestions of the first meal').toHaveLength(3);
+    await click(suggestionsOf(meal(0))[1]);
+    expect(textOf(meal(0).querySelector('p.recipe'))).toBe(before[1]);
+    expect(buttonTexts(meal(0)), 'buttons of the picked meal').toEqual(['Undo']);
+
+    await click(button(meal(0), 'Undo'));
     expect(meal(0).querySelector('p.recipe')).toBeNull();
-    expect(suggestionsOf(meal(0))).toHaveLength(3);
+    expect(suggestionsOf(meal(0)).map(textOf)).toEqual(before);
   });
 
   it('disables "Accept plan" while a meal is open and enables it once every meal has a recipe', async () => {
@@ -166,12 +188,12 @@ describe('PlanPage', () => {
     expect(textOf(meal(2).querySelector('p.recipe'))).toBe(`Leftovers: ${recipe}`);
   });
 
-  it('shows an accepted plan read-only, without day, people, pick, "Clear", "Other suggestions" or "Accept plan" controls', async () => {
+  it('shows an accepted plan read-only, without day, people, pick, "Undo", "Other suggestions" or "Accept plan" controls', async () => {
     const recipes = await acceptOneDayPlan();
     expect(Array.from(element.querySelectorAll('p.recipe')).map(textOf)).toEqual(recipes);
     expect(element.querySelectorAll('input')).toHaveLength(0);
     expect(element.querySelectorAll('button.suggestion')).toHaveLength(0);
-    expect(buttonTexts()).not.toContain('Clear');
+    expect(buttonTexts()).not.toContain('Undo');
     expect(buttonTexts()).not.toContain('Other suggestions');
     expect(buttonTexts()).not.toContain('Accept plan');
   });

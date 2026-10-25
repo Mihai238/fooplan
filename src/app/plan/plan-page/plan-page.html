@@ -71,7 +71,7 @@
               }
             }
             @if (!plan().accepted) {
-              <button type="button" class="link" (click)="store.clear(ref)">Clear</button>
+              <button type="button" class="link" (click)="store.clear(ref)">Undo</button>
             }
           } @else if (leftoverRecipe) {
             <p class="recipe">Leftovers: {{ leftoverRecipe }}</p>

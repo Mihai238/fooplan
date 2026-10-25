@@ -45,6 +45,6 @@ export function empty(): Meal {
   return { recipe: null, suggestions: [] };
 }
 
-export function picked(recipe: string): Meal {
-  return { recipe, suggestions: [] };
+export function picked(recipe: string, offered?: string[]): Meal {
+  return offered === undefined ? { recipe, suggestions: [] } : { recipe, suggestions: [], offered };
 }
