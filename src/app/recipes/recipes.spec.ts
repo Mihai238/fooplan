@@ -153,6 +153,16 @@ describe('RECIPES', () => {
     expect(problems).toEqual([]);
   });
 
+  it('stores vegetable oil in ml in every recipe', () => {
+    const oils = RECIPES.flatMap((recipe) =>
+      recipe.ingredients
+        .filter((ingredient) => ingredient.name === 'vegetable oil')
+        .map((ingredient) => ({ recipe: recipe.name, unit: ingredient.unit })),
+    );
+    expect(oils.length, 'no recipe with vegetable oil').toBeGreaterThan(0);
+    expect(oils.filter((oil) => oil.unit !== 'ml')).toEqual([]);
+  });
+
   // Without it, the invariant tests would pass vacuously on an empty list
   function expectRecipesLoaded() {
     expect(RECIPES.length, 'no recipes loaded').toBeGreaterThan(0);

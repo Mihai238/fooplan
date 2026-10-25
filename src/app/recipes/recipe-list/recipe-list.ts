@@ -1,4 +1,5 @@
 import { Component, computed, signal } from '@angular/core';
+import { displayAmount } from '../amount';
 import { searchRecipes } from '../recipe-search';
 import { RECIPES } from '../recipes';
 
@@ -10,4 +11,5 @@ import { RECIPES } from '../recipes';
 export class RecipeList {
   protected readonly query = signal('');
   protected readonly recipes = computed(() => searchRecipes(RECIPES, this.query()));
+  protected readonly displayAmount = displayAmount;
 }

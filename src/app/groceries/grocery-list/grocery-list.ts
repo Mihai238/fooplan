@@ -1,6 +1,7 @@
 import { afterNextRender, Component, computed, ElementRef, inject, Injector } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PlanStore } from '../../plan/plan-store';
+import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
 import { GroceryItem, groceryList, itemKey, shoppingView } from '../groceries';
 
@@ -16,6 +17,7 @@ export class GroceryList {
   private readonly injector = inject(Injector);
   protected readonly plan = this.store.plan;
   protected readonly key = itemKey;
+  protected readonly displayAmount = displayAmount;
   protected readonly view = computed(() =>
     shoppingView(groceryList(this.plan(), RECIPES), this.plan().ticked),
   );

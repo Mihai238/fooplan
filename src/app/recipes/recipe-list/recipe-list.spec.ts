@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { displayAmount } from '../amount';
 import { RECIPES } from '../recipes';
 import { RecipeList } from './recipe-list';
 
@@ -12,7 +13,7 @@ describe('RecipeList', () => {
     element = fixture.nativeElement as HTMLElement;
   });
 
-  it('shows each recipe with its name, servings and every ingredient with amount, unit and name', () => {
+  it('shows each recipe with its name, servings and every ingredient with its displayed amount and name', () => {
     expectAllRecipesRendered();
     articles().forEach((article, i) => {
       const recipe = RECIPES[i];
@@ -24,9 +25,10 @@ describe('RecipeList', () => {
         Array.from(article.querySelectorAll('li')).map(textOf),
         `ingredients of "${recipe.name}"`,
       ).toEqual(
-        recipe.ingredients.map(
-          (ingredient) => `${ingredient.amount} ${ingredient.unit} ${ingredient.name}`,
-        ),
+        recipe.ingredients.map((ingredient) => {
+          const shown = displayAmount(ingredient);
+          return `${shown.amount} ${shown.unit} ${ingredient.name}`;
+        }),
       );
     });
   });
@@ -96,6 +98,17 @@ describe('RecipeList', () => {
     expectAllRecipesRendered();
   });
 
+  it('shows the 15 ml vegetable oil of "Teriyaki chicken with rice" as "1 tbsp vegetable oil"', () => {
+    const lines = ingredientLinesOf('Teriyaki chicken with rice');
+    expect(lines).toContain('1 tbsp vegetable oil');
+    expect(lines).not.toContain('15 ml vegetable oil');
+  });
+
+  it('keeps 900 ml vegetable oil of "Fish and chips" and 50 ml milk of "Baked potatoes with herb quark" in ml', () => {
+    expect(ingredientLinesOf('Fish and chips')).toContain('900 ml vegetable oil');
+    expect(ingredientLinesOf('Baked potatoes with herb quark')).toContain('50 ml milk');
+  });
+
   async function search(text: string) {
     const field = searchField();
     field.value = text;
@@ -113,6 +126,12 @@ describe('RecipeList', () => {
     );
     expect(field, 'no search field labelled "Search recipes"').toBeDefined();
     return field!;
+  }
+
+  function ingredientLinesOf(name: string): string[] {
+    const article = articles().find((candidate) => textOf(candidate.querySelector('h2')!) === name);
+    expect(article, `"${name}" not shown`).toBeDefined();
+    return Array.from(article!.querySelectorAll('li')).map(textOf);
   }
 
   function listedNames(): string[] {

@@ -11,7 +11,8 @@
         <p class="servings">{{ recipe.servings }} servings</p>
         <ul>
           @for (ingredient of recipe.ingredients; track ingredient.name) {
-            <li>{{ ingredient.amount }} {{ ingredient.unit }} {{ ingredient.name }}</li>
+            @let shown = displayAmount(ingredient);
+            <li>{{ shown.amount }} {{ shown.unit }} {{ ingredient.name }}</li>
           }
         </ul>
       </article>

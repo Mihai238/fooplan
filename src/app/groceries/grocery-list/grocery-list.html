@@ -13,6 +13,7 @@
           <ul class="items">
             @for (item of group.items; track key(item)) {
               <li>
+                @let shown = displayAmount(item);
                 <label>
                   <input
                     #checkbox
@@ -20,7 +21,7 @@
                     [attr.data-key]="key(item)"
                     (change)="toggle(item, checkbox)"
                   />
-                  {{ item.amount }} {{ item.unit }} {{ item.name }}
+                  {{ shown.amount }} {{ shown.unit }} {{ item.name }}
                 </label>
               </li>
             }
@@ -35,6 +36,7 @@
       <ul class="items">
         @for (item of view().inCart; track key(item)) {
           <li>
+            @let shown = displayAmount(item);
             <label>
               <input
                 #checkbox
@@ -43,7 +45,7 @@
                 [attr.data-key]="key(item)"
                 (change)="toggle(item, checkbox)"
               />
-              {{ item.amount }} {{ item.unit }} {{ item.name }}
+              {{ shown.amount }} {{ shown.unit }} {{ item.name }}
             </label>
           </li>
         }

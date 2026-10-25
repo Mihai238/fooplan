@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
 import { acceptOneDayPlan, seededRandom } from '../../plan/testing';
+import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
 import { byName, bySection, GroceryItem, groceryList, itemKey } from '../groceries';
 import { Section, SECTIONS } from '../sections';
@@ -11,6 +12,7 @@ describe('GroceryList', () => {
   let store: PlanStore;
   let fixture: ComponentFixture<GroceryList>;
   let element: HTMLElement;
+  const restores: (() => void)[] = [];
 
   beforeEach(() => {
     localStorage.clear();
@@ -22,6 +24,12 @@ describe('GroceryList', () => {
       ],
     });
     store = TestBed.inject(PlanStore);
+  });
+
+  afterEach(() => {
+    for (const restore of restores.splice(0)) {
+      restore();
+    }
   });
 
   it('says to accept a plan first, links to the plan and lists nothing when the plan is not accepted', async () => {
@@ -236,6 +244,33 @@ describe('GroceryList', () => {
     expect(inCart().map(textOf)).toEqual(alphabetical.map(lineOf));
   });
 
+  it('shows a merged, rounded-up total of 30 ml as "2 tbsp", in its section and in "In the cart" once ticked, under the same key', async () => {
+    acceptOneDayPlan(store);
+    // 12.5 + 17 = 29.5 ml, rounded up to 30
+    addToPlannedRecipes('white wine', 12.5, 17);
+    await open();
+    expect(listed().map(textOf)).toContain('2 tbsp white wine');
+    expect(listed().map(textOf)).not.toContain('30 ml white wine');
+
+    const key = itemKey({ name: 'white wine', unit: 'ml' });
+    await click(checkboxOf(listed().find((item) => textOf(item) === '2 tbsp white wine')!));
+    expect(store.plan().ticked).toEqual([key]);
+    expect(listed().map(textOf)).not.toContain('2 tbsp white wine');
+    expect(inCart().map(textOf)).toEqual(['2 tbsp white wine']);
+    expect(checkboxOf(inCart()[0]).dataset['key']).toBe(key);
+
+    await open();
+    expect(inCart().map(textOf)).toEqual(['2 tbsp white wine']);
+  });
+
+  it('keeps a merged total that is not a spoon amount in ml although each recipe adds a spoon amount', async () => {
+    acceptOneDayPlan(store);
+    // 15 + 10 = 25 ml
+    addToPlannedRecipes('white wine', 15, 10);
+    await open();
+    expect(listed().map(textOf)).toContain('25 ml white wine');
+  });
+
   async function open() {
     fixture = TestBed.createComponent(GroceryList);
     await fixture.whenStable();
@@ -258,6 +293,31 @@ describe('GroceryList', () => {
     checkbox.checked = !checkbox.checked;
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
     await fixture.whenStable();
+  }
+
+  // The component reads RECIPES itself, so the test adds the ingredient to the planned recipes,
+  // sized to give each meal its share for the plan's people, and takes it out again afterwards
+  function addToPlannedRecipes(name: string, lunchShare: number, dinnerShare: number) {
+    const [{ lunch, dinner }] = store.plan().days;
+    const meals: [string | null, number][] = [
+      [lunch.recipe, lunchShare],
+      [dinner.recipe, dinnerShare],
+    ];
+    for (const [recipeName, share] of meals) {
+      const recipe = RECIPES.find((candidate) => candidate.name === recipeName);
+      expect(recipe, `no recipe "${recipeName}"`).toBeDefined();
+      expect(
+        recipe!.ingredients.some((ingredient) => ingredient.name === name),
+        `"${recipeName}" already has ${name}`,
+      ).toBe(false);
+      const original = [...recipe!.ingredients];
+      recipe!.ingredients.push({
+        name,
+        amount: (share * recipe!.servings) / store.plan().people,
+        unit: 'ml',
+      });
+      restores.push(() => recipe!.ingredients.splice(0, Infinity, ...original));
+    }
   }
 
   function sections(): HTMLElement[] {
@@ -293,7 +353,8 @@ describe('GroceryList', () => {
   }
 
   function lineOf(item: GroceryItem): string {
-    return `${item.amount} ${item.unit} ${item.name}`;
+    const shown = displayAmount(item);
+    return `${shown.amount} ${shown.unit} ${item.name}`;
   }
 
   function textOf(node: Element | null): string {
