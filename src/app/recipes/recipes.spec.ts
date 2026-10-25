@@ -5,13 +5,7 @@ const SPEC_NAMES = [
   'Spaghetti pomodoro',
   'Spaghetti carbonara',
   'Pesto pasta with cherry tomatoes',
-  'Lasagne',
-  'Käsespätzle',
-  'Chili con carne',
-  'Goulash with bread',
   'Beef burgers with oven fries',
-  'Stuffed peppers',
-  'Schnitzel with potato salad',
   'Chicken curry with rice',
   'Teriyaki chicken with rice',
   'Chicken fajitas',
@@ -20,112 +14,94 @@ const SPEC_NAMES = [
   'Fish tacos',
   'Chickpea and spinach curry',
   'Vegetable stir-fry with noodles',
-  'Fried rice with egg and vegetables',
-  'Ratatouille with rice',
-  'Mushroom risotto',
   'Shakshuka with bread',
-  'Spinach and feta quiche',
-  'Baked potatoes with herb quark',
   'Couscous salad with halloumi',
   'Greek salad with feta and bread',
   'Lentil soup',
-  'Minestrone',
   'Pumpkin soup',
   'Tomato soup with grilled cheese',
-  'Spaghetti bolognese',
   'Penne arrabbiata',
   'Spaghetti aglio e olio',
   'Mac and cheese',
   'Gnocchi with tomato sauce and mozzarella',
-  'Spinach and ricotta cannelloni',
-  'Pizza margherita',
-  "Shepherd's pie",
-  'Meatballs in tomato sauce with rice',
   'Beef stroganoff with rice',
   'Bratwurst with sauerkraut and mashed potatoes',
-  'Sweet and sour pork with rice',
-  'Chicken drumsticks with roasted vegetables',
-  'Butter chicken with naan',
-  'Chicken noodle soup',
   'Chicken quesadillas',
   'Pad thai with chicken',
-  'Fish and chips',
   'Tuna pasta bake',
-  'Seafood paella',
   'Thai green curry with prawns',
-  'Falafel wraps with hummus',
   'Bean burritos',
-  'Eggplant parmigiana',
-  'Spanish tortilla with salad',
   'Potato and leek soup',
-  'French onion soup',
   'Potato goulash',
   'Sweet potato and black bean chili',
   'Niçoise salad',
 ];
 
-const SPEC_MINUTES: Record<string, number> = {
-  'Spaghetti pomodoro': 25,
-  'Spaghetti carbonara': 20,
-  'Pesto pasta with cherry tomatoes': 20,
-  Lasagne: 105,
-  Käsespätzle: 45,
-  'Chili con carne': 75,
-  'Goulash with bread': 150,
-  'Beef burgers with oven fries': 45,
-  'Stuffed peppers': 60,
-  'Schnitzel with potato salad': 50,
-  'Chicken curry with rice': 40,
-  'Teriyaki chicken with rice': 30,
-  'Chicken fajitas': 30,
-  'Chicken Caesar salad': 25,
-  'Oven-baked salmon with potatoes and green beans': 45,
-  'Fish tacos': 30,
-  'Chickpea and spinach curry': 30,
-  'Vegetable stir-fry with noodles': 25,
-  'Fried rice with egg and vegetables': 35,
-  'Ratatouille with rice': 60,
-  'Mushroom risotto': 40,
-  'Shakshuka with bread': 30,
-  'Spinach and feta quiche': 60,
-  'Baked potatoes with herb quark': 70,
-  'Couscous salad with halloumi': 25,
-  'Greek salad with feta and bread': 15,
-  'Lentil soup': 35,
-  Minestrone: 50,
-  'Pumpkin soup': 45,
-  'Tomato soup with grilled cheese': 35,
-  'Spaghetti bolognese': 60,
-  'Penne arrabbiata': 25,
-  'Spaghetti aglio e olio': 15,
-  'Mac and cheese': 35,
-  'Gnocchi with tomato sauce and mozzarella': 30,
-  'Spinach and ricotta cannelloni': 75,
-  'Pizza margherita': 120,
-  "Shepherd's pie": 90,
-  'Meatballs in tomato sauce with rice': 50,
-  'Beef stroganoff with rice': 35,
-  'Bratwurst with sauerkraut and mashed potatoes': 40,
-  'Sweet and sour pork with rice': 40,
-  'Chicken drumsticks with roasted vegetables': 60,
-  'Butter chicken with naan': 80,
-  'Chicken noodle soup': 50,
-  'Chicken quesadillas': 25,
-  'Pad thai with chicken': 30,
-  'Fish and chips': 60,
-  'Tuna pasta bake': 45,
-  'Seafood paella': 60,
-  'Thai green curry with prawns': 30,
-  'Falafel wraps with hummus': 50,
-  'Bean burritos': 35,
-  'Eggplant parmigiana': 75,
-  'Spanish tortilla with salad': 45,
-  'Potato and leek soup': 40,
-  'French onion soup': 90,
-  'Potato goulash': 45,
-  'Sweet potato and black bean chili': 45,
-  'Niçoise salad': 30,
+const SPEC_TIMES: Record<string, { minutes: number; workMinutes: number }> = {
+  'Spaghetti pomodoro': { minutes: 25, workMinutes: 15 },
+  'Spaghetti carbonara': { minutes: 20, workMinutes: 20 },
+  'Pesto pasta with cherry tomatoes': { minutes: 20, workMinutes: 15 },
+  'Beef burgers with oven fries': { minutes: 45, workMinutes: 25 },
+  'Chicken curry with rice': { minutes: 40, workMinutes: 25 },
+  'Teriyaki chicken with rice': { minutes: 30, workMinutes: 25 },
+  'Chicken fajitas': { minutes: 30, workMinutes: 25 },
+  'Chicken Caesar salad': { minutes: 25, workMinutes: 25 },
+  'Oven-baked salmon with potatoes and green beans': { minutes: 45, workMinutes: 15 },
+  'Fish tacos': { minutes: 30, workMinutes: 30 },
+  'Chickpea and spinach curry': { minutes: 30, workMinutes: 20 },
+  'Vegetable stir-fry with noodles': { minutes: 25, workMinutes: 20 },
+  'Shakshuka with bread': { minutes: 30, workMinutes: 15 },
+  'Couscous salad with halloumi': { minutes: 25, workMinutes: 25 },
+  'Greek salad with feta and bread': { minutes: 15, workMinutes: 15 },
+  'Lentil soup': { minutes: 35, workMinutes: 15 },
+  'Pumpkin soup': { minutes: 45, workMinutes: 20 },
+  'Tomato soup with grilled cheese': { minutes: 35, workMinutes: 25 },
+  'Penne arrabbiata': { minutes: 25, workMinutes: 15 },
+  'Spaghetti aglio e olio': { minutes: 15, workMinutes: 15 },
+  'Mac and cheese': { minutes: 35, workMinutes: 15 },
+  'Gnocchi with tomato sauce and mozzarella': { minutes: 30, workMinutes: 15 },
+  'Beef stroganoff with rice': { minutes: 35, workMinutes: 30 },
+  'Bratwurst with sauerkraut and mashed potatoes': { minutes: 40, workMinutes: 20 },
+  'Chicken quesadillas': { minutes: 25, workMinutes: 20 },
+  'Pad thai with chicken': { minutes: 30, workMinutes: 20 },
+  'Tuna pasta bake': { minutes: 45, workMinutes: 20 },
+  'Thai green curry with prawns': { minutes: 30, workMinutes: 25 },
+  'Bean burritos': { minutes: 35, workMinutes: 25 },
+  'Potato and leek soup': { minutes: 40, workMinutes: 15 },
+  'Potato goulash': { minutes: 45, workMinutes: 20 },
+  'Sweet potato and black bean chili': { minutes: 45, workMinutes: 20 },
+  'Niçoise salad': { minutes: 30, workMinutes: 15 },
 };
+
+const REMOVED_NAMES = [
+  'Lasagne',
+  'Chili con carne',
+  'Goulash with bread',
+  'Stuffed peppers',
+  'Schnitzel with potato salad',
+  'Fried rice with egg and vegetables',
+  'Ratatouille with rice',
+  'Spinach and feta quiche',
+  'Baked potatoes with herb quark',
+  'Minestrone',
+  'Spaghetti bolognese',
+  'Spinach and ricotta cannelloni',
+  'Pizza margherita',
+  "Shepherd's pie",
+  'Meatballs in tomato sauce with rice',
+  'Chicken drumsticks with roasted vegetables',
+  'Butter chicken with naan',
+  'Chicken noodle soup',
+  'Fish and chips',
+  'Seafood paella',
+  'Falafel wraps with hummus',
+  'Eggplant parmigiana',
+  'Spanish tortilla with salad',
+  'French onion soup',
+  'Käsespätzle',
+  'Mushroom risotto',
+  'Sweet and sour pork with rice',
+];
 
 describe('RECIPES', () => {
   it('has a unique name, servings > 0 and at least one ingredient with amount > 0 and a known unit per recipe', () => {
@@ -151,10 +127,6 @@ describe('RECIPES', () => {
     expect(problems).toEqual([]);
   });
 
-  it('contains exactly the 60 recipes named in the spec, in the spec order', () => {
-    expect(RECIPES.map((recipe) => recipe.name)).toEqual(SPEC_NAMES);
-  });
-
   it('has whole-number servings', () => {
     expectRecipesLoaded();
     const problems = RECIPES.filter((recipe) => !Number.isInteger(recipe.servings)).map(
@@ -163,13 +135,34 @@ describe('RECIPES', () => {
     expect(problems).toEqual([]);
   });
 
-  it('has the minutes of the spec table for every recipe', () => {
+  it('contains exactly the 33 recipes of the spec table, in its order, each with its minutes and workMinutes', () => {
+    expect(Object.keys(SPEC_TIMES), 'recipes in the times table').toEqual(SPEC_NAMES);
+    expect(
+      RECIPES.map(({ name, minutes, workMinutes }) => ({ name, minutes, workMinutes })),
+    ).toEqual(SPEC_NAMES.map((name) => ({ name, ...SPEC_TIMES[name] })));
+  });
+
+  it('has workMinutes that are a whole multiple of 5 from 5 up to its minutes and at most 30, and minutes of at most 45, for every recipe', () => {
     expectRecipesLoaded();
-    expect(Object.keys(SPEC_MINUTES), 'recipes in the minutes table').toEqual(SPEC_NAMES);
-    const problems = RECIPES.filter((recipe) => recipe.minutes !== SPEC_MINUTES[recipe.name]).map(
-      (recipe) => `"${recipe.name}": minutes ${recipe.minutes}, not ${SPEC_MINUTES[recipe.name]}`,
+    const problems = RECIPES.filter(
+      (recipe) =>
+        !Number.isInteger(recipe.workMinutes) ||
+        recipe.workMinutes % 5 !== 0 ||
+        recipe.workMinutes < 5 ||
+        recipe.workMinutes > recipe.minutes ||
+        recipe.workMinutes > 30 ||
+        recipe.minutes > 45,
+    ).map(
+      (recipe) => `"${recipe.name}": workMinutes ${recipe.workMinutes}, minutes ${recipe.minutes}`,
     );
     expect(problems).toEqual([]);
+  });
+
+  it('contains none of the 27 recipes the spec removes', () => {
+    expectRecipesLoaded();
+    expect(
+      RECIPES.map((recipe) => recipe.name).filter((name) => REMOVED_NAMES.includes(name)),
+    ).toEqual([]);
   });
 
   it('has minutes that are a whole multiple of 5 from 10 to 240 for every recipe', () => {

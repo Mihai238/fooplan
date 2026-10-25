@@ -69,7 +69,6 @@ describe('RecipeList', () => {
     expect(listedNames()).toEqual([
       'Spaghetti pomodoro',
       'Spaghetti carbonara',
-      'Spaghetti bolognese',
       'Spaghetti aglio e olio',
     ]);
   });
@@ -90,7 +89,7 @@ describe('RecipeList', () => {
 
   it('lists all recipes again in RECIPES order when the user clears the search', async () => {
     await search('spaghetti');
-    expect(articles(), 'search not applied').toHaveLength(4);
+    expect(articles(), 'search not applied').toHaveLength(3);
     await search('');
     expect(listedNames()).toEqual(RECIPES.map((recipe) => recipe.name));
   });
@@ -109,9 +108,9 @@ describe('RecipeList', () => {
     expect(lines).not.toContain('15 ml vegetable oil');
   });
 
-  it('keeps 900 ml vegetable oil of "Fish and chips" and 50 ml milk of "Baked potatoes with herb quark" in ml', () => {
-    expect(ingredientLinesOf('Fish and chips')).toContain('900 ml vegetable oil');
-    expect(ingredientLinesOf('Baked potatoes with herb quark')).toContain('50 ml milk');
+  it('keeps 700 ml milk of "Mac and cheese" and 100 ml cream of "Tomato soup with grilled cheese" in ml', () => {
+    expect(ingredientLinesOf('Mac and cheese')).toContain('700 ml milk');
+    expect(ingredientLinesOf('Tomato soup with grilled cheese')).toContain('100 ml cream');
   });
 
   it("links each recipe's name to its recipe page, which a click opens", async () => {
@@ -127,15 +126,17 @@ describe('RecipeList', () => {
       expect(href).toMatch(/^\/recipes\/[a-z0-9]+(-[a-z0-9]+)*$/);
     }
     expect(new Set(hrefs).size, 'recipes sharing a link').toBe(RECIPES.length);
-    expect(nameLinkOf("Shepherd's pie").getAttribute('href')).toBe('/recipes/shepherds-pie');
-    expect(nameLinkOf('Käsespätzle').getAttribute('href')).toBe('/recipes/kasespatzle');
+    expect(nameLinkOf('Niçoise salad').getAttribute('href')).toBe('/recipes/nicoise-salad');
+    expect(nameLinkOf('Oven-baked salmon with potatoes and green beans').getAttribute('href')).toBe(
+      '/recipes/oven-baked-salmon-with-potatoes-and-green-beans',
+    );
     expect(nameLinkOf('Spaghetti carbonara').getAttribute('href')).toBe(
       '/recipes/spaghetti-carbonara',
     );
 
-    nameLinkOf("Shepherd's pie").click();
+    nameLinkOf('Niçoise salad').click();
     await fixture.whenStable();
-    expect(TestBed.inject(Router).url).toBe('/recipes/shepherds-pie');
+    expect(TestBed.inject(Router).url).toBe('/recipes/nicoise-salad');
   });
 
   it('links the name of a recipe the search lists to its recipe page', async () => {
@@ -159,7 +160,7 @@ describe('RecipeList', () => {
       field.focus();
       expect(document.activeElement, 'field not focused before typing').toBe(field);
       await search('spag');
-      expect(statusText(), 'count not shown').toBe('4 recipes match "spag".');
+      expect(statusText(), 'count not shown').toBe('3 recipes match "spag".');
       expect(document.activeElement, 'focus after typing').toBe(field);
       statusElement().focus();
       expect(document.activeElement, 'status element took the focus').toBe(field);
@@ -174,10 +175,10 @@ describe('RecipeList', () => {
       expectStatusShownAndEmpty('with a search of only spaces');
     });
 
-    it('says "4 recipes match "spaghetti"." and lists 4 recipes when the user types "spaghetti"', async () => {
+    it('says "3 recipes match "spaghetti"." and lists 3 recipes when the user types "spaghetti"', async () => {
       await search('spaghetti');
-      expect(statusText()).toBe('4 recipes match "spaghetti".');
-      expect(articles()).toHaveLength(4);
+      expect(statusText()).toBe('3 recipes match "spaghetti".');
+      expect(articles()).toHaveLength(3);
     });
 
     it('places the status element after the search field and before the first card', async () => {
@@ -195,9 +196,9 @@ describe('RecipeList', () => {
     });
 
     it('uses the plural for a search matching exactly 2 recipes', async () => {
-      await search('goulash');
-      expect(statusText()).toBe('2 recipes match "goulash".');
-      expect(listedNames()).toEqual(['Goulash with bread', 'Potato goulash']);
+      await search('feta');
+      expect(statusText()).toBe('2 recipes match "feta".');
+      expect(listedNames()).toEqual(['Shakshuka with bread', 'Greek salad with feta and bread']);
     });
 
     it('says "1 recipe matches "carbonara"." and lists 1 recipe when the user types "carbonara"', async () => {
@@ -206,16 +207,34 @@ describe('RecipeList', () => {
       expect(listedNames()).toEqual(['Spaghetti carbonara']);
     });
 
-    it('says "60 recipes match "s"." and lists all recipes when the user types "s"', async () => {
+    it('says "33 recipes match "s"." and lists all recipes when the user types "s"', async () => {
       await search('s');
       expect(statusText()).toBe(`${RECIPES.length} recipes match "s".`);
-      expect(RECIPES.length, 'recipes loaded').toBe(60);
+      expect(RECIPES.length, 'recipes loaded').toBe(33);
       expectAllRecipesRendered();
+    });
+
+    it('lists the 33 quick recipes on open, and says "33 recipes match "s".", "3 recipes match "spaghetti"." and "No recipe matches "kase"."', async () => {
+      expect(articles()).toHaveLength(33);
+      await search('s');
+      expect(statusText()).toBe('33 recipes match "s".');
+      expect(articles(), 'cards for "s"').toHaveLength(33);
+      await search('spaghetti');
+      expect(statusText()).toBe('3 recipes match "spaghetti".');
+      await search('kase');
+      expect(statusText()).toBe('No recipe matches "kase".');
+      expect(articles(), 'cards for "kase"').toEqual([]);
+    });
+
+    it('says "1 recipe matches "goulash"." and lists only "Potato goulash" when the user types "goulash"', async () => {
+      await search('goulash');
+      expect(statusText()).toBe('1 recipe matches "goulash".');
+      expect(listedNames()).toEqual(['Potato goulash']);
     });
 
     it('quotes the search without its surrounding spaces and with its case in the count', async () => {
       await search('  Spaghetti  ');
-      expect(statusText()).toBe('4 recipes match "Spaghetti".');
+      expect(statusText()).toBe('3 recipes match "Spaghetti".');
     });
 
     it('says "No recipe matches "xyzzy"." in the status element, once on the page, without listing any recipe', async () => {
@@ -239,25 +258,25 @@ describe('RecipeList', () => {
       expect(statusText()).toBe('No recipe matches "feta  quiche".');
     });
 
-    it('updates the count to "6 recipes match "spa"." and lists 6 recipes when the user deletes the "g" of "spag"', async () => {
-      await search('spag');
-      expect(statusText(), 'count before deleting').toBe('4 recipes match "spag".');
+    it('updates the count to "7 recipes match "sp"." and lists 7 recipes when the user deletes the "a" of "spa"', async () => {
       await search('spa');
-      expect(statusText()).toBe('6 recipes match "spa".');
-      expect(articles()).toHaveLength(6);
+      expect(statusText(), 'count before deleting').toBe('3 recipes match "spa".');
+      await search('sp');
+      expect(statusText()).toBe('7 recipes match "sp".');
+      expect(articles()).toHaveLength(7);
     });
 
     it('replaces the no-match text with the count when a deletion makes recipes match again', async () => {
       await search('spaghettix');
       expect(statusText(), 'no-match text before deleting').toBe('No recipe matches "spaghettix".');
       await search('spaghetti');
-      expect(statusText()).toBe('4 recipes match "spaghetti".');
-      expect(articles()).toHaveLength(4);
+      expect(statusText()).toBe('3 recipes match "spaghetti".');
+      expect(articles()).toHaveLength(3);
     });
 
     it('empties the status element and lists all recipes when the user empties the field or types only spaces', async () => {
       await search('spaghetti');
-      expect(statusText(), 'count not shown').toBe('4 recipes match "spaghetti".');
+      expect(statusText(), 'count not shown').toBe('3 recipes match "spaghetti".');
       await search('');
       expectAllRecipesRendered();
       expect(statusText(), 'status after emptying the field').toBe('');
@@ -270,7 +289,7 @@ describe('RecipeList', () => {
       const status = statusElement();
       await search('spaghetti');
       expect(statusElement(), 'element after "spaghetti"').toBe(status);
-      expect(statusText()).toBe('4 recipes match "spaghetti".');
+      expect(statusText()).toBe('3 recipes match "spaghetti".');
       await search('xyzzy');
       expect(statusElement(), 'element after "xyzzy"').toBe(status);
       expect(statusText()).toBe('No recipe matches "xyzzy".');

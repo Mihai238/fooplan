@@ -3,6 +3,7 @@
     "name": "Spaghetti pomodoro",
     "servings": 2,
     "minutes": 25,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "spaghetti", "amount": 200, "unit": "g" },
       { "name": "canned tomatoes", "amount": 400, "unit": "g" },
@@ -25,6 +26,7 @@
     "name": "Spaghetti carbonara",
     "servings": 2,
     "minutes": 20,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "spaghetti", "amount": 200, "unit": "g" },
       { "name": "guanciale", "amount": 100, "unit": "g" },
@@ -46,6 +48,7 @@
     "name": "Pesto pasta with cherry tomatoes",
     "servings": 2,
     "minutes": 20,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "penne", "amount": 200, "unit": "g" },
       { "name": "pesto", "amount": 4, "unit": "tbsp" },
@@ -65,123 +68,10 @@
     ]
   },
   {
-    "name": "Lasagne",
-    "servings": 4,
-    "minutes": 105,
-    "ingredients": [
-      { "name": "lasagne sheet", "amount": 250, "unit": "g" },
-      { "name": "ground beef", "amount": 500, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "carrot", "amount": 1, "unit": "pc" },
-      { "name": "celery stalk", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "red wine", "amount": 125, "unit": "ml" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
-      { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
-      { "name": "butter", "amount": 60, "unit": "g" },
-      { "name": "flour", "amount": 60, "unit": "g" },
-      { "name": "milk", "amount": 750, "unit": "ml" },
-      { "name": "nutmeg", "amount": 0.25, "unit": "tsp" },
-      { "name": "parmesan", "amount": 80, "unit": "g" }
-    ],
-    "steps": [
-      "Finely chop the onion, carrot, celery stalk and garlic cloves.",
-      "Heat the olive oil in a large pan over medium heat and fry the chopped vegetables for 8 minutes until soft.",
-      "Turn up the heat, add the ground beef and fry for 5 minutes, breaking it up, until browned.",
-      "Stir in the tomato paste, pour in the red wine and let it bubble for 2 minutes.",
-      "Add the canned tomatoes, season with salt and pepper and simmer gently for 45 minutes, stirring now and then.",
-      "For the white sauce, melt the butter in a saucepan, stir in the flour and cook for 1 minute.",
-      "Whisk in the milk a little at a time and simmer for 5 minutes, whisking, until thick, then season with the nutmeg and salt.",
-      "Heat the oven to 180 °C.",
-      "In a baking dish, layer meat sauce, lasagne sheets and white sauce, repeating until everything is used and finishing with white sauce.",
-      "Scatter the grated parmesan on top and bake for 40 minutes until golden and bubbling, then rest for 10 minutes before cutting."
-    ]
-  },
-  {
-    "name": "Käsespätzle",
-    "servings": 4,
-    "minutes": 45,
-    "ingredients": [
-      { "name": "flour", "amount": 400, "unit": "g" },
-      { "name": "egg", "amount": 4, "unit": "pc" },
-      { "name": "milk", "amount": 100, "unit": "ml" },
-      { "name": "nutmeg", "amount": 0.25, "unit": "tsp" },
-      { "name": "emmental", "amount": 300, "unit": "g" },
-      { "name": "onion", "amount": 3, "unit": "pc" },
-      { "name": "butter", "amount": 40, "unit": "g" },
-      { "name": "chive", "amount": 10, "unit": "g" }
-    ],
-    "steps": [
-      "Mix the flour, eggs, milk, nutmeg and a pinch of salt and beat with a wooden spoon for a few minutes until the dough is smooth and bubbly.",
-      "Let the dough rest for 15 minutes while you bring a large pot of salted water to the boil.",
-      "Slice the onions into thin rings and fry them in the butter over medium heat for 15 minutes until golden brown.",
-      "Grate the emmental and heat the oven to 180 °C.",
-      "Press the dough through a spätzle maker or scrape it off a board into the boiling water in batches, and lift each batch out with a slotted spoon once it floats.",
-      "Layer the hot spätzle with the emmental in a baking dish, finishing with emmental.",
-      "Bake for 10 minutes until the emmental has melted.",
-      "Top with the fried onions and the chopped chives and serve."
-    ]
-  },
-  {
-    "name": "Chili con carne",
-    "servings": 4,
-    "minutes": 75,
-    "ingredients": [
-      { "name": "ground beef", "amount": 500, "unit": "g" },
-      { "name": "onion", "amount": 2, "unit": "pc" },
-      { "name": "garlic clove", "amount": 3, "unit": "pc" },
-      { "name": "bell pepper", "amount": 1, "unit": "pc" },
-      { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
-      { "name": "canned kidney beans", "amount": 400, "unit": "g" },
-      { "name": "beef stock", "amount": 250, "unit": "ml" },
-      { "name": "chili powder", "amount": 2, "unit": "tsp" },
-      { "name": "cumin", "amount": 2, "unit": "tsp" },
-      { "name": "oregano", "amount": 1, "unit": "tsp" },
-      { "name": "olive oil", "amount": 1, "unit": "tbsp" }
-    ],
-    "steps": [
-      "Finely chop the onions and garlic cloves and dice the bell pepper.",
-      "Heat the olive oil in a large pot over medium heat and fry the onions for 5 minutes until soft.",
-      "Add the garlic and bell pepper and fry for 3 minutes more.",
-      "Turn up the heat, add the ground beef and fry for 5 minutes, breaking it up, until browned.",
-      "Stir in the chili powder, cumin, oregano and tomato paste and cook for 1 minute.",
-      "Add the canned tomatoes and beef stock, season with salt and pepper and simmer gently for 30 minutes, stirring now and then.",
-      "Drain and rinse the canned kidney beans, stir them in and simmer for 10 minutes more."
-    ]
-  },
-  {
-    "name": "Goulash with bread",
-    "servings": 4,
-    "minutes": 150,
-    "ingredients": [
-      { "name": "beef", "amount": 800, "unit": "g" },
-      { "name": "onion", "amount": 4, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
-      { "name": "paprika", "amount": 6, "unit": "tsp" },
-      { "name": "caraway", "amount": 1, "unit": "tsp" },
-      { "name": "marjoram", "amount": 1, "unit": "tsp" },
-      { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
-      { "name": "beef stock", "amount": 500, "unit": "ml" },
-      { "name": "bread", "amount": 400, "unit": "g" }
-    ],
-    "steps": [
-      "Cut the beef into 3 cm cubes and pat them dry.",
-      "Chop the onions and finely chop the garlic cloves.",
-      "Heat the vegetable oil in a large pot over high heat and brown the beef in batches, then set it aside.",
-      "Lower the heat to medium and fry the onions for 10 minutes until golden, then add the garlic cloves and tomato paste and fry for 1 minute more.",
-      "Take the pot off the heat and stir in the paprika, caraway and marjoram so the paprika doesn't burn.",
-      "Put the pot back on the heat, return the beef, pour in the beef stock, season with salt and pepper and bring to the boil.",
-      "Cover and simmer gently for 1 hour 30 minutes, stirring now and then, until the beef is tender.",
-      "Serve the goulash with slices of bread."
-    ]
-  },
-  {
     "name": "Beef burgers with oven fries",
     "servings": 4,
     "minutes": 45,
+    "workMinutes": 25,
     "ingredients": [
       { "name": "ground beef", "amount": 600, "unit": "g" },
       { "name": "burger bun", "amount": 4, "unit": "pc" },
@@ -206,69 +96,10 @@
     ]
   },
   {
-    "name": "Stuffed peppers",
-    "servings": 4,
-    "minutes": 60,
-    "ingredients": [
-      { "name": "bell pepper", "amount": 4, "unit": "pc" },
-      { "name": "ground beef", "amount": 400, "unit": "g" },
-      { "name": "rice", "amount": 100, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
-      { "name": "paprika", "amount": 1, "unit": "tsp" },
-      { "name": "mozzarella", "amount": 125, "unit": "g" },
-      { "name": "olive oil", "amount": 1, "unit": "tbsp" }
-    ],
-    "steps": [
-      "Cook the rice in salted water for 10 minutes so it is half done, then drain it.",
-      "Heat the oven to 190 °C.",
-      "Cut the tops off the bell peppers and scoop out the seeds.",
-      "Finely chop the onion and garlic cloves and fry them in the olive oil over medium heat for 5 minutes until soft.",
-      "Add the ground beef and fry for 5 minutes until browned, then stir in the paprika and half of the canned tomatoes and season with salt and pepper.",
-      "Mix the rice into the filling and stuff the bell peppers with it.",
-      "Pour the rest of the canned tomatoes into a baking dish, season them, stand the peppers in it and put their tops back on.",
-      "Cover with foil and bake for 35 minutes.",
-      "Take off the foil and the tops, lay slices of mozzarella on the peppers and bake for 10 minutes more until melted and golden."
-    ]
-  },
-  {
-    "name": "Schnitzel with potato salad",
-    "servings": 4,
-    "minutes": 50,
-    "ingredients": [
-      { "name": "pork cutlet", "amount": 600, "unit": "g" },
-      { "name": "flour", "amount": 50, "unit": "g" },
-      { "name": "egg", "amount": 2, "unit": "pc" },
-      { "name": "breadcrumbs", "amount": 100, "unit": "g" },
-      { "name": "vegetable oil", "amount": 200, "unit": "ml" },
-      { "name": "lemon", "amount": 1, "unit": "pc" },
-      { "name": "potato", "amount": 1000, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "beef stock", "amount": 250, "unit": "ml" },
-      { "name": "white wine vinegar", "amount": 4, "unit": "tbsp" },
-      { "name": "mustard", "amount": 1, "unit": "tbsp" },
-      { "name": "chive", "amount": 10, "unit": "g" }
-    ],
-    "steps": [
-      "Boil the unpeeled potatoes in salted water for 20 to 25 minutes until tender.",
-      "Meanwhile, finely chop the onion.",
-      "Simmer the onion in the beef stock in a small pan for 2 minutes.",
-      "Take the pan off the heat and stir in the white wine vinegar, mustard, 2 tbsp of the vegetable oil, salt and pepper.",
-      "Drain the potatoes, then peel and thinly slice them while still warm.",
-      "Pour the warm dressing over the potatoes, mix gently and leave them for 30 minutes to soak it up.",
-      "Pound the pork cutlets between cling film to about 5 mm thick and season them with salt and pepper.",
-      "Set out three plates: one with the flour, one with the eggs beaten with a pinch of salt, and one with the breadcrumbs.",
-      "Coat each cutlet in flour, then egg, then breadcrumbs, without pressing the crumbs on.",
-      "Heat the rest of the vegetable oil in a large pan over medium-high heat and fry the schnitzels for 2 to 3 minutes per side until golden, shaking the pan so the coating puffs up.",
-      "Drain the schnitzels on kitchen paper.",
-      "Stir the chopped chives into the potato salad and serve it with the schnitzels and lemon wedges."
-    ]
-  },
-  {
     "name": "Chicken curry with rice",
     "servings": 4,
     "minutes": 40,
+    "workMinutes": 25,
     "ingredients": [
       { "name": "chicken breast", "amount": 600, "unit": "g" },
       { "name": "onion", "amount": 2, "unit": "pc" },
@@ -296,6 +127,7 @@
     "name": "Teriyaki chicken with rice",
     "servings": 2,
     "minutes": 30,
+    "workMinutes": 25,
     "ingredients": [
       { "name": "chicken thigh", "amount": 400, "unit": "g" },
       { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
@@ -322,6 +154,7 @@
     "name": "Chicken fajitas",
     "servings": 4,
     "minutes": 30,
+    "workMinutes": 25,
     "ingredients": [
       { "name": "chicken breast", "amount": 500, "unit": "g" },
       { "name": "bell pepper", "amount": 3, "unit": "pc" },
@@ -351,6 +184,7 @@
     "name": "Chicken Caesar salad",
     "servings": 2,
     "minutes": 25,
+    "workMinutes": 25,
     "ingredients": [
       { "name": "chicken breast", "amount": 300, "unit": "g" },
       { "name": "romaine lettuce", "amount": 1, "unit": "pc" },
@@ -378,6 +212,7 @@
     "name": "Oven-baked salmon with potatoes and green beans",
     "servings": 4,
     "minutes": 45,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "salmon", "amount": 600, "unit": "g" },
       { "name": "potato", "amount": 1000, "unit": "g" },
@@ -401,6 +236,7 @@
     "name": "Fish tacos",
     "servings": 4,
     "minutes": 30,
+    "workMinutes": 30,
     "ingredients": [
       { "name": "cod", "amount": 500, "unit": "g" },
       { "name": "cumin", "amount": 1, "unit": "tsp" },
@@ -427,6 +263,7 @@
     "name": "Chickpea and spinach curry",
     "servings": 4,
     "minutes": 30,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "canned chickpeas", "amount": 800, "unit": "g" },
       { "name": "spinach", "amount": 200, "unit": "g" },
@@ -454,6 +291,7 @@
     "name": "Vegetable stir-fry with noodles",
     "servings": 2,
     "minutes": 25,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "egg noodle", "amount": 200, "unit": "g" },
       { "name": "bell pepper", "amount": 1, "unit": "pc" },
@@ -478,94 +316,10 @@
     ]
   },
   {
-    "name": "Fried rice with egg and vegetables",
-    "servings": 2,
-    "minutes": 35,
-    "ingredients": [
-      { "name": "rice", "amount": 150, "unit": "g" },
-      { "name": "egg", "amount": 2, "unit": "pc" },
-      { "name": "carrot", "amount": 1, "unit": "pc" },
-      { "name": "pea", "amount": 100, "unit": "g" },
-      { "name": "spring onion", "amount": 2, "unit": "pc" },
-      { "name": "garlic clove", "amount": 1, "unit": "pc" },
-      { "name": "soy sauce", "amount": 2, "unit": "tbsp" },
-      { "name": "sesame oil", "amount": 1, "unit": "tbsp" },
-      { "name": "vegetable oil", "amount": 15, "unit": "ml" }
-    ],
-    "steps": [
-      "Rinse the rice and bring it to the boil in 1.5 times its volume of salted water.",
-      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
-      "Spread the rice on a plate, let it cool, then chill it in the fridge for at least 1 hour, or overnight, so it fries without clumping.",
-      "Dice the carrot, slice the spring onions and finely chop the garlic clove.",
-      "Beat the eggs with a pinch of salt.",
-      "Heat the vegetable oil in a wok over high heat, pour in the eggs and scramble them for 1 minute until just set, then push them to the side.",
-      "Add the carrot and garlic and stir-fry for 2 minutes.",
-      "Add the cold rice and peas and stir-fry for 4 to 5 minutes, breaking up any clumps, until hot.",
-      "Stir in the soy sauce and spring onions and toss everything together with the eggs.",
-      "Take the wok off the heat, drizzle with the sesame oil and serve."
-    ]
-  },
-  {
-    "name": "Ratatouille with rice",
-    "servings": 4,
-    "minutes": 60,
-    "ingredients": [
-      { "name": "eggplant", "amount": 1, "unit": "pc" },
-      { "name": "zucchini", "amount": 2, "unit": "pc" },
-      { "name": "bell pepper", "amount": 2, "unit": "pc" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 3, "unit": "pc" },
-      { "name": "tomato", "amount": 4, "unit": "pc" },
-      { "name": "olive oil", "amount": 6, "unit": "tbsp" },
-      { "name": "thyme", "amount": 1, "unit": "tsp" },
-      { "name": "bay leaf", "amount": 1, "unit": "pc" },
-      { "name": "basil", "amount": 10, "unit": "g" },
-      { "name": "rice", "amount": 300, "unit": "g" }
-    ],
-    "steps": [
-      "Cut the eggplant, zucchini and bell peppers into 2 cm pieces.",
-      "Chop the onion, garlic cloves and tomatoes.",
-      "Heat half of the olive oil in a large pan over medium-high heat and fry the eggplant for 5 minutes until golden, then set it aside.",
-      "Add the rest of the olive oil and fry the zucchini and bell peppers for 5 minutes, then set them aside too.",
-      "Fry the onion in the same pan over medium heat for 5 minutes until soft, then add the garlic cloves and fry for 1 minute more.",
-      "Add the tomatoes, thyme and bay leaf and cook for 5 minutes until they start to break down.",
-      "Return all the vegetables, season with salt and pepper, cover and simmer gently for 30 minutes, stirring now and then.",
-      "Meanwhile, rinse the rice and bring it to the boil in 1.5 times its volume of salted water.",
-      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
-      "Remove the bay leaf, stir in the torn basil and serve the ratatouille with the rice."
-    ]
-  },
-  {
-    "name": "Mushroom risotto",
-    "servings": 4,
-    "minutes": 40,
-    "ingredients": [
-      { "name": "arborio rice", "amount": 320, "unit": "g" },
-      { "name": "mushroom", "amount": 400, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "white wine", "amount": 100, "unit": "ml" },
-      { "name": "vegetable stock", "amount": 1000, "unit": "ml" },
-      { "name": "butter", "amount": 30, "unit": "g" },
-      { "name": "parmesan", "amount": 60, "unit": "g" }
-    ],
-    "steps": [
-      "Heat the vegetable stock in a saucepan and keep it at a gentle simmer.",
-      "Finely chop the onion and garlic cloves, and slice the mushrooms.",
-      "Heat the olive oil in a wide pan and fry the mushrooms over high heat for 5 minutes until golden, then take them out and set them aside.",
-      "Lower the heat to medium and fry the onion for 5 minutes until soft, then add the garlic cloves and fry for 1 minute more.",
-      "Add the arborio rice and stir for 2 minutes until the grains turn glossy.",
-      "Pour in the white wine and stir until it has been absorbed.",
-      "Add the hot stock one ladle at a time, stirring often and waiting until each ladle is absorbed, for about 18 minutes until the arborio rice is creamy and just tender.",
-      "Stir the mushrooms back in, take the pan off the heat and stir in the butter and the grated parmesan.",
-      "Season with salt and pepper, cover and let the risotto rest for 2 minutes before serving."
-    ]
-  },
-  {
     "name": "Shakshuka with bread",
     "servings": 2,
     "minutes": 30,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "egg", "amount": 4, "unit": "pc" },
       { "name": "canned tomatoes", "amount": 400, "unit": "g" },
@@ -590,57 +344,10 @@
     ]
   },
   {
-    "name": "Spinach and feta quiche",
-    "servings": 4,
-    "minutes": 60,
-    "ingredients": [
-      { "name": "shortcrust pastry", "amount": 250, "unit": "g" },
-      { "name": "spinach", "amount": 300, "unit": "g" },
-      { "name": "feta", "amount": 200, "unit": "g" },
-      { "name": "egg", "amount": 3, "unit": "pc" },
-      { "name": "cream", "amount": 200, "unit": "ml" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 1, "unit": "pc" },
-      { "name": "nutmeg", "amount": 0.25, "unit": "tsp" }
-    ],
-    "steps": [
-      "Heat the oven to 190 °C and line a 24 cm tart tin with the shortcrust pastry, then prick the base all over with a fork.",
-      "Cover the pastry with baking paper weighed down with baking weights and bake for 15 minutes, then remove the paper and weights.",
-      "Finely chop the onion and garlic clove.",
-      "Put the spinach, onion and garlic in a large pan with a splash of water, cover and cook over medium heat for 5 minutes until the spinach has wilted and the onion is soft.",
-      "Let the spinach mixture cool, squeeze out as much liquid as you can and chop it roughly.",
-      "Whisk the eggs with the cream and nutmeg, and season with salt and pepper.",
-      "Spread the spinach mixture over the pastry case, crumble the feta on top and pour over the egg mixture.",
-      "Lower the oven to 180 °C and bake the quiche for 30 to 35 minutes until the filling is set and golden.",
-      "Let the quiche rest for 10 minutes before slicing."
-    ]
-  },
-  {
-    "name": "Baked potatoes with herb quark",
-    "servings": 4,
-    "minutes": 70,
-    "ingredients": [
-      { "name": "potato", "amount": 1200, "unit": "g" },
-      { "name": "olive oil", "amount": 1, "unit": "tbsp" },
-      { "name": "quark", "amount": 500, "unit": "g" },
-      { "name": "milk", "amount": 50, "unit": "ml" },
-      { "name": "chive", "amount": 20, "unit": "g" },
-      { "name": "parsley", "amount": 10, "unit": "g" },
-      { "name": "garlic clove", "amount": 1, "unit": "pc" }
-    ],
-    "steps": [
-      "Heat the oven to 200 °C.",
-      "Scrub the potatoes, prick them all over with a fork and rub them with the olive oil and some salt.",
-      "Bake the potatoes directly on the oven rack for 60 minutes until the skins are crisp and a knife slides in easily.",
-      "Meanwhile finely chop the chives and parsley and crush the garlic clove.",
-      "Stir the quark with the milk until smooth, mix in the chives, parsley and garlic, and season with salt and pepper.",
-      "Cut a cross into the top of each potato, squeeze it open and fill it with the herb quark."
-    ]
-  },
-  {
     "name": "Couscous salad with halloumi",
     "servings": 4,
     "minutes": 25,
+    "workMinutes": 25,
     "ingredients": [
       { "name": "couscous", "amount": 250, "unit": "g" },
       { "name": "vegetable stock", "amount": 250, "unit": "ml" },
@@ -668,6 +375,7 @@
     "name": "Greek salad with feta and bread",
     "servings": 2,
     "minutes": 15,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "tomato", "amount": 3, "unit": "pc" },
       { "name": "cucumber", "amount": 1, "unit": "pc" },
@@ -692,6 +400,7 @@
     "name": "Lentil soup",
     "servings": 4,
     "minutes": 35,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "red lentil", "amount": 250, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -715,38 +424,10 @@
     ]
   },
   {
-    "name": "Minestrone",
-    "servings": 4,
-    "minutes": 50,
-    "ingredients": [
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "carrot", "amount": 2, "unit": "pc" },
-      { "name": "celery stalk", "amount": 2, "unit": "pc" },
-      { "name": "zucchini", "amount": 1, "unit": "pc" },
-      { "name": "potato", "amount": 200, "unit": "g" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
-      { "name": "canned white beans", "amount": 400, "unit": "g" },
-      { "name": "vegetable stock", "amount": 1200, "unit": "ml" },
-      { "name": "ditalini", "amount": 100, "unit": "g" },
-      { "name": "basil", "amount": 10, "unit": "g" },
-      { "name": "parmesan", "amount": 40, "unit": "g" }
-    ],
-    "steps": [
-      "Dice the onion, carrots, celery stalks, zucchini and potato, and chop the garlic cloves.",
-      "Heat the olive oil in a large pot and fry the onion, carrots and celery over medium heat for 8 minutes until soft.",
-      "Add the garlic, potato and zucchini and fry for 2 minutes.",
-      "Add the canned tomatoes and vegetable stock, bring to the boil and simmer for 15 minutes.",
-      "Drain and rinse the canned white beans, add them with the ditalini and simmer for 10 minutes until the pasta is tender.",
-      "Tear in the basil and season with salt and pepper.",
-      "Serve the soup with the parmesan grated over the top."
-    ]
-  },
-  {
     "name": "Pumpkin soup",
     "servings": 4,
     "minutes": 45,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "pumpkin", "amount": 1200, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -772,6 +453,7 @@
     "name": "Tomato soup with grilled cheese",
     "servings": 4,
     "minutes": 35,
+    "workMinutes": 25,
     "ingredients": [
       { "name": "canned tomatoes", "amount": 800, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -797,38 +479,10 @@
     ]
   },
   {
-    "name": "Spaghetti bolognese",
-    "servings": 4,
-    "minutes": 60,
-    "ingredients": [
-      { "name": "spaghetti", "amount": 400, "unit": "g" },
-      { "name": "ground beef", "amount": 500, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "carrot", "amount": 1, "unit": "pc" },
-      { "name": "celery stalk", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "red wine", "amount": 125, "unit": "ml" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
-      { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
-      { "name": "milk", "amount": 100, "unit": "ml" },
-      { "name": "parmesan", "amount": 40, "unit": "g" }
-    ],
-    "steps": [
-      "Finely chop the onion, carrot, celery stalk and garlic cloves.",
-      "Heat the olive oil in a large pan and fry the chopped vegetables over medium heat for 8 minutes until soft.",
-      "Turn up the heat, add the ground beef and fry for 8 minutes, breaking it up, until browned.",
-      "Pour in the milk and simmer for about 10 minutes, until it has been absorbed.",
-      "Pour in the red wine and let it bubble for 2 minutes.",
-      "Stir in the tomato paste and canned tomatoes, season with salt and pepper and simmer gently with the lid half on for 1 hour, stirring now and then.",
-      "About 15 minutes before the sauce is done, cook the spaghetti in plenty of salted water until al dente, about 9 minutes.",
-      "Drain the spaghetti, toss it with the sauce and serve with the parmesan grated over the top."
-    ]
-  },
-  {
     "name": "Penne arrabbiata",
     "servings": 2,
     "minutes": 25,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "penne", "amount": 200, "unit": "g" },
       { "name": "canned tomatoes", "amount": 400, "unit": "g" },
@@ -850,6 +504,7 @@
     "name": "Spaghetti aglio e olio",
     "servings": 2,
     "minutes": 15,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "spaghetti", "amount": 200, "unit": "g" },
       { "name": "garlic clove", "amount": 4, "unit": "pc" },
@@ -871,6 +526,7 @@
     "name": "Mac and cheese",
     "servings": 4,
     "minutes": 35,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "macaroni", "amount": 400, "unit": "g" },
       { "name": "butter", "amount": 50, "unit": "g" },
@@ -895,6 +551,7 @@
     "name": "Gnocchi with tomato sauce and mozzarella",
     "servings": 4,
     "minutes": 30,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "gnocchi", "amount": 1000, "unit": "g" },
       { "name": "canned tomatoes", "amount": 800, "unit": "g" },
@@ -917,129 +574,10 @@
     ]
   },
   {
-    "name": "Spinach and ricotta cannelloni",
-    "servings": 4,
-    "minutes": 75,
-    "ingredients": [
-      { "name": "cannelloni tube", "amount": 16, "unit": "pc" },
-      { "name": "spinach", "amount": 500, "unit": "g" },
-      { "name": "ricotta", "amount": 500, "unit": "g" },
-      { "name": "egg", "amount": 1, "unit": "pc" },
-      { "name": "nutmeg", "amount": 0.25, "unit": "tsp" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "basil", "amount": 10, "unit": "g" },
-      { "name": "butter", "amount": 40, "unit": "g" },
-      { "name": "flour", "amount": 40, "unit": "g" },
-      { "name": "milk", "amount": 500, "unit": "ml" },
-      { "name": "parmesan", "amount": 60, "unit": "g" }
-    ],
-    "steps": [
-      "Heat the oven to 180 °C.",
-      "Wilt the spinach in a large covered pan over medium heat for 3 minutes, let it cool, squeeze it dry and chop it.",
-      "Mix the spinach with the ricotta, egg and nutmeg, and season with salt and pepper.",
-      "Fill the cannelloni tubes with the spinach mixture using a small spoon or a piping bag.",
-      "Chop the garlic cloves and fry them in the olive oil in a saucepan over medium heat for 1 minute.",
-      "Add the canned tomatoes and torn basil, season with salt and simmer for 10 minutes.",
-      "For the white sauce, melt the butter in a saucepan, stir in the flour and cook for 1 minute.",
-      "Gradually whisk in the milk and simmer for 5 minutes, stirring, until thick, then season with salt.",
-      "Spread the red sauce in a baking dish and lay the filled cannelloni tubes on top in a single layer.",
-      "Pour the white sauce over the cannelloni and sprinkle with the grated parmesan.",
-      "Bake for 35 minutes until the pasta is tender and the top is golden."
-    ]
-  },
-  {
-    "name": "Pizza margherita",
-    "servings": 4,
-    "minutes": 120,
-    "ingredients": [
-      { "name": "flour", "amount": 500, "unit": "g" },
-      { "name": "dry yeast", "amount": 7, "unit": "g" },
-      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
-      { "name": "mozzarella", "amount": 500, "unit": "g" },
-      { "name": "basil", "amount": 10, "unit": "g" }
-    ],
-    "steps": [
-      "Mix most of the flour, keeping back a handful for shaping, with the dry yeast and 1 tsp of salt in a bowl, then add 300 ml of lukewarm water and 2 tbsp of the olive oil.",
-      "Knead the dough for 10 minutes until smooth and elastic.",
-      "Cover the dough and let it rise in a warm place for 1 hour until doubled in size.",
-      "Heat the oven to 250 °C with a baking tray inside.",
-      "Crush the canned tomatoes with the remaining olive oil and a pinch of salt to make a rough sauce.",
-      "Divide the dough into 4 pieces and stretch each one into a thin round on a surface dusted with the rest of the flour.",
-      "Spread the sauce over the bases, leaving a border, and top with torn mozzarella.",
-      "Bake each pizza on the hot tray for 8 to 10 minutes until the crust is golden and the mozzarella is bubbling.",
-      "Scatter the basil over the pizzas and serve."
-    ]
-  },
-  {
-    "name": "Shepherd's pie",
-    "servings": 4,
-    "minutes": 90,
-    "ingredients": [
-      { "name": "ground lamb", "amount": 600, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "carrot", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 1, "unit": "tbsp" },
-      { "name": "flour", "amount": 10, "unit": "g" },
-      { "name": "tomato paste", "amount": 1, "unit": "tbsp" },
-      { "name": "worcestershire sauce", "amount": 3, "unit": "tsp" },
-      { "name": "beef stock", "amount": 300, "unit": "ml" },
-      { "name": "thyme", "amount": 1, "unit": "tsp" },
-      { "name": "pea", "amount": 150, "unit": "g" },
-      { "name": "potato", "amount": 1000, "unit": "g" },
-      { "name": "butter", "amount": 50, "unit": "g" },
-      { "name": "milk", "amount": 100, "unit": "ml" }
-    ],
-    "steps": [
-      "Peel the potatoes, cut them into chunks and boil them in salted water for 20 minutes until soft.",
-      "Meanwhile finely chop the onion and dice the carrots.",
-      "Heat the olive oil in a large pan and brown the ground lamb over high heat for 5 minutes, breaking it up.",
-      "Add the onion and carrots and fry over medium heat for 5 minutes until soft.",
-      "Stir in the flour and tomato paste and cook for 1 minute.",
-      "Add the beef stock, worcestershire sauce and thyme and simmer for 20 minutes until thick.",
-      "Stir in the peas and season with salt and pepper.",
-      "Heat the oven to 200 °C.",
-      "Drain the potatoes and mash them with the butter and milk, then season with salt and pepper.",
-      "Spoon the filling into a baking dish, spread the mash over it and rough up the top with a fork.",
-      "Bake for 25 minutes until the top is golden and the filling is bubbling."
-    ]
-  },
-  {
-    "name": "Meatballs in tomato sauce with rice",
-    "servings": 4,
-    "minutes": 50,
-    "ingredients": [
-      { "name": "ground beef", "amount": 500, "unit": "g" },
-      { "name": "breadcrumbs", "amount": 50, "unit": "g" },
-      { "name": "egg", "amount": 1, "unit": "pc" },
-      { "name": "parmesan", "amount": 30, "unit": "g" },
-      { "name": "garlic clove", "amount": 3, "unit": "pc" },
-      { "name": "parsley", "amount": 10, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
-      { "name": "canned tomatoes", "amount": 800, "unit": "g" },
-      { "name": "basil", "amount": 10, "unit": "g" },
-      { "name": "rice", "amount": 300, "unit": "g" }
-    ],
-    "steps": [
-      "Finely chop the onion, garlic cloves and parsley.",
-      "Mix the ground beef with the breadcrumbs, egg, grated parmesan, parsley, half the garlic, salt and pepper.",
-      "Shape the mixture into balls about 3 cm across.",
-      "Heat 2 tbsp of the olive oil in a large pan and brown the meatballs over medium-high heat for 5 minutes, turning them, then set them aside.",
-      "Fry the onion and the rest of the garlic in the remaining olive oil over medium heat for 5 minutes until soft.",
-      "Add the canned tomatoes, season with salt and simmer for 10 minutes.",
-      "Return the meatballs to the sauce, cover and simmer for 20 minutes until cooked through.",
-      "Meanwhile, rinse the rice and bring it to the boil in 1.5 times its volume of salted water.",
-      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
-      "Tear the basil over the meatballs and serve them with the rice."
-    ]
-  },
-  {
     "name": "Beef stroganoff with rice",
     "servings": 4,
     "minutes": 35,
+    "workMinutes": 30,
     "ingredients": [
       { "name": "beef sirloin", "amount": 600, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -1069,6 +607,7 @@
     "name": "Bratwurst with sauerkraut and mashed potatoes",
     "servings": 4,
     "minutes": 40,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "bratwurst", "amount": 8, "unit": "pc" },
       { "name": "vegetable oil", "amount": 30, "unit": "ml" },
@@ -1093,132 +632,10 @@
     ]
   },
   {
-    "name": "Sweet and sour pork with rice",
-    "servings": 4,
-    "minutes": 40,
-    "ingredients": [
-      { "name": "pork shoulder", "amount": 500, "unit": "g" },
-      { "name": "egg", "amount": 1, "unit": "pc" },
-      { "name": "cornstarch", "amount": 50, "unit": "g" },
-      { "name": "vegetable oil", "amount": 300, "unit": "ml" },
-      { "name": "bell pepper", "amount": 2, "unit": "pc" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "canned pineapple", "amount": 400, "unit": "g" },
-      { "name": "ketchup", "amount": 3, "unit": "tbsp" },
-      { "name": "rice vinegar", "amount": 3, "unit": "tbsp" },
-      { "name": "sugar", "amount": 3, "unit": "tbsp" },
-      { "name": "soy sauce", "amount": 2, "unit": "tbsp" },
-      { "name": "rice", "amount": 300, "unit": "g" }
-    ],
-    "steps": [
-      "Rinse the rice and bring it to the boil in 1.5 times its volume of water.",
-      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
-      "Cut the pork shoulder into 2 cm cubes, season with salt and toss them in the beaten egg.",
-      "Coat the pork cubes in most of the cornstarch, keeping 1 tbsp back for the sauce.",
-      "Heat the vegetable oil in a wok or deep pan to 180 °C and fry the pork in batches for 5 to 6 minutes until golden and crisp, then drain on kitchen paper.",
-      "Drain the canned pineapple, keeping the juice, and stir the juice with the ketchup, rice vinegar, sugar, soy sauce and the remaining cornstarch.",
-      "Pour off all but 1 tbsp of oil and stir-fry the onion and bell pepper pieces over high heat for 3 minutes, adding the sliced garlic cloves for the last minute.",
-      "Add the pineapple pieces and the sauce and stir for 1 to 2 minutes until it thickens and turns glossy.",
-      "Toss the fried pork in the sauce and serve it at once with the rice."
-    ]
-  },
-  {
-    "name": "Chicken drumsticks with roasted vegetables",
-    "servings": 4,
-    "minutes": 60,
-    "ingredients": [
-      { "name": "chicken drumstick", "amount": 8, "unit": "pc" },
-      { "name": "potato", "amount": 800, "unit": "g" },
-      { "name": "carrot", "amount": 3, "unit": "pc" },
-      { "name": "bell pepper", "amount": 2, "unit": "pc" },
-      { "name": "zucchini", "amount": 1, "unit": "pc" },
-      { "name": "red onion", "amount": 2, "unit": "pc" },
-      { "name": "garlic clove", "amount": 4, "unit": "pc" },
-      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
-      { "name": "paprika", "amount": 2, "unit": "tsp" },
-      { "name": "thyme", "amount": 1, "unit": "tsp" },
-      { "name": "lemon", "amount": 1, "unit": "pc" }
-    ],
-    "steps": [
-      "Heat the oven to 200 °C.",
-      "Rub the chicken drumsticks with half of the olive oil, the paprika, the thyme, the grated zest of the lemon, salt and pepper.",
-      "Cut the potatoes and carrots into chunks and the red onions into wedges.",
-      "Toss the vegetables with the rest of the olive oil, salt and pepper and spread them on a baking tray.",
-      "Lay the chicken drumsticks on top of the vegetables and roast for 20 minutes.",
-      "Cut the bell peppers and zucchini into chunks and add them to the tray with the whole garlic cloves.",
-      "Turn the drumsticks and roast for another 25 minutes until the skin is crisp and the juices run clear.",
-      "Squeeze the juice of the lemon over the tray and serve."
-    ]
-  },
-  {
-    "name": "Butter chicken with naan",
-    "servings": 4,
-    "minutes": 80,
-    "ingredients": [
-      { "name": "chicken thigh", "amount": 700, "unit": "g" },
-      { "name": "yogurt", "amount": 150, "unit": "g" },
-      { "name": "lemon", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 4, "unit": "pc" },
-      { "name": "ginger", "amount": 30, "unit": "g" },
-      { "name": "garam masala", "amount": 3, "unit": "tsp" },
-      { "name": "chili powder", "amount": 1, "unit": "tsp" },
-      { "name": "cumin", "amount": 1, "unit": "tsp" },
-      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
-      { "name": "butter", "amount": 50, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
-      { "name": "cream", "amount": 150, "unit": "ml" },
-      { "name": "dried fenugreek leaf", "amount": 1, "unit": "tsp" },
-      { "name": "coriander", "amount": 10, "unit": "g" },
-      { "name": "naan", "amount": 4, "unit": "pc" }
-    ],
-    "steps": [
-      "Grate the garlic cloves and the ginger.",
-      "Cut the chicken thighs into bite-sized pieces and mix them with the yogurt, the juice of the lemon, half of the garlic and ginger, 1 tsp of the garam masala, the chili powder and salt.",
-      "Cover the bowl and leave the chicken to marinate in the fridge for at least 1 hour.",
-      "Heat the vegetable oil in a large pan and sear the chicken over high heat for 5 to 6 minutes until charred at the edges, then set it aside.",
-      "Melt the butter in the same pan and fry the chopped onion over medium heat for 8 minutes until golden.",
-      "Add the rest of the garlic cloves and ginger, the cumin and the remaining garam masala and fry for 1 minute.",
-      "Add the canned tomatoes and simmer for 15 minutes, then blend the sauce until smooth.",
-      "Return the chicken to the sauce and simmer for 10 minutes until cooked through.",
-      "Stir in the cream and the dried fenugreek leaf, crumbled between your palms, and simmer for 5 more minutes.",
-      "Warm the naan in a hot dry pan for 1 to 2 minutes.",
-      "Sprinkle the curry with chopped coriander and serve it with the naan."
-    ]
-  },
-  {
-    "name": "Chicken noodle soup",
-    "servings": 4,
-    "minutes": 50,
-    "ingredients": [
-      { "name": "chicken thigh", "amount": 500, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "carrot", "amount": 2, "unit": "pc" },
-      { "name": "celery stalk", "amount": 2, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 1, "unit": "tbsp" },
-      { "name": "chicken stock", "amount": 1500, "unit": "ml" },
-      { "name": "thyme", "amount": 1, "unit": "tsp" },
-      { "name": "bay leaf", "amount": 1, "unit": "pc" },
-      { "name": "egg noodle", "amount": 150, "unit": "g" },
-      { "name": "parsley", "amount": 10, "unit": "g" }
-    ],
-    "steps": [
-      "Chop the onion, carrots and celery stalks and mince the garlic cloves.",
-      "Heat the olive oil in a large pot and cook the onion, carrots and celery stalks over medium heat for 5 minutes until soft, adding the garlic for the last minute.",
-      "Add the chicken stock, the whole chicken thighs, the thyme and the bay leaf and bring to the boil.",
-      "Simmer gently for 25 minutes until the chicken is cooked through.",
-      "Lift out the chicken and remove the bay leaf.",
-      "Shred the chicken with two forks.",
-      "Add the egg noodles to the soup and simmer for 6 to 8 minutes until tender.",
-      "Return the shredded chicken, season with salt and pepper and stir in the chopped parsley before serving."
-    ]
-  },
-  {
     "name": "Chicken quesadillas",
     "servings": 2,
     "minutes": 25,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "chicken breast", "amount": 250, "unit": "g" },
       { "name": "bell pepper", "amount": 1, "unit": "pc" },
@@ -1246,6 +663,7 @@
     "name": "Pad thai with chicken",
     "servings": 2,
     "minutes": 30,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "rice noodle", "amount": 200, "unit": "g" },
       { "name": "chicken breast", "amount": 250, "unit": "g" },
@@ -1273,33 +691,10 @@
     ]
   },
   {
-    "name": "Fish and chips",
-    "servings": 4,
-    "minutes": 60,
-    "ingredients": [
-      { "name": "cod", "amount": 600, "unit": "g" },
-      { "name": "flour", "amount": 220, "unit": "g" },
-      { "name": "baking powder", "amount": 1, "unit": "tsp" },
-      { "name": "beer", "amount": 300, "unit": "ml" },
-      { "name": "potato", "amount": 1000, "unit": "g" },
-      { "name": "vegetable oil", "amount": 900, "unit": "ml" },
-      { "name": "lemon", "amount": 1, "unit": "pc" }
-    ],
-    "steps": [
-      "Peel the potatoes, cut them into thick chips, rinse them in cold water and pat them dry.",
-      "Heat the vegetable oil in a deep pan to 140 °C and fry the chips in batches for 6 to 8 minutes until soft but still pale, then drain.",
-      "Whisk most of the flour with the baking powder and a pinch of salt, then whisk in the cold beer to a smooth, thick batter.",
-      "Cut the cod into 4 pieces, pat them dry, season with salt and dust them in the remaining flour.",
-      "Heat the vegetable oil to 180 °C.",
-      "Dip the cod in the batter and fry it for 5 to 7 minutes until golden and crisp, then drain it on kitchen paper and keep it warm.",
-      "Fry the chips again at 180 °C for 2 to 3 minutes until golden and crisp, then drain and salt them.",
-      "Serve the fish and chips with wedges of lemon."
-    ]
-  },
-  {
     "name": "Tuna pasta bake",
     "servings": 4,
     "minutes": 45,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "penne", "amount": 400, "unit": "g" },
       { "name": "canned tuna", "amount": 320, "unit": "g" },
@@ -1320,45 +715,10 @@
     ]
   },
   {
-    "name": "Seafood paella",
-    "servings": 4,
-    "minutes": 60,
-    "ingredients": [
-      { "name": "paella rice", "amount": 350, "unit": "g" },
-      { "name": "prawn", "amount": 400, "unit": "g" },
-      { "name": "mussel", "amount": 500, "unit": "g" },
-      { "name": "squid", "amount": 300, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 3, "unit": "pc" },
-      { "name": "bell pepper", "amount": 1, "unit": "pc" },
-      { "name": "tomato", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
-      { "name": "paprika", "amount": 1, "unit": "tsp" },
-      { "name": "saffron", "amount": 0.25, "unit": "tsp" },
-      { "name": "fish stock", "amount": 1000, "unit": "ml" },
-      { "name": "pea", "amount": 100, "unit": "g" },
-      { "name": "lemon", "amount": 1, "unit": "pc" },
-      { "name": "parsley", "amount": 10, "unit": "g" }
-    ],
-    "steps": [
-      "Scrub the mussels and discard any that stay open when tapped.",
-      "Cut the squid into rings.",
-      "Heat the fish stock with the saffron and keep it hot.",
-      "Heat the olive oil in a paella pan and sear the prawns and squid over high heat for 2 minutes, then set them aside.",
-      "Fry the chopped onion, bell pepper and garlic cloves in the pan over medium heat for 5 minutes until soft.",
-      "Add the grated tomatoes and the paprika and cook for 5 minutes until thick.",
-      "Stir in the paella rice to coat it, then pour in the hot stock, season with salt and simmer without stirring for 10 minutes.",
-      "Arrange the prawns, squid, mussels and peas on top of the paella rice.",
-      "Cook for 8 to 10 minutes more without stirring, until the paella rice is tender, the stock is absorbed and the mussels have opened.",
-      "Take the pan off the heat, cover it with a clean towel and let it rest for 5 minutes.",
-      "Discard any mussels that have not opened.",
-      "Sprinkle with chopped parsley and serve with wedges of lemon."
-    ]
-  },
-  {
     "name": "Thai green curry with prawns",
     "servings": 4,
     "minutes": 30,
+    "workMinutes": 25,
     "ingredients": [
       { "name": "prawn", "amount": 400, "unit": "g" },
       { "name": "green curry paste", "amount": 3, "unit": "tbsp" },
@@ -1386,40 +746,10 @@
     ]
   },
   {
-    "name": "Falafel wraps with hummus",
-    "servings": 4,
-    "minutes": 50,
-    "ingredients": [
-      { "name": "dried chickpeas", "amount": 250, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 3, "unit": "pc" },
-      { "name": "parsley", "amount": 30, "unit": "g" },
-      { "name": "coriander", "amount": 20, "unit": "g" },
-      { "name": "cumin", "amount": 2, "unit": "tsp" },
-      { "name": "baking powder", "amount": 0.5, "unit": "tsp" },
-      { "name": "flour", "amount": 20, "unit": "g" },
-      { "name": "vegetable oil", "amount": 450, "unit": "ml" },
-      { "name": "flatbread", "amount": 4, "unit": "pc" },
-      { "name": "hummus", "amount": 200, "unit": "g" },
-      { "name": "tomato", "amount": 2, "unit": "pc" },
-      { "name": "cucumber", "amount": 1, "unit": "pc" },
-      { "name": "lettuce", "amount": 1, "unit": "pc" }
-    ],
-    "steps": [
-      "The day before, soak the dried chickpeas in plenty of cold water for at least 12 hours.",
-      "Drain the chickpeas well and blitz them in a food processor with the onion, garlic cloves, parsley, coriander, cumin and salt to a coarse paste.",
-      "Stir in the baking powder and flour and chill the mixture for 30 minutes.",
-      "Shape the mixture into walnut-sized balls.",
-      "Heat the vegetable oil in a deep pan to 175 °C and fry the falafel in batches for 3 to 4 minutes until deep brown, then drain on kitchen paper.",
-      "Slice the tomatoes and cucumber and shred the lettuce.",
-      "Warm each flatbread in a dry pan for 30 seconds per side.",
-      "Spread each flatbread with hummus, add the lettuce, tomatoes, cucumber and falafel, and roll it up."
-    ]
-  },
-  {
     "name": "Bean burritos",
     "servings": 4,
     "minutes": 35,
+    "workMinutes": 25,
     "ingredients": [
       { "name": "canned pinto beans", "amount": 800, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -1447,62 +777,10 @@
     ]
   },
   {
-    "name": "Eggplant parmigiana",
-    "servings": 4,
-    "minutes": 75,
-    "ingredients": [
-      { "name": "eggplant", "amount": 3, "unit": "pc" },
-      { "name": "vegetable oil", "amount": 150, "unit": "ml" },
-      { "name": "canned tomatoes", "amount": 800, "unit": "g" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "basil", "amount": 15, "unit": "g" },
-      { "name": "mozzarella", "amount": 250, "unit": "g" },
-      { "name": "parmesan", "amount": 100, "unit": "g" }
-    ],
-    "steps": [
-      "Cut the eggplants lengthwise into 1 cm slices.",
-      "Sprinkle the slices with salt and leave them for 30 minutes.",
-      "Pat the eggplant slices dry with kitchen paper.",
-      "Heat the vegetable oil in a frying pan and fry the eggplant slices in batches over medium-high heat for 2 to 3 minutes per side until golden, then drain on kitchen paper.",
-      "Heat the olive oil in a pan and fry the sliced garlic cloves for 1 minute.",
-      "Add the canned tomatoes and simmer for 20 minutes until thick, then season and tear in half of the basil.",
-      "Heat the oven to 200 °C.",
-      "Layer the sauce, eggplant slices, sliced mozzarella, grated parmesan and basil leaves in a baking dish, repeating until everything is used and ending with sauce, mozzarella and parmesan.",
-      "Bake for 30 minutes until bubbling and golden.",
-      "Let it rest for 10 minutes before serving."
-    ]
-  },
-  {
-    "name": "Spanish tortilla with salad",
-    "servings": 4,
-    "minutes": 45,
-    "ingredients": [
-      { "name": "potato", "amount": 800, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "egg", "amount": 6, "unit": "pc" },
-      { "name": "olive oil", "amount": 12, "unit": "tbsp" },
-      { "name": "lettuce", "amount": 1, "unit": "pc" },
-      { "name": "tomato", "amount": 2, "unit": "pc" },
-      { "name": "white wine vinegar", "amount": 1, "unit": "tbsp" }
-    ],
-    "steps": [
-      "Peel the potatoes, cut them into thin slices and thinly slice the onion.",
-      "Heat most of the olive oil in a 24 cm frying pan and cook the potatoes and onion over medium-low heat for 20 minutes, turning them now and then, until soft but not browned.",
-      "Drain the potatoes and onion in a sieve, keeping the oil.",
-      "Beat the eggs with salt, stir in the potatoes and onion and leave for 10 minutes.",
-      "Heat 2 tbsp of the drained oil in the pan, pour in the mixture and cook over medium-low heat for 6 minutes until the bottom is set.",
-      "Put a plate over the pan, turn the omelette out onto it and slide it back into the pan.",
-      "Cook for 3 to 4 minutes more until just set.",
-      "Tear the lettuce and cut the tomatoes into wedges.",
-      "Dress the lettuce and tomatoes with the rest of the olive oil, the white wine vinegar, salt and pepper.",
-      "Cut the potato omelette into wedges and serve with the salad."
-    ]
-  },
-  {
     "name": "Potato and leek soup",
     "servings": 4,
     "minutes": 40,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "leek", "amount": 2, "unit": "pc" },
       { "name": "potato", "amount": 600, "unit": "g" },
@@ -1522,36 +800,10 @@
     ]
   },
   {
-    "name": "French onion soup",
-    "servings": 4,
-    "minutes": 90,
-    "ingredients": [
-      { "name": "onion", "amount": 6, "unit": "pc" },
-      { "name": "butter", "amount": 50, "unit": "g" },
-      { "name": "flour", "amount": 10, "unit": "g" },
-      { "name": "white wine", "amount": 150, "unit": "ml" },
-      { "name": "beef stock", "amount": 1200, "unit": "ml" },
-      { "name": "thyme", "amount": 1, "unit": "tsp" },
-      { "name": "bay leaf", "amount": 1, "unit": "pc" },
-      { "name": "bread", "amount": 200, "unit": "g" },
-      { "name": "gruyère", "amount": 150, "unit": "g" }
-    ],
-    "steps": [
-      "Thinly slice the onions.",
-      "Melt the butter in a large pot and cook the onions over medium-low heat for 40 to 50 minutes, stirring often, until deep golden brown.",
-      "Stir in the flour and cook for 2 minutes.",
-      "Pour in the white wine and let it bubble for 2 minutes, scraping the bottom of the pot.",
-      "Add the beef stock, thyme and bay leaf and simmer for 20 minutes, then remove the bay leaf and season.",
-      "Heat the oven grill to high.",
-      "Slice the bread and toast it under the grill for 1 to 2 minutes per side until golden.",
-      "Ladle the soup into ovenproof bowls, top with the toasted bread and cover it with grated gruyère.",
-      "Grill for 3 to 5 minutes until the gruyère is melted and bubbling."
-    ]
-  },
-  {
     "name": "Potato goulash",
     "servings": 4,
     "minutes": 45,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "potato", "amount": 1000, "unit": "g" },
       { "name": "onion", "amount": 2, "unit": "pc" },
@@ -1579,6 +831,7 @@
     "name": "Sweet potato and black bean chili",
     "servings": 4,
     "minutes": 45,
+    "workMinutes": 20,
     "ingredients": [
       { "name": "sweet potato", "amount": 800, "unit": "g" },
       { "name": "canned black beans", "amount": 800, "unit": "g" },
@@ -1608,6 +861,7 @@
     "name": "Niçoise salad",
     "servings": 2,
     "minutes": 30,
+    "workMinutes": 15,
     "ingredients": [
       { "name": "canned tuna", "amount": 160, "unit": "g" },
       { "name": "egg", "amount": 2, "unit": "pc" },

@@ -61,7 +61,7 @@ describe('App', () => {
     expect(recipes().getAttribute('aria-current'), 'on /recipes').toBe('page');
     expect(recipes().classList, 'on /recipes').toContain('active');
 
-    await navigate('/recipes/shepherds-pie');
+    await navigate('/recipes/nicoise-salad');
     expect(recipes().getAttribute('aria-current'), 'on a recipe page').toBe('true');
     expect(recipes().classList, 'on a recipe page').toContain('active');
 

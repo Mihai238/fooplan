@@ -1,6 +1,50 @@
 import { RECIPES } from '../recipes/recipes';
 import { INGREDIENTS_BY_SECTION, PANTRY_STAPLES, sectionOf } from './sections';
 
+const REMOVED_INGREDIENTS = [
+  'arborio rice',
+  'baking powder',
+  'beef',
+  'beer',
+  'canned kidney beans',
+  'canned pineapple',
+  'canned white beans',
+  'cannelloni tube',
+  'celery stalk',
+  'chicken drumstick',
+  'chicken stock',
+  'cornstarch',
+  'ditalini',
+  'dried chickpeas',
+  'dried fenugreek leaf',
+  'dry yeast',
+  'emmental',
+  'fish stock',
+  'flatbread',
+  'garam masala',
+  'ground lamb',
+  'gruyère',
+  'hummus',
+  'lasagne sheet',
+  'mussel',
+  'naan',
+  'paella rice',
+  'pea',
+  'pork cutlet',
+  'pork shoulder',
+  'quark',
+  'red wine',
+  'rice vinegar',
+  'ricotta',
+  'saffron',
+  'shortcrust pastry',
+  'squid',
+  'thyme',
+  'white wine',
+  'yogurt',
+  'zucchini',
+];
+
 describe('sections', () => {
   it('has a section for every ingredient of the recipes except the pantry staples', () => {
     expect(sectionOf('dragon fruit'), 'unknown ingredient').toBe('Other');
@@ -27,5 +71,17 @@ describe('sections', () => {
     expect(mapped.length, 'no ingredients mapped').toBeGreaterThan(0);
 
     expect(mapped.filter((name) => !used.has(name))).toEqual([]);
+  });
+
+  it('maps none of the 41 ingredients only removed recipes used, and still every ingredient of the recipes except the pantry staples', () => {
+    const mapped = Object.values(INGREDIENTS_BY_SECTION).flat();
+    expect(mapped.filter((name) => REMOVED_INGREDIENTS.includes(name))).toEqual([]);
+
+    const names = new Set(RECIPES.flatMap((recipe) => recipe.ingredients.map((i) => i.name)));
+    expect(names.size, 'no ingredients').toBeGreaterThan(0);
+    const unmapped = [...names].filter(
+      (name) => !PANTRY_STAPLES.includes(name) && !mapped.includes(name),
+    );
+    expect(unmapped).toEqual([]);
   });
 });

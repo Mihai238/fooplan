@@ -470,20 +470,22 @@ describe('PlanPage', () => {
     it("links a picked meal's recipe name to its recipe page, which a click opens at /recipes/<slug>", async () => {
       await openWith(planWithOpenDinner());
       const link = recipeLink(meal(0));
-      expect(textOf(link)).toBe("Shepherd's pie");
-      expect(link.getAttribute('href')).toBe('/recipes/shepherds-pie');
+      expect(textOf(link)).toBe('Beef stroganoff with rice');
+      expect(link.getAttribute('href')).toBe('/recipes/beef-stroganoff-with-rice');
       await click(link);
-      expect(router().url).toBe('/recipes/shepherds-pie');
+      expect(router().url).toBe('/recipes/beef-stroganoff-with-rice');
     });
 
     it('links the recipe name in "Leftovers: <recipe>" to its recipe page, which a click opens', async () => {
       await openWith(planWithLeftovers(false));
-      expect(textOf(meal(2).querySelector('p.recipe'))).toBe("Leftovers: Shepherd's pie");
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe(
+        'Leftovers: Beef stroganoff with rice',
+      );
       const link = recipeLink(meal(2));
-      expect(textOf(link)).toBe("Shepherd's pie");
-      expect(link.getAttribute('href')).toBe('/recipes/shepherds-pie');
+      expect(textOf(link)).toBe('Beef stroganoff with rice');
+      expect(link.getAttribute('href')).toBe('/recipes/beef-stroganoff-with-rice');
       await click(link);
-      expect(router().url).toBe('/recipes/shepherds-pie');
+      expect(router().url).toBe('/recipes/beef-stroganoff-with-rice');
     });
 
     it('offers a "Recipe" link named "Recipe for <name>" with each suggestion, which opens its recipe page, while a click on the suggestion itself still picks it', async () => {
@@ -491,12 +493,12 @@ describe('PlanPage', () => {
       const links = recipeLinksOf(meal(1));
       expect(links.map(nameOf)).toEqual([
         'Recipe for Niçoise salad',
-        'Recipe for Käsespätzle',
+        'Recipe for Oven-baked salmon with potatoes and green beans',
         'Recipe for Spaghetti carbonara',
       ]);
       expect(links.map((link) => link.getAttribute('href'))).toEqual([
         '/recipes/nicoise-salad',
-        '/recipes/kasespatzle',
+        '/recipes/oven-baked-salmon-with-potatoes-and-green-beans',
         '/recipes/spaghetti-carbonara',
       ]);
       await click(links[0]);
@@ -514,13 +516,15 @@ describe('PlanPage', () => {
       const links = recipeLinksOf(meal(1));
       expect(links, '"Recipe" links of the open dinner').toHaveLength(3);
       await click(links[1]);
-      expect(router().url, 'link not followed').toBe('/recipes/kasespatzle');
+      expect(router().url, 'link not followed').toBe(
+        '/recipes/oven-baked-salmon-with-potatoes-and-green-beans',
+      );
       expect(store.plan()).toBe(before);
       expect(localStorage.getItem('fooplan.plan')).toBe(saved);
       expect(meal(1).querySelector('p.recipe')).toBeNull();
       expect(suggestionsOf(meal(1)).map(recipeOf)).toEqual([
         'Niçoise salad',
-        'Käsespätzle',
+        'Oven-baked salmon with potatoes and green beans',
         'Spaghetti carbonara',
       ]);
     });
@@ -583,9 +587,12 @@ describe('PlanPage', () => {
           return [textOf(link), link.getAttribute('href')];
         }),
       ).toEqual([
-        ['Käsespätzle', '/recipes/kasespatzle'],
-        ["Shepherd's pie", '/recipes/shepherds-pie'],
-        ["Shepherd's pie", '/recipes/shepherds-pie'],
+        [
+          'Oven-baked salmon with potatoes and green beans',
+          '/recipes/oven-baked-salmon-with-potatoes-and-green-beans',
+        ],
+        ['Beef stroganoff with rice', '/recipes/beef-stroganoff-with-rice'],
+        ['Beef stroganoff with rice', '/recipes/beef-stroganoff-with-rice'],
         ['Niçoise salad', '/recipes/nicoise-salad'],
       ]);
       await click(recipeLink(meal(3)));
@@ -597,16 +604,18 @@ describe('PlanPage', () => {
       const before = store.plan();
       const links = Array.from(element.querySelectorAll<HTMLAnchorElement>('.days a'));
       expect(links.map(textOf)).toEqual([
-        'Käsespätzle',
-        "Shepherd's pie",
-        "Shepherd's pie",
+        'Oven-baked salmon with potatoes and green beans',
+        'Beef stroganoff with rice',
+        'Beef stroganoff with rice',
         'Niçoise salad',
       ]);
       expect(element.querySelectorAll('button.suggestion')).toHaveLength(0);
       expect(buttonTexts()).not.toContain('Undo');
       expect(buttonTexts()).not.toContain('Other suggestions');
       await click(links[0]);
-      expect(router().url, 'link not followed').toBe('/recipes/kasespatzle');
+      expect(router().url, 'link not followed').toBe(
+        '/recipes/oven-baked-salmon-with-potatoes-and-green-beans',
+      );
       expect(store.plan()).toBe(before);
     });
 
@@ -615,15 +624,24 @@ describe('PlanPage', () => {
         days: [
           planDay(
             '2026-10-24',
-            picked("Shepherd's pie"),
-            open('Niçoise salad', 'Käsespätzle', 'Spaghetti carbonara'),
+            picked('Beef stroganoff with rice'),
+            open(
+              'Niçoise salad',
+              'Oven-baked salmon with potatoes and green beans',
+              'Spaghetti carbonara',
+            ),
           ),
         ],
         people: 2,
         accepted: false,
         ticked: [],
         added: [],
-        shown: ["Shepherd's pie", 'Niçoise salad', 'Käsespätzle', 'Spaghetti carbonara'],
+        shown: [
+          'Beef stroganoff with rice',
+          'Niçoise salad',
+          'Oven-baked salmon with potatoes and green beans',
+          'Spaghetti carbonara',
+        ],
       };
     }
 
@@ -632,11 +650,18 @@ describe('PlanPage', () => {
     function planWithLeftovers(accepted: boolean): Plan {
       return {
         days: [
-          planDay('2026-10-24', picked('Käsespätzle'), picked("Shepherd's pie"), true),
+          planDay(
+            '2026-10-24',
+            picked('Oven-baked salmon with potatoes and green beans'),
+            picked('Beef stroganoff with rice'),
+            true,
+          ),
           planDay(
             '2026-10-25',
             covered(),
-            accepted ? picked('Niçoise salad') : open('Niçoise salad', 'Lasagne', 'Minestrone'),
+            accepted
+              ? picked('Niçoise salad')
+              : open('Niçoise salad', 'Lentil soup', 'Pumpkin soup'),
           ),
         ],
         people: 2,
@@ -644,56 +669,80 @@ describe('PlanPage', () => {
         ticked: [],
         added: [],
         shown: accepted
-          ? ['Käsespätzle', "Shepherd's pie", 'Niçoise salad']
-          : ['Käsespätzle', "Shepherd's pie", 'Niçoise salad', 'Lasagne', 'Minestrone'],
+          ? [
+              'Oven-baked salmon with potatoes and green beans',
+              'Beef stroganoff with rice',
+              'Niçoise salad',
+            ]
+          : [
+              'Oven-baked salmon with potatoes and green beans',
+              'Beef stroganoff with rice',
+              'Niçoise salad',
+              'Lentil soup',
+              'Pumpkin soup',
+            ],
       };
     }
   });
 
   describe('cooking time', () => {
-    const OPEN_LASAGNE = open('Lasagne', 'Niçoise salad', 'Käsespätzle');
+    const OPEN_LENTIL_SOUP = open(
+      'Lentil soup',
+      'Niçoise salad',
+      'Oven-baked salmon with potatoes and green beans',
+    );
 
-    it('shows a suggestion as a span.name with the recipe and a span.minutes with its time, read as "Lasagne 105 minutes" without an aria-label', async () => {
-      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
-      const lasagne = suggestionsOf(meal(0))[0];
-      expect(Array.from(lasagne.children).map(partOf)).toEqual([
-        ['span.name', 'Lasagne'],
-        ['span.minutes', '105 minutes'],
+    it('shows a suggestion as a span.name with the recipe and a span.minutes with its time, read as "Lentil soup 35 minutes" without an aria-label', async () => {
+      await openWith(
+        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+      );
+      const soup = suggestionsOf(meal(0))[0];
+      expect(Array.from(soup.children).map(partOf)).toEqual([
+        ['span.name', 'Lentil soup'],
+        ['span.minutes', '35 minutes'],
       ]);
-      expect(textOf(lasagne)).toBe('Lasagne 105 minutes');
-      expect(lasagne.hasAttribute('aria-label')).toBe(false);
+      expect(textOf(soup)).toBe('Lentil soup 35 minutes');
+      expect(soup.hasAttribute('aria-label')).toBe(false);
     });
 
-    it('keeps the time of a suggestion inside its button, out of its "Recipe" link, which stays "Recipe for Lasagne"', async () => {
-      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
+    it('keeps the time of a suggestion inside its button, out of its "Recipe" link, which stays "Recipe for Lentil soup"', async () => {
+      await openWith(
+        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+      );
       const option = suggestionsOf(meal(0))[0].closest<HTMLElement>('.option');
-      expect(option, 'no option around the "Lasagne" suggestion').not.toBeNull();
+      expect(option, 'no option around the "Lentil soup" suggestion').not.toBeNull();
       const times = Array.from(option!.querySelectorAll('.minutes'));
-      expect(times.map(textOf), 'times of the "Lasagne" option').toEqual(['105 minutes']);
+      expect(times.map(textOf), 'times of the "Lentil soup" option').toEqual(['35 minutes']);
       expect(times[0].closest('button.suggestion')).toBe(suggestionsOf(meal(0))[0]);
       const [link] = recipeLinksOf(option!);
       expect(link.querySelector('.minutes')).toBeNull();
-      expect(nameOf(link)).toBe('Recipe for Lasagne');
+      expect(nameOf(link)).toBe('Recipe for Lentil soup');
     });
 
-    it('picks "Lasagne" when the user clicks the time in its suggestion', async () => {
-      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
+    it('picks "Lentil soup" when the user clicks the time in its suggestion', async () => {
+      await openWith(
+        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+      );
       const time = suggestionsOf(meal(0))[0].querySelector<HTMLElement>('span.minutes');
-      expect(time, 'no time in the "Lasagne" suggestion').not.toBeNull();
+      expect(time, 'no time in the "Lentil soup" suggestion').not.toBeNull();
       await click(time!);
-      expect(store.plan().days[0].lunch.recipe).toBe('Lasagne');
-      expect(textOf(meal(0).querySelector('p.recipe'))).toBe('Lasagne');
+      expect(store.plan().days[0].lunch.recipe).toBe('Lentil soup');
+      expect(textOf(meal(0).querySelector('p.recipe'))).toBe('Lentil soup');
     });
 
     it('shows a p.minutes "20 minutes" right after the p.recipe of a picked "Spaghetti carbonara"', async () => {
-      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
+      await openWith(
+        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+      );
       const name = meal(1).querySelector('p.recipe');
       expect(textOf(name)).toBe('Spaghetti carbonara');
       expect(partOf(name?.nextElementSibling)).toEqual(['p.minutes', '20 minutes']);
     });
 
     it("puts no link in or around a picked meal's time, and keeps the time out of the recipe name's link", async () => {
-      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
+      await openWith(
+        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+      );
       const time = meal(1).querySelector('p.minutes');
       expect(time, 'no time below "Spaghetti carbonara"').not.toBeNull();
       expect(time!.closest('a'), 'time in a link').toBeNull();
@@ -701,21 +750,11 @@ describe('PlanPage', () => {
       expect(textOf(recipeLink(meal(1)))).toBe('Spaghetti carbonara');
     });
 
-    it('shows a time of a whole number of hours in minutes, "120 minutes" and "60 minutes", never in hours', async () => {
-      await openWith(
-        planOf([planDay('2026-10-24', picked('Pizza margherita'), picked('Fish and chips'))]),
-      );
-      expect(Array.from(element.querySelectorAll('.minutes')).map(textOf)).toEqual([
-        '120 minutes',
-        '60 minutes',
-      ]);
-    });
-
     it('shows a picked dinner that is not on the last day as its name, its time, "Cook extra" and "Undo", in this order', async () => {
       await openWith(goulashPlan({ cookExtra: false, accepted: false }));
       expect(childrenAfterHeading(meal(1))).toEqual([
-        ['p.recipe', 'Goulash with bread'],
-        ['p.minutes', '150 minutes'],
+        ['p.recipe', 'Potato goulash'],
+        ['p.minutes', '45 minutes'],
         ['label.cook-extra', "Cook extra for tomorrow's lunch"],
         ['button.link', 'Undo'],
       ]);
@@ -723,39 +762,43 @@ describe('PlanPage', () => {
 
     it('shows no time on a leftovers lunch, but keeps it on the dinner cooked extra for it', async () => {
       await openWith(goulashPlan({ cookExtra: true, accepted: false }));
-      expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Leftovers: Goulash with bread');
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Leftovers: Potato goulash');
       expect(meal(2).querySelectorAll('.minutes')).toHaveLength(0);
       expect(textOf(meal(2))).not.toMatch(/\d+ minutes/);
-      expect(textOf(meal(1).querySelector('.minutes'))).toBe('150 minutes');
+      expect(textOf(meal(1).querySelector('.minutes'))).toBe('45 minutes');
     });
 
     it('shows a dinner cooked extra of an accepted plan as its name, its time and the note, the leftovers lunch without a time, and no control or linked time', async () => {
       await openWith(goulashPlan({ cookExtra: true, accepted: true }));
       expect(childrenAfterHeading(meal(1))).toEqual([
-        ['p.recipe', 'Goulash with bread'],
-        ['p.minutes', '150 minutes'],
+        ['p.recipe', 'Potato goulash'],
+        ['p.minutes', '45 minutes'],
         ['p.note', "Cooking extra for tomorrow's lunch"],
       ]);
-      expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Leftovers: Goulash with bread');
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Leftovers: Potato goulash');
       expect(meal(2).querySelectorAll('.minutes')).toHaveLength(0);
       expect(element.querySelectorAll('section.day button, section.day input')).toHaveLength(0);
       const times = Array.from(element.querySelectorAll('.minutes'));
       expect(times.filter((time) => time.closest('a') !== null)).toEqual([]);
     });
 
-    it('brings back the suggestions with "Lasagne 105 minutes" when the user clicks "Undo" on a picked "Lasagne"', async () => {
+    it('brings back the suggestions with "Lentil soup 35 minutes" when the user clicks "Undo" on a picked "Lentil soup"', async () => {
       await openWith(
         planOf([
           planDay(
             '2026-10-24',
-            picked('Lasagne', ['Niçoise salad', 'Lasagne', 'Käsespätzle']),
+            picked('Lentil soup', [
+              'Niçoise salad',
+              'Lentil soup',
+              'Oven-baked salmon with potatoes and green beans',
+            ]),
             picked('Spaghetti carbonara'),
           ),
         ]),
       );
       await click(button(meal(0), 'Undo'));
       expect(suggestionsOf(meal(0)), 'suggestions after "Undo"').toHaveLength(3);
-      expect(suggestionsOf(meal(0)).map(textOf)).toContain('Lasagne 105 minutes');
+      expect(suggestionsOf(meal(0)).map(textOf)).toContain('Lentil soup 35 minutes');
     });
 
     it('shows the times of a plan saved without them as soon as it loads, keeps the plan, and saves no time when the user picks', async () => {
@@ -763,21 +806,25 @@ describe('PlanPage', () => {
         [
           planDay(
             '2026-10-24',
-            picked('Lasagne'),
-            open('Niçoise salad', 'Käsespätzle', 'Spaghetti carbonara'),
+            picked('Lentil soup'),
+            open(
+              'Niçoise salad',
+              'Oven-baked salmon with potatoes and green beans',
+              'Spaghetti carbonara',
+            ),
           ),
         ],
         { people: 3 },
       );
       await openWith(saved);
       const name = meal(0).querySelector('p.recipe');
-      expect(textOf(name)).toBe('Lasagne');
-      expect(partOf(name?.nextElementSibling)).toEqual(['p.minutes', '105 minutes']);
+      expect(textOf(name)).toBe('Lentil soup');
+      expect(partOf(name?.nextElementSibling)).toEqual(['p.minutes', '35 minutes']);
       expect(store.plan()).toEqual(saved);
       expect(textOf(stepper('People'))).toBe('3');
       expect(suggestionsOf(meal(1)).map(recipeOf)).toEqual([
         'Niçoise salad',
-        'Käsespätzle',
+        'Oven-baked salmon with potatoes and green beans',
         'Spaghetti carbonara',
       ]);
 
@@ -786,25 +833,32 @@ describe('PlanPage', () => {
       expect(localStorage.getItem('fooplan.plan')).not.toMatch(/"minutes"/);
     });
 
-    it('keeps "105 minutes" on a picked "Lasagne" when the user raises People from 2 to 3', async () => {
+    it('keeps "35 minutes" on a picked "Lentil soup" when the user raises People from 2 to 3', async () => {
       await openWith(
-        planOf([planDay('2026-10-24', picked('Lasagne'), picked('Spaghetti carbonara'))]),
+        planOf([planDay('2026-10-24', picked('Lentil soup'), picked('Spaghetti carbonara'))]),
       );
       await click(arrow('One more person'));
       expect(textOf(stepper('People'))).toBe('3');
-      expect(textOf(meal(0).querySelector('.minutes'))).toBe('105 minutes');
+      expect(textOf(meal(0).querySelector('.minutes'))).toBe('35 minutes');
     });
 
-    // The first day's dinner, "Goulash with bread", isn't on the last day; cooked extra, it covers
+    // The first day's dinner, "Potato goulash", isn't on the last day; cooked extra, it covers
     // the second day's lunch
     function goulashPlan({ cookExtra, accepted }: { cookExtra: boolean; accepted: boolean }): Plan {
       return planOf(
         [
-          planDay('2026-10-24', picked('Käsespätzle'), picked('Goulash with bread'), cookExtra),
+          planDay(
+            '2026-10-24',
+            picked('Oven-baked salmon with potatoes and green beans'),
+            picked('Potato goulash'),
+            cookExtra,
+          ),
           planDay(
             '2026-10-25',
-            cookExtra ? covered() : picked('Minestrone'),
-            accepted ? picked('Niçoise salad') : open('Niçoise salad', 'Lasagne', 'Pumpkin soup'),
+            cookExtra ? covered() : picked('Potato and leek soup'),
+            accepted
+              ? picked('Niçoise salad')
+              : open('Niçoise salad', 'Lentil soup', 'Pumpkin soup'),
           ),
         ],
         { accepted },

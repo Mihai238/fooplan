@@ -21,7 +21,7 @@ describe('RecipePage', () => {
   it("shows the recipe's name as the heading, its servings and every ingredient with its displayed amount, unit and name", async () => {
     for (const [url, name] of [
       ['/recipes/spaghetti-carbonara', 'Spaghetti carbonara'],
-      ['/recipes/shepherds-pie', "Shepherd's pie"],
+      ['/recipes/nicoise-salad', 'Niçoise salad'],
     ]) {
       harness = await RouterTestingHarness.create(url);
       const recipe = recipeNamed(name);
@@ -34,14 +34,14 @@ describe('RecipePage', () => {
     }
   });
 
-  it('shows the 15 ml vegetable oil of "Teriyaki chicken with rice" as "1 tbsp vegetable oil" and the 900 ml of "Fish and chips" in ml', async () => {
+  it('shows the 15 ml vegetable oil of "Teriyaki chicken with rice" as "1 tbsp vegetable oil" and the 700 ml milk of "Mac and cheese" in ml', async () => {
     harness = await RouterTestingHarness.create('/recipes/teriyaki-chicken-with-rice');
     expect(headings().map(textOf)).toEqual(['Teriyaki chicken with rice']);
     expect(ingredientLines()).toContain('1 tbsp vegetable oil');
     expect(ingredientLines()).not.toContain('15 ml vegetable oil');
-    await harness.navigateByUrl('/recipes/fish-and-chips');
-    expect(headings().map(textOf)).toEqual(['Fish and chips']);
-    expect(ingredientLines()).toContain('900 ml vegetable oil');
+    await harness.navigateByUrl('/recipes/mac-and-cheese');
+    expect(headings().map(textOf)).toEqual(['Mac and cheese']);
+    expect(ingredientLines()).toContain('700 ml milk');
   });
 
   it('links "Back" to the Plan page when opened from it, which shows the plan unchanged', async () => {
@@ -54,8 +54,8 @@ describe('RecipePage', () => {
     const before = TestBed.inject(PlanStore).plan();
     const saved = localStorage.getItem('fooplan.plan');
 
-    await harness.navigateByUrl('/recipes/shepherds-pie');
-    expect(headings().map(textOf), 'recipe page not shown').toEqual(["Shepherd's pie"]);
+    await harness.navigateByUrl('/recipes/nicoise-salad');
+    expect(headings().map(textOf), 'recipe page not shown').toEqual(['Niçoise salad']);
     const back = backLink();
     expect(back.getAttribute('href')).toBe('/plan');
     await click(back);
@@ -67,8 +67,8 @@ describe('RecipePage', () => {
   });
 
   it('links "Back" to the Recipes page when opened directly', async () => {
-    harness = await RouterTestingHarness.create('/recipes/shepherds-pie');
-    expect(headings().map(textOf), 'recipe page not shown').toEqual(["Shepherd's pie"]);
+    harness = await RouterTestingHarness.create('/recipes/nicoise-salad');
+    expect(headings().map(textOf), 'recipe page not shown').toEqual(['Niçoise salad']);
     const back = backLink();
     expect(back.getAttribute('href')).toBe('/recipes');
     await click(back);
@@ -88,9 +88,9 @@ describe('RecipePage', () => {
 
   it('shows the other recipe and links "Back" to the first when opened from another recipe page', async () => {
     harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
-    await harness.navigateByUrl('/recipes/shepherds-pie');
-    expect(headings().map(textOf)).toEqual(["Shepherd's pie"]);
-    expect(ingredientLines()).toEqual(linesOf(recipeNamed("Shepherd's pie")));
+    await harness.navigateByUrl('/recipes/nicoise-salad');
+    expect(headings().map(textOf)).toEqual(['Niçoise salad']);
+    expect(ingredientLines()).toEqual(linesOf(recipeNamed('Niçoise salad')));
     expect(backLink().getAttribute('href')).toBe('/recipes/spaghetti-carbonara');
     await click(backLink());
     expect(router().url).toBe('/recipes/spaghetti-carbonara');
@@ -100,15 +100,15 @@ describe('RecipePage', () => {
 
   it('links "Back" to the Recipes page after a reload of a recipe page opened from the Plan page, keeping the plan', async () => {
     harness = await RouterTestingHarness.create('/plan');
-    await harness.navigateByUrl('/recipes/shepherds-pie');
+    await harness.navigateByUrl('/recipes/nicoise-salad');
     expect(backLink().getAttribute('href'), 'before the reload').toBe('/plan');
     const before = TestBed.inject(PlanStore).plan();
 
     // A fresh app on the same URL and localStorage, as a reload makes
     TestBed.resetTestingModule();
     configure();
-    harness = await RouterTestingHarness.create('/recipes/shepherds-pie');
-    expect(headings().map(textOf)).toEqual(["Shepherd's pie"]);
+    harness = await RouterTestingHarness.create('/recipes/nicoise-salad');
+    expect(headings().map(textOf)).toEqual(['Niçoise salad']);
     expect(backLink().getAttribute('href')).toBe('/recipes');
     expect(TestBed.inject(PlanStore).plan()).toEqual(before);
   });
@@ -161,11 +161,11 @@ describe('RecipePage', () => {
     await click(button('Next'));
     expect(stepCounters()).toEqual([`Step 3 of ${carbonara.length}`]);
 
-    await harness.navigateByUrl('/recipes/shepherds-pie');
-    const pie = stepsOf("Shepherd's pie");
-    expect(headings().map(textOf)).toEqual(["Shepherd's pie"]);
-    expect(stepCounters()).toEqual([`Step 1 of ${pie.length}`]);
-    expect(textOf(page())).toContain(pie[0]);
+    await harness.navigateByUrl('/recipes/nicoise-salad');
+    const salad = stepsOf('Niçoise salad');
+    expect(headings().map(textOf)).toEqual(['Niçoise salad']);
+    expect(stepCounters()).toEqual([`Step 1 of ${salad.length}`]);
+    expect(textOf(page())).toContain(salad[0]);
     expect(button('Previous').disabled).toBe(true);
   });
 

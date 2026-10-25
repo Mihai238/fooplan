@@ -3,7 +3,7 @@ import { groceryList, itemKey } from '../groceries/groceries';
 import { RECIPES } from '../recipes/recipes';
 import { addedKey, DEFAULT_DAYS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
-import { acceptOneDayPlan, DINNER, LUNCH, seededRandom, suggestionsOf } from './testing';
+import { acceptOneDayPlan, day, DINNER, LUNCH, open, seededRandom, suggestionsOf } from './testing';
 
 const STORAGE_KEY = 'fooplan.plan';
 
@@ -21,6 +21,38 @@ describe('PlanStore', () => {
 
   it('starts a plan for today with the default days when nothing is stored', () => {
     expectFreshPlan(store.plan(), '2026-10-24');
+  });
+
+  it('suggests three recipes for each of the 10 meals of a new 5-day plan, no recipe for two meals, all of them from the 33 quick recipes', () => {
+    const plan = store.plan();
+    expect(plan.days, 'days').toHaveLength(5);
+    for (const planDay of plan.days) {
+      expect(planDay.lunch.suggestions, `${planDay.date} lunch`).toHaveLength(3);
+      expect(planDay.dinner.suggestions, `${planDay.date} dinner`).toHaveLength(3);
+    }
+    const suggestions = suggestionsOf(plan);
+    expect(new Set(suggestions).size, 'different recipes suggested').toBe(30);
+    const quick = RECIPES.filter((recipe) => recipe.workMinutes <= 30 && recipe.minutes <= 45).map(
+      (recipe) => recipe.name,
+    );
+    expect(suggestions.filter((name) => !quick.includes(name))).toEqual([]);
+    expect(quick, 'quick recipes').toHaveLength(33);
+  });
+
+  it('brings the 3 recipes a new 5-day plan does not show on the first "Other suggestions", and only recipes shown earlier on the second', () => {
+    const shownAtStart = suggestionsOf(store.plan());
+    const notShown = RECIPES.map((recipe) => recipe.name).filter(
+      (name) => !shownAtStart.includes(name),
+    );
+    expect(notShown, 'recipes not shown at the start').toHaveLength(3);
+
+    store.otherSuggestions(LUNCH);
+    expect([...store.plan().days[0].lunch.suggestions].sort()).toEqual([...notShown].sort());
+
+    store.otherSuggestions(LUNCH);
+    const second = store.plan().days[0].lunch.suggestions;
+    expect(second, 'suggestions after the second click').toHaveLength(3);
+    expect(second.filter((name) => !shownAtStart.includes(name))).toEqual([]);
   });
 
   it('shows the same fresh plan after a reload without any change', () => {
@@ -57,24 +89,38 @@ describe('PlanStore', () => {
   });
 
   it('does not suggest the recipes a plan has shown again after a reload, while recipes not shown yet are left', () => {
-    const seen = suggestionsOf(store.plan());
-    for (let click = 0; click < 5; click++) {
-      store.otherSuggestions(LUNCH);
-      seen.push(...store.plan().days[0].lunch.suggestions);
-    }
-    const before = store.plan();
+    const names = RECIPES.map((recipe) => recipe.name);
+    const saved: Plan = {
+      days: [day('2026-10-24', open(...names.slice(0, 3)), open(...names.slice(3, 6)))],
+      people: 2,
+      accepted: false,
+      ticked: [],
+      added: [],
+      shown: names.slice(0, 6),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    store = reload();
+    expect(store.plan(), 'saved plan not loaded').toEqual(saved);
 
+    // 27 of the 33 recipes start unshown, enough for 3 new ones on each of the 8 clicks
+    clickOtherSuggestions(1, 3);
+    const before = store.plan();
     store = reload();
     expect(store.plan()).toEqual(before);
-    // 45 of the 60 recipes were shown, so the next 5 clicks still bring only recipes not shown yet
-    for (let click = 1; click <= 5; click++) {
-      store.otherSuggestions(LUNCH);
-      const suggestions = store.plan().days[0].lunch.suggestions;
-      expect(
-        suggestions.filter((name) => seen.includes(name)),
-        `click ${click}: ${suggestions.join(', ')}`,
-      ).toEqual([]);
-      seen.push(...suggestions);
+    clickOtherSuggestions(4, 8);
+    expect(store.plan().shown).toHaveLength(30);
+
+    function clickOtherSuggestions(first: number, last: number) {
+      for (let click = first; click <= last; click++) {
+        const seen = store.plan().shown;
+        store.otherSuggestions(LUNCH);
+        const suggestions = store.plan().days[0].lunch.suggestions;
+        expect(
+          suggestions.filter((name) => seen.includes(name)),
+          `click ${click}: ${suggestions.join(', ')}`,
+        ).toEqual([]);
+        expect(store.plan().shown, `shown after click ${click}`).toHaveLength(6 + 3 * click);
+      }
     }
   });
 
@@ -284,10 +330,10 @@ describe('PlanStore', () => {
     expect(plan.days).toHaveLength(DEFAULT_DAYS);
     expect(plan.days[0].date).toBe(startDate);
     expect(plan.accepted).toBe(false);
-    for (const day of plan.days) {
-      for (const meal of [day.lunch, day.dinner]) {
-        expect(meal.recipe, day.date).toBeNull();
-        expect(meal.suggestions, day.date).toHaveLength(3);
+    for (const planDay of plan.days) {
+      for (const meal of [planDay.lunch, planDay.dinner]) {
+        expect(meal.recipe, planDay.date).toBeNull();
+        expect(meal.suggestions, planDay.date).toHaveLength(3);
       }
     }
   }

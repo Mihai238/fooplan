@@ -33,7 +33,7 @@ describe('routes', () => {
 
   it('shows the recipe at /recipes/<slug> when opened directly, and again after a reload', async () => {
     for (const [url, name] of [
-      ['/recipes/shepherds-pie', "Shepherd's pie"],
+      ['/recipes/spaghetti-carbonara', 'Spaghetti carbonara'],
       ['/recipes/nicoise-salad', 'Niçoise salad'],
     ]) {
       for (const open of ['opened', 'reloaded']) {
@@ -55,6 +55,20 @@ describe('routes', () => {
     expect(TestBed.inject(Router).url).toBe('/recipes');
     expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Recipes');
     expect(harness.routeNativeElement!.querySelectorAll('article').length).toBeGreaterThan(0);
+  });
+
+  it('shows the Recipes page for /recipes/lasagne, a removed recipe, and the "Niçoise salad" recipe page for /recipes/nicoise-salad', async () => {
+    const harness = await RouterTestingHarness.create('/recipes/lasagne');
+    expect(TestBed.inject(Router).url).toBe('/recipes');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Recipes');
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+    const recipePage = await RouterTestingHarness.create('/recipes/nicoise-salad');
+    expect(TestBed.inject(Router).url).toBe('/recipes/nicoise-salad');
+    expect(recipePage.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+      'Niçoise salad',
+    );
   });
 
   it('redirects a recipe slug in another case to /recipes', async () => {

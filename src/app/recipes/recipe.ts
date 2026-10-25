@@ -12,6 +12,7 @@ export interface Recipe {
   name: string;
   servings: number;
   minutes: number;
+  workMinutes: number;
   ingredients: Ingredient[];
   steps: string[];
 }

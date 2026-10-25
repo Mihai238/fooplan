@@ -12,5 +12,6 @@ paths:
 - Each recipe has at least three non-empty `steps`. They describe the classic way to cook it, in order, one action a cook can do before looking at the screen again, with times and heat where they matter. Every ingredient is named in a step by its ingredient name; no step uses anything that isn't listed, apart from water, salt and pepper.
 - Servings are 2 or 4: 4 for oven dishes, soups and stews, 2 for quick pan dishes.
 - `minutes` is the total time from starting to cook to serving the recipe's servings, including preparation, marinating, oven, simmering and dough rising, excluding soaking the day before; a multiple of 5, from 10 to 240.
+- `workMinutes` is the hands-on time (preparing, chopping, stirring, frying, assembling), without unattended oven, boiling, simmering, soaking or resting time; a multiple of 5, from 5 up to `minutes`. A recipe takes at most 30 minutes of work and at most 45 minutes in total.
 - Parts home cooks normally buy are one ingredient (naan, tortilla, gnocchi, curry paste, hummus); the part the dish is about is made from its ingredients (pizza dough, falafel, fish batter, meatballs).
 - Recipe names and their order are pinned by `recipes.spec.ts`, and saved plans refer to recipes by name: renaming one breaks both.

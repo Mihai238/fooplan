@@ -4,21 +4,15 @@ import { RECIPES } from './recipes';
 
 describe('searchRecipes', () => {
   it('finds the recipes whose name contains the search text, ignoring case, accents and surrounding spaces, in RECIPES order', () => {
-    const spaghetti = [
-      'Spaghetti pomodoro',
-      'Spaghetti carbonara',
-      'Spaghetti bolognese',
-      'Spaghetti aglio e olio',
-    ];
+    const spaghetti = ['Spaghetti pomodoro', 'Spaghetti carbonara', 'Spaghetti aglio e olio'];
     expect(namesFor('spaghetti')).toEqual(spaghetti);
     expect(namesFor('  SPAGHETTI ')).toEqual(spaghetti);
-    expect(namesFor('kase')).toEqual(['Käsespätzle']);
     expect(namesFor('nicoise')).toEqual(['Niçoise salad']);
   });
 
   it('does not match a recipe whose name holds the words of the search text only in another order', () => {
     expect(namesFor('carbonara spaghetti')).toEqual([]);
-    expect(namesFor('spaghetti bolognese')).toEqual(['Spaghetti bolognese']);
+    expect(namesFor('spaghetti carbonara')).toEqual(['Spaghetti carbonara']);
   });
 
   it('ignores accents in the search text too', () => {
@@ -42,11 +36,7 @@ describe('searchRecipes', () => {
   });
 
   it('finds the recipes with an ingredient whose name contains the search text, in RECIPES order', () => {
-    expect(namesFor('feta')).toEqual([
-      'Shakshuka with bread',
-      'Spinach and feta quiche',
-      'Greek salad with feta and bread',
-    ]);
+    expect(namesFor('feta')).toEqual(['Shakshuka with bread', 'Greek salad with feta and bread']);
   });
 
   it("does not match the search text against an ingredient's amount or unit", () => {
@@ -57,7 +47,17 @@ describe('searchRecipes', () => {
   });
 
   it('matches part of an ingredient name ignoring case, accents and surrounding spaces', () => {
-    expect(namesFor('  GRUYERE ')).toEqual(['French onion soup']);
+    expect(
+      names(
+        searchRecipes(
+          [
+            recipe('French onion soup', { name: 'gruyère', amount: 100, unit: 'g' }),
+            recipe('Tomato soup', { name: 'tomato', amount: 500, unit: 'g' }),
+          ],
+          '  GRUYERE ',
+        ),
+      ),
+    ).toEqual(['French onion soup']);
     expect(namesFor(' Cherry ')).toEqual([
       'Pesto pasta with cherry tomatoes',
       'Couscous salad with halloumi',
@@ -99,6 +99,7 @@ describe('searchRecipes', () => {
         typeof ingredient === 'string' ? { name: ingredient, amount: 1, unit: 'pc' } : ingredient,
       ),
       minutes: 30,
+      workMinutes: 15,
       steps: [],
     };
   }

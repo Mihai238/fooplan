@@ -24,6 +24,7 @@ const RECIPES: readonly Recipe[] = [
       { name: 'tomatoes', amount: 400, unit: 'g' },
     ],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -34,6 +35,7 @@ const RECIPES: readonly Recipe[] = [
       { name: 'onion', amount: 1, unit: 'pc' },
     ],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -44,6 +46,7 @@ const RECIPES: readonly Recipe[] = [
       { name: 'onion', amount: 1, unit: 'pc' },
     ],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -54,6 +57,7 @@ const RECIPES: readonly Recipe[] = [
       { name: 'stock', amount: 500, unit: 'ml' },
     ],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -61,6 +65,7 @@ const RECIPES: readonly Recipe[] = [
     servings: 2,
     ingredients: [{ name: 'onion', amount: 300, unit: 'g' }],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -68,6 +73,7 @@ const RECIPES: readonly Recipe[] = [
     servings: 2,
     ingredients: [{ name: 'rice', amount: 150, unit: 'g' }],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -75,6 +81,7 @@ const RECIPES: readonly Recipe[] = [
     servings: 3,
     ingredients: [{ name: 'lettuce', amount: 200, unit: 'g' }],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -82,6 +89,7 @@ const RECIPES: readonly Recipe[] = [
     servings: 4,
     ingredients: [{ name: 'soy sauce', amount: 3, unit: 'tbsp' }],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -89,6 +97,7 @@ const RECIPES: readonly Recipe[] = [
     servings: 2,
     ingredients: [{ name: 'sugar', amount: 0.4, unit: 'tsp' }],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -96,6 +105,7 @@ const RECIPES: readonly Recipe[] = [
     servings: 2,
     ingredients: [{ name: 'sugar', amount: 1.6, unit: 'tsp' }],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -103,12 +113,13 @@ const RECIPES: readonly Recipe[] = [
     servings: 2,
     ingredients: [
       { name: 'parmesan', amount: 50, unit: 'g' },
-      { name: 'beef', amount: 300, unit: 'g' },
-      { name: 'zucchini', amount: 1, unit: 'pc' },
-      { name: 'zucchini', amount: 200, unit: 'g' },
+      { name: 'beef sirloin', amount: 300, unit: 'g' },
+      { name: 'tomato', amount: 1, unit: 'pc' },
+      { name: 'tomato', amount: 200, unit: 'g' },
       { name: 'basil', amount: 20, unit: 'g' },
     ],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -116,6 +127,7 @@ const RECIPES: readonly Recipe[] = [
     servings: 2,
     ingredients: [{ name: 'dragon fruit', amount: 1, unit: 'pc' }],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
   {
@@ -131,6 +143,7 @@ const RECIPES: readonly Recipe[] = [
       { name: 'bell pepper', amount: 2, unit: 'pc' },
     ],
     minutes: 30,
+    workMinutes: 15,
     steps: [],
   },
 ];
@@ -212,9 +225,9 @@ describe('groceries', () => {
       const plan = acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice')));
       expect(groceryList(plan, RECIPES)).toEqual([
         item('basil', 20, 'g', 'Fruit & vegetables'),
-        item('zucchini', 200, 'g', 'Fruit & vegetables'),
-        item('zucchini', 1, 'pc', 'Fruit & vegetables'),
-        item('beef', 300, 'g', 'Meat & fish'),
+        item('tomato', 200, 'g', 'Fruit & vegetables'),
+        item('tomato', 1, 'pc', 'Fruit & vegetables'),
+        item('beef sirloin', 300, 'g', 'Meat & fish'),
         item('parmesan', 50, 'g', 'Dairy & eggs'),
         item('rice', 150, 'g', 'Pasta, rice & grains'),
       ]);
@@ -272,11 +285,11 @@ describe('groceries', () => {
           items: [
             item('basil', 20, 'g'),
             added('lemon', 'Fruit & vegetables'),
-            item('zucchini', 200, 'g'),
-            item('zucchini', 1, 'pc'),
+            item('tomato', 200, 'g'),
+            item('tomato', 1, 'pc'),
           ],
         },
-        { section: 'Meat & fish', items: [item('beef', 300, 'g')] },
+        { section: 'Meat & fish', items: [item('beef sirloin', 300, 'g')] },
         { section: 'Dairy & eggs', items: [item('parmesan', 50, 'g')] },
         { section: 'Pasta, rice & grains', items: [item('rice', 150, 'g')] },
         {
@@ -309,16 +322,16 @@ describe('groceries', () => {
     it("lists an added item named like a plan item on its own line, after the plan's lines of that name", () => {
       const plan = withAdded(
         acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice'))),
-        'zucchini',
+        'tomato',
       );
       const [vegetables] = shoppingView(listItems(plan, RECIPES), []).sections;
       expect(vegetables).toEqual({
         section: 'Fruit & vegetables',
         items: [
           item('basil', 20, 'g'),
-          item('zucchini', 200, 'g'),
-          item('zucchini', 1, 'pc'),
-          added('zucchini', 'Fruit & vegetables'),
+          item('tomato', 200, 'g'),
+          item('tomato', 1, 'pc'),
+          added('tomato', 'Fruit & vegetables'),
         ],
       });
     });
@@ -411,7 +424,7 @@ describe('groceries', () => {
       const plan = withAdded(
         acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice'))),
         'toilet paper',
-        'zucchini',
+        'tomato',
         'coffee',
       );
       const list = listItems(plan, RECIPES);
@@ -419,14 +432,14 @@ describe('groceries', () => {
         sections: [],
         inCart: [
           item('basil', 20, 'g'),
-          item('beef', 300, 'g'),
+          item('beef sirloin', 300, 'g'),
           added('coffee', 'Other'),
           item('parmesan', 50, 'g'),
           item('rice', 150, 'g'),
           added('toilet paper', 'Other'),
-          item('zucchini', 200, 'g'),
-          item('zucchini', 1, 'pc'),
-          added('zucchini', 'Fruit & vegetables'),
+          item('tomato', 200, 'g'),
+          item('tomato', 1, 'pc'),
+          added('tomato', 'Fruit & vegetables'),
         ],
       });
     });
