@@ -137,6 +137,19 @@ full, and a list is either complete or the rule says what decides membership. No
   Variants of one rule can share a criterion, separated by `;`.
 - Every rule in the spec has a criterion, and no criterion says something the spec doesn't.
 
+**Self-check.** Before filing, reread the draft as `develop-ticket`'s intake would, with the code at
+hand, and fix in the ticket, sentence by sentence:
+
+- where two developers could build different things;
+- states, inputs or limits from the precision list that the spec doesn't settle;
+- criteria that can't be tested as written (a component test can't compute CSS, so a colour or an
+  opacity is a browser check and says so), or that disagree with the spec;
+- claims about today's behavior that the code contradicts;
+- texts or names that don't match the app.
+
+Add what this settled to the list of settled details. Ask the user only about what the request leaves
+open; everything else gets decided here.
+
 ## 6. File
 
 Create the issues in dependency order, so a later one can name an earlier one's number:
@@ -154,5 +167,5 @@ flow started.
 ## 7. Report
 
 For each issue filed: its URL, title and dependencies. Then a short list of the details settled in
-step 4, so the user can edit the issue where they'd have decided differently before running
+steps 4 and 5, so the user can edit the issue where they'd have decided differently before running
 `/develop-ticket <number>`, and what step 2 couldn't check in a desktop browser.
