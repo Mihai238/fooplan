@@ -5,7 +5,7 @@ import { addedKey } from '../../plan/plan';
 import { acceptOneDayPlan, day, picked, planOf, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
-import { Unit } from '../../recipes/recipe';
+import { Recipe, Unit } from '../../recipes/recipe';
 import { RecipeStore } from '../../recipes/recipe-store';
 import { PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
 import { byName, bySection, GroceryItem, groceryList, itemKey } from '../groceries';
@@ -761,6 +761,698 @@ describe('GroceryList', () => {
     });
   });
 
+  describe('"Undo" bar after a tick', () => {
+    // For 2 people: 1 pc bell pepper, 1 pc onion and 2 pc spring onion under "Fruit & vegetables",
+    // and 30 ml soy sauce halved to 15 ml, which reads "1 tbsp"
+    const ONION_STIR_FRY: Recipe = {
+      name: 'Onion Stir-Fry',
+      servings: 4,
+      ingredients: [
+        { name: 'onion', amount: 2, unit: 'pc' },
+        { name: 'bell pepper', amount: 2, unit: 'pc' },
+        { name: 'spring onion', amount: 4, unit: 'pc' },
+        { name: 'soy sauce', amount: 30, unit: 'ml' },
+      ],
+      own: true,
+    };
+    const ONION = '1 pc onion';
+    const RICE = '150 g rice';
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('shows the bar as the last child with "1 pc onion" is in the cart. and an "Undo" button after the text after a click on the line\'s checkbox, leaving the status text and the focus alone', async () => {
+      await openStirFryPlan();
+
+      await tick(ONION);
+      expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('In the cart (1)');
+      expect(inCart().map(labelOf)).toEqual([ONION]);
+      const shown = shownBar();
+      expect(element.lastElementChild, 'last child').toBe(shown);
+      expect(barText()).toBe('"1 pc onion" is in the cart.');
+      expect(Array.from(shown.children).map((child) => child.tagName)).toEqual(['SPAN', 'BUTTON']);
+      const button = undoButton();
+      expect(button.type).toBe('button');
+      expect(button.getAttribute('aria-label') ?? 'Undo', 'accessible name').toBe('Undo');
+      expect(button.hasAttribute('aria-labelledby'), 'aria-labelledby').toBe(false);
+      expect(statusText()).toBe('');
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it('gives the bar no role and no aria-live, nor anything inside it, and keeps one status element', async () => {
+      await openStirFryPlan();
+
+      await tick(ONION);
+      const shown = shownBar();
+      for (const node of [shown, ...Array.from(shown.querySelectorAll('*'))]) {
+        expect(node.hasAttribute('role'), `role on ${node.tagName}`).toBe(false);
+        expect(node.hasAttribute('aria-live'), `aria-live on ${node.tagName}`).toBe(false);
+      }
+      expect(element.querySelectorAll('[role="status"]'), 'status elements').toHaveLength(1);
+    });
+
+    it('shows no bar on opening, also with a line ticked before the page opened', async () => {
+      await openStirFryPlan();
+      expect(bar()).toBeNull();
+
+      store.toggleTicked(itemKey({ name: 'onion', unit: 'pc' }));
+      fixture.destroy();
+      await open();
+      expect(inCart().map(labelOf), 'line not ticked').toEqual([ONION]);
+      expect(bar()).toBeNull();
+    });
+
+    it('keeps the status text of an "Add" when a tick shows the bar', async () => {
+      await openStirFryPlan();
+      await add('coffee');
+      expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
+
+      await tick(ONION);
+      shownBar();
+      expect(statusText()).toBe('Added "coffee" to Other.');
+    });
+
+    it('makes "Undo" the last focusable element of the page, after the lines in the cart', async () => {
+      await openStirFryPlan();
+      await tick(RICE);
+
+      await tick(ONION);
+      const focusable = Array.from(
+        element.querySelectorAll<HTMLElement>('a[href], button, input, summary'),
+      );
+      expect(focusable.at(-1)).toBe(undoButton());
+      expect(focusable.at(-2)).toBe(checkboxOf(inCart().at(-1)!));
+    });
+
+    it('shows no bar after unticking a line in the cart', async () => {
+      await openStirFryPlan({ ticked: [itemKey({ name: 'onion', unit: 'pc' })] });
+      expect(inCart().map(labelOf), 'line not ticked').toEqual([ONION]);
+
+      cart()!.open = true;
+      await click(checkboxOf(inCart()[0]));
+      expect(labelsIn(sectionHeaded('Fruit & vegetables')), 'line not unticked').toContain(ONION);
+      expect(bar()).toBeNull();
+    });
+
+    it('shows no bar after "Add" or "Remove" of an added item', async () => {
+      await openStirFryPlan();
+
+      await add('toilet paper');
+      expect(labelsIn(sectionHeaded('Other')), 'item not added').toEqual(['toilet paper']);
+      expect(bar(), 'after "Add"').toBeNull();
+      await click(removeButtonOf(line('toilet paper')));
+      expect(store.plan().added, 'item not removed').toEqual([]);
+      expect(bar(), 'after "Remove"').toBeNull();
+    });
+
+    it('shows no bar for a line ticked in the store without its checkbox', async () => {
+      await openStirFryPlan();
+
+      store.toggleTicked(itemKey({ name: 'onion', unit: 'pc' }));
+      await stable();
+      expect(inCart().map(labelOf), 'line not ticked').toEqual([ONION]);
+      expect(bar()).toBeNull();
+    });
+
+    it('says "toilet paper" is in the cart. for a ticked added item, and "1 tbsp soy sauce" is in the cart. for a 15 ml plan line, with the amount as shown', async () => {
+      await openStirFryPlan({ added: ['toilet paper'] });
+
+      await tick('toilet paper');
+      expect(barText()).toBe('"toilet paper" is in the cart.');
+      await tick('1 tbsp soy sauce');
+      expect(barText()).toBe('"1 tbsp soy sauce" is in the cart.');
+    });
+
+    it('quotes an added item of 60 letters whole', async () => {
+      const name = 'x'.repeat(60);
+      await openStirFryPlan({ added: [name] });
+
+      await tick(name);
+      expect(barText()).toBe(`"${name}" is in the cart.`);
+    });
+
+    it('says "onion" is in the cart. for an added item "onion" ticked next to the plan line "1 pc onion"', async () => {
+      await openStirFryPlan({ added: ['onion'] });
+      expect(labelsIn(sectionHeaded('Fruit & vegetables')), 'item not listed').toContain('onion');
+
+      await tick('onion');
+      expect(barText()).toBe('"onion" is in the cart.');
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain(ONION);
+    });
+
+    it('quotes an added item with its case and inner spaces as typed', async () => {
+      await openStirFryPlan({ added: ['Toilet  Paper'] });
+
+      // labelOf collapses the inner spaces, which the bar's text keeps
+      await tick('Toilet Paper');
+      expect(barText()).toBe('"Toilet  Paper" is in the cart.');
+    });
+
+    it('keeps the bar 4999 ms after the tick and removes it at 5000 ms, leaving the line in the cart', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      shownBar();
+
+      await wait(4999);
+      expect(bar(), 'gone at 4999 ms').not.toBeNull();
+      await wait(1);
+      expect(bar(), 'shown at 5000 ms').toBeNull();
+      expect(inCart().map(labelOf)).toEqual([ONION]);
+    });
+
+    it('shows the bar again for 5 seconds after a tick following one whose bar went away', async () => {
+      await openStirFryPlan();
+      await tick(RICE);
+      shownBar();
+      await wait(5000);
+      expect(bar(), 'first bar still shown').toBeNull();
+
+      await wait(2000);
+      await tick(ONION);
+      expect(barText()).toBe('"1 pc onion" is in the cart.');
+      await wait(4999);
+      expect(bar(), 'gone at 4999 ms').not.toBeNull();
+      await wait(1);
+      expect(bar(), 'shown at 5000 ms').toBeNull();
+    });
+
+    it("replaces the text with the latest tick's line and counts the 5 seconds from it", async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      shownBar();
+
+      await wait(3000);
+      await tick(RICE);
+      expect(barText()).toBe('"150 g rice" is in the cart.');
+      await wait(4999);
+      expect(bar(), 'gone 4999 ms after the latest tick').not.toBeNull();
+      await wait(1);
+      expect(bar(), 'shown 5000 ms after the latest tick').toBeNull();
+      expect(inCart().map(labelOf)).toEqual([ONION, RICE]);
+    });
+
+    it('undoes only the latest tick after two ticks in a row', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await wait(1000);
+      await tick(RICE);
+      expect(barText(), 'bar of the latest tick').toBe('"150 g rice" is in the cart.');
+
+      await click(undoButton());
+      expect(inCart().map(labelOf)).toEqual([ONION]);
+      expect(labelsIn(sectionHeaded('Pasta, rice & grains'))).toEqual([RICE]);
+      expect(bar()).toBeNull();
+    });
+
+    it('keeps the bar past 5 seconds while the pointer is over it or the focus is in it, and removes it as soon as the pointer leaves or the focus goes', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await pointer('pointerenter');
+      await wait(5000);
+      expect(bar(), 'gone with the pointer over it').not.toBeNull();
+      await pointer('pointerleave');
+      expect(bar(), 'shown after pointerleave').toBeNull();
+
+      await tick(RICE);
+      await focusUndo();
+      await wait(5000);
+      expect(bar(), 'gone with the focus in it').not.toBeNull();
+      await blurUndo();
+      expect(bar(), 'shown after blur').toBeNull();
+    });
+
+    it('keeps the bar when the pointer leaves it while "Undo" still has the focus, until the focus goes', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await pointer('pointerenter');
+      await focusUndo();
+      await wait(5000);
+
+      await pointer('pointerleave');
+      expect(bar(), 'gone with the focus in it').not.toBeNull();
+      await blurUndo();
+      expect(bar(), 'shown after blur').toBeNull();
+    });
+
+    it('keeps the bar when "Undo" loses the focus while the pointer is still over it, until the pointer leaves', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await focusUndo();
+      await pointer('pointerenter');
+      await wait(5000);
+
+      await blurUndo();
+      expect(bar(), 'gone with the pointer over it').not.toBeNull();
+      await pointer('pointerleave');
+      expect(bar(), 'shown after pointerleave').toBeNull();
+    });
+
+    it('removes the bar 5000 ms after the tick when the focus came to "Undo" and went before', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await focusUndo();
+      await wait(1000);
+      await blurUndo();
+      expect(bar(), 'gone after blur before 5 seconds').not.toBeNull();
+
+      await wait(3999);
+      expect(bar(), 'gone at 4999 ms').not.toBeNull();
+      await wait(1);
+      expect(bar(), 'shown at 5000 ms').toBeNull();
+    });
+
+    it('removes the bar 5000 ms after the tick when the pointer came and left before', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await pointer('pointerenter');
+      await wait(1000);
+      await pointer('pointerleave');
+      expect(bar(), 'gone after pointerleave before 5 seconds').not.toBeNull();
+
+      await wait(3999);
+      expect(bar(), 'gone at 4999 ms').not.toBeNull();
+      await wait(1);
+      expect(bar(), 'shown at 5000 ms').toBeNull();
+    });
+
+    it('keeps the bar held by a pointer resting on it across a keyboard tick of another line, until the pointer leaves', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await pointer('pointerenter');
+
+      await press(checkboxOf(line('1 pc bell pepper')));
+      expect(barText(), 'bar of the keyboard tick').toBe('"1 pc bell pepper" is in the cart.');
+      await wait(5000);
+      expect(bar(), 'gone with the pointer resting on it').not.toBeNull();
+      await pointer('pointerleave');
+      expect(bar(), 'shown after pointerleave').toBeNull();
+    });
+
+    it('moves the line back to its sorted place in its section with a click on "Undo", leaving the earlier tick in the cart, the status text and the focus alone', async () => {
+      await openStirFryPlan();
+      await tick(RICE);
+      await tick(ONION);
+      expect(barText(), 'bar of the latest tick').toBe('"1 pc onion" is in the cart.');
+
+      await click(undoButton());
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toEqual([
+        '1 pc bell pepper',
+        ONION,
+        '2 pc spring onion',
+      ]);
+      expect(checkboxOf(line(ONION)).checked).toBe(false);
+      expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('In the cart (1)');
+      expect(inCart().map(labelOf)).toEqual([RICE]);
+      expect(bar()).toBeNull();
+      expect(statusText()).toBe('');
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it('leaves the status text of an "Add" as it is on "Undo"', async () => {
+      await openStirFryPlan();
+      await add('coffee');
+      expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
+      await tick('coffee');
+
+      await click(undoButton());
+      expect(labelsIn(sectionHeaded('Other')), 'item not unticked').toEqual(['coffee']);
+      expect(statusText()).toBe('Added "coffee" to Other.');
+    });
+
+    it('moves an added item back under "Other" with "Undo", still on the list', async () => {
+      await openStirFryPlan({ added: ['toilet paper'] });
+      await tick('toilet paper');
+
+      await click(undoButton());
+      expect(labelsIn(sectionHeaded('Other'))).toEqual(['toilet paper']);
+      expect(store.plan().added).toEqual(['toilet paper']);
+      expect(store.plan().ticked).toEqual([]);
+    });
+
+    it('keeps the bar while a press on it is in progress past 5 seconds, so a tap on "Undo" at the 5 s mark unticks the line', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await wait(4000);
+      await pointer('pointerdown');
+      await wait(1001);
+      // A touch fires pointerleave after pointerup and before the click
+      await release(undoButton());
+      await pointer('pointerleave');
+
+      await click(undoButton());
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain(ONION);
+      expect(store.plan().ticked).toEqual([]);
+      expect(bar()).toBeNull();
+    });
+
+    it('removes the bar past 5 seconds when a press on it is cancelled or ends outside it', async () => {
+      await openStirFryPlan();
+      for (const end of ['pointercancel', 'pointerup outside'] as const) {
+        await tick(end === 'pointercancel' ? ONION : RICE);
+        await pointer('pointerdown');
+        await wait(5000);
+        expect(bar(), `gone during the press before "${end}"`).not.toBeNull();
+        if (end === 'pointercancel') {
+          await pointer('pointercancel');
+        } else {
+          await release(document.body);
+        }
+        expect(bar(), `shown after "${end}"`).toBeNull();
+      }
+    });
+
+    it('keeps the bar past 5 seconds when another pointer than the pressing one is cancelled', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await pointer('pointerdown', { pointerId: 1 });
+      await pointer('pointercancel', { pointerId: 2 });
+      await wait(5000);
+      expect(bar(), 'gone after another pointer was cancelled').not.toBeNull();
+      await pointer('pointercancel', { pointerId: 1 });
+      expect(bar(), 'shown after the pressing pointer was cancelled').toBeNull();
+    });
+
+    it('removes the bar at 5000 ms after a right-click or a ctrl+click released on it without a click', async () => {
+      await openStirFryPlan();
+      for (const [press, init] of [
+        ['right-click', { button: 2 }],
+        ['ctrl+click', { button: 0, ctrlKey: true }],
+      ] as const) {
+        await tick(press === 'right-click' ? ONION : RICE);
+        await pointer('pointerdown', init);
+        await release(undoButton(), init);
+        await wait(4999);
+        expect(bar(), `gone at 4999 ms after a ${press}`).not.toBeNull();
+        await wait(1);
+        expect(bar(), `shown at 5000 ms after a ${press}`).toBeNull();
+      }
+    });
+
+    it('removes the bar at 5000 ms after a press on it that opens the context menu instead of clicking', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await wait(4000);
+      await pointer('pointerdown');
+      await wait(500);
+      await pointer('contextmenu');
+      await wait(499);
+      expect(bar(), 'gone at 4999 ms').not.toBeNull();
+      await wait(1);
+      expect(bar(), 'shown at 5000 ms').toBeNull();
+    });
+
+    it('keeps the bar held by a press on it when another pointer is released outside it, until that press ends', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await pointer('pointerdown', { pointerId: 1 });
+      await release(document.body, { pointerId: 2 });
+      await wait(5000);
+      expect(bar(), 'gone after the other pointer was released').not.toBeNull();
+      await release(document.body, { pointerId: 1 });
+      expect(bar(), 'shown after the press ended outside').toBeNull();
+    });
+
+    it('never ticks the line again with "Undo" after it was unticked elsewhere', async () => {
+      const key = itemKey({ name: 'onion', unit: 'pc' });
+      await openStirFryPlan();
+      await tick(ONION);
+      shownBar();
+
+      store.toggleTicked(key);
+      await stable();
+      expect(store.plan().ticked, 'line not unticked').toEqual([]);
+      if (bar() !== null) {
+        await click(undoButton());
+      }
+      expect(store.plan().ticked).toEqual([]);
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain(ONION);
+      expect(bar()).toBeNull();
+    });
+
+    it('removes the cart box when "Undo" unticks the only ticked line', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+
+      await click(undoButton());
+      expect(cart()).toBeNull();
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain(ONION);
+      expect(bar()).toBeNull();
+      expect(vi.getTimerCount(), 'pending timers').toBe(0);
+    });
+
+    it('moves the focus to the line\'s checkbox back in its section after "Undo" with Enter or Space', async () => {
+      await openStirFryPlan();
+      await tick(RICE);
+
+      for (const key of ['Enter', ' '] as const) {
+        await tick(ONION);
+        await pressButton(undoButton(), key);
+        expect(inCart().map(labelOf), `after "${key}"`).toEqual([RICE]);
+        expect(document.activeElement, `focus after "${key}"`).toBe(checkboxOf(line(ONION)));
+      }
+    });
+
+    it('moves the focus to the line\'s checkbox when "Undo" with the keyboard empties the cart', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+
+      await pressButton(undoButton(), ' ');
+      expect(cart()).toBeNull();
+      expect(document.activeElement).toBe(checkboxOf(line(ONION)));
+    });
+
+    it('starts the next bar unheld after "Undo" while the pointer and the focus were on the bar', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      await pointer('pointerenter');
+      await focusUndo();
+
+      await click(undoButton());
+      expect(bar(), 'bar after "Undo"').toBeNull();
+      await tick(RICE);
+      await wait(5000);
+      expect(bar()).toBeNull();
+    });
+
+    it('removes the bar when its line is unticked in the cart, and when its added item is removed with "Remove"', async () => {
+      await openStirFryPlan({ added: ['toilet paper'] });
+      await tick(ONION);
+      shownBar();
+      cart()!.open = true;
+      await click(checkboxOf(cartLine(ONION)));
+      expect(labelsIn(sectionHeaded('Fruit & vegetables')), 'line not unticked').toContain(ONION);
+      expect(bar(), 'after unticking').toBeNull();
+
+      await tick('toilet paper');
+      shownBar();
+      cart()!.open = true;
+      await click(removeButtonOf(cartLine('toilet paper')));
+      expect(store.plan().added).toEqual([]);
+      expect(textOf(element)).not.toContain('toilet paper');
+      expect(bar(), 'after "Remove"').toBeNull();
+    });
+
+    it('moves the focus to the next line of the section after a keyboard tick while the bar shows, not to the bar', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      shownBar();
+
+      await press(checkboxOf(line('1 pc bell pepper')));
+      expect(barText(), 'bar of the keyboard tick').toBe('"1 pc bell pepper" is in the cart.');
+      expect(document.activeElement).toBe(checkboxOf(line('2 pc spring onion')));
+    });
+
+    it('moves the focus to the cart after a keyboard tick of the last line while the bar shows, not to the bar', async () => {
+      await openStirFryPlan();
+      const [remaining, ...others] = listed().map(labelOf);
+      for (const label of others) {
+        await tick(label);
+      }
+      shownBar();
+
+      await press(checkboxOf(line(remaining)));
+      expect(listed()).toEqual([]);
+      expect(barText(), 'bar of the keyboard tick').toBe(`"${remaining}" is in the cart.`);
+      expect(document.activeElement).toBe(cart()?.querySelector('summary'));
+    });
+
+    it('shows no bar after the page is left and opened again, with the line still in the cart', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      shownBar();
+
+      fixture.destroy();
+      expect(vi.getTimerCount(), 'pending timers').toBe(0);
+      await open();
+      expect(TestBed.inject(PlanStore), 'another store').toBe(store);
+      expect(bar()).toBeNull();
+      expect(inCart().map(labelOf)).toEqual([ONION]);
+    });
+
+    it('shows no bar after a reload and keeps its text neither in the plan nor in the storage', async () => {
+      await openStirFryPlan();
+      await tick(ONION);
+      shownBar();
+
+      expect(JSON.stringify(store.plan()), 'plan').not.toContain('is in the cart');
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)!;
+        expect(localStorage.getItem(key), `storage "${key}"`).not.toContain('is in the cart');
+      }
+      await reload();
+      expect(bar()).toBeNull();
+      expect(inCart().map(labelOf)).toEqual([ONION]);
+    });
+
+    it('keeps the bar and its text when another line is unticked in the cart', async () => {
+      await openStirFryPlan();
+      await tick(RICE);
+      await tick(ONION);
+      shownBar();
+
+      cart()!.open = true;
+      await click(checkboxOf(cartLine(RICE)));
+      expect(inCart().map(labelOf), 'line not unticked').toEqual([ONION]);
+      expect(barText()).toBe('"1 pc onion" is in the cart.');
+    });
+
+    it('keeps the bar when another added item is removed from the cart', async () => {
+      await openStirFryPlan({ added: ['coffee', 'toilet paper'] });
+      await tick('coffee');
+      await tick('toilet paper');
+      shownBar();
+
+      cart()!.open = true;
+      await click(removeButtonOf(cartLine('coffee')));
+      expect(store.plan().added, 'item not removed').toEqual(['toilet paper']);
+      expect(barText()).toBe('"toilet paper" is in the cart.');
+    });
+
+    it('keeps counting the 5 seconds from the tick when another line is unticked in the cart', async () => {
+      await openStirFryPlan();
+      await tick(RICE);
+      await tick(ONION);
+      shownBar();
+
+      await wait(2000);
+      cart()!.open = true;
+      await click(checkboxOf(cartLine(RICE)));
+      await wait(2999);
+      expect(bar(), 'gone at 4999 ms').not.toBeNull();
+      await wait(1);
+      expect(bar(), 'shown at 5000 ms').toBeNull();
+    });
+
+    it('shows no bar while the plan is not accepted, also after toggleTicked on the store', async () => {
+      await open();
+      expect(element.querySelector('p.empty'), 'no message').not.toBeNull();
+      expect(bar()).toBeNull();
+
+      store.toggleTicked(itemKey({ name: 'onion', unit: 'pc' }));
+      await stable();
+      expect(store.plan().ticked, 'ticked without an accepted plan').toEqual([]);
+      expect(bar()).toBeNull();
+    });
+
+    // Own recipes saved before a fresh app starts, as a reload makes, so the list holds the lines
+    // the spec names
+    async function openStirFryPlan({ added = [] as string[], ticked = [] as string[] } = {}) {
+      storeOwnRecipes(ONION_STIR_FRY, PLAIN_RICE);
+      const saved = {
+        ...planOf([day('2026-10-24', picked('Onion Stir-Fry'), picked('Plain Rice'))], {
+          accepted: true,
+        }),
+        added,
+        ticked,
+      };
+      localStorage.setItem('fooplan.plan', JSON.stringify(saved));
+      await reload();
+      expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+      expect([...listed(), ...inCart()].map(labelOf), 'plan lines').toEqual(
+        expect.arrayContaining(['1 pc bell pepper', ONION, '2 pc spring onion', RICE]),
+      );
+    }
+
+    async function reload() {
+      TestBed.resetTestingModule();
+      configure();
+      store = TestBed.inject(PlanStore);
+      await open();
+    }
+
+    async function tick(label: string) {
+      await click(checkboxOf(line(label)));
+    }
+
+    async function wait(ms: number) {
+      vi.advanceTimersByTime(ms);
+      await stable();
+    }
+
+    // jsdom has no :hover, so the events stand for the pointer moving onto the bar and off it
+    async function pointer(
+      type: 'pointerenter' | 'pointerleave' | 'pointerdown' | 'pointercancel' | 'contextmenu',
+      init: PointerEventInit = {},
+    ) {
+      shownBar().dispatchEvent(new PointerEvent(type, init));
+      await stable();
+    }
+
+    async function release(target: Element, init: PointerEventInit = {}) {
+      target.dispatchEvent(new PointerEvent('pointerup', { ...init, bubbles: true }));
+      await stable();
+    }
+
+    async function focusUndo() {
+      undoButton().focus();
+      await stable();
+      expect(document.activeElement, '"Undo" not focused').toBe(undoButton());
+    }
+
+    async function blurUndo() {
+      undoButton().blur();
+      await stable();
+    }
+
+    function line(label: string): HTMLElement {
+      const found = listed().find((item) => labelOf(item) === label);
+      expect(found, `no line "${label}" in the sections`).toBeDefined();
+      return found!;
+    }
+
+    function cartLine(label: string): HTMLElement {
+      const found = inCart().find((item) => labelOf(item) === label);
+      expect(found, `no line "${label}" in the cart`).toBeDefined();
+      return found!;
+    }
+
+    function undoButton(): HTMLButtonElement {
+      const button = buttonsIn(shownBar()).find((candidate) => textOf(candidate) === 'Undo');
+      expect(button, 'no "Undo" button').toBeDefined();
+      return button!;
+    }
+
+    // Trimmed only, like statusText: the inner spaces of an added item are part of the text
+    function barText(): string {
+      return (shownBar().querySelector('span')?.textContent ?? '').trim();
+    }
+
+    function shownBar(): HTMLElement {
+      const found = bar();
+      expect(found, 'no "Undo" bar').not.toBeNull();
+      return found!;
+    }
+
+    function bar(): HTMLElement | null {
+      return element.querySelector('div.undo-bar');
+    }
+  });
+
   function configure() {
     TestBed.configureTestingModule({
       providers: [
@@ -773,15 +1465,28 @@ describe('GroceryList', () => {
 
   async function open() {
     fixture = TestBed.createComponent(GroceryList);
-    await fixture.whenStable();
+    await stable();
     element = fixture.nativeElement as HTMLElement;
+  }
+
+  // Under fake timers the render Angular schedules waits for a timer, which this runs while one is
+  // pending. It runs the timers due now, then steps the clock 1 ms at a time, never jumping ahead to
+  // a later timer: a render scheduled from inside a timer needs one step, as the fake timers make a
+  // 0 ms timeout set while they run timers a 1 ms one
+  async function stable() {
+    let step = 0;
+    while (vi.isFakeTimers() && !fixture.isStable() && vi.getTimerCount() > 0) {
+      await vi.advanceTimersByTimeAsync(step);
+      step = 1;
+    }
+    await fixture.whenStable();
   }
 
   // jsdom doesn't focus what is clicked, unlike a browser
   async function click(target: HTMLElement) {
     target.focus();
     target.click();
-    await fixture.whenStable();
+    await stable();
   }
 
   // Space on the checkbox, without click(): jsdom takes any click for a pointer and then doesn't
@@ -792,7 +1497,7 @@ describe('GroceryList', () => {
     checkbox.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true }));
     checkbox.checked = !checkbox.checked;
     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-    await fixture.whenStable();
+    await stable();
   }
 
   // The component reads RECIPES itself, so the test adds the ingredient to the planned recipes,
@@ -834,7 +1539,7 @@ describe('GroceryList', () => {
   async function type(text: string) {
     field().value = text;
     field().dispatchEvent(new Event('input', { bubbles: true }));
-    await fixture.whenStable();
+    await stable();
   }
 
   // Unless the keydown is handled, a browser submits the field's form on Enter, which jsdom doesn't
@@ -844,7 +1549,7 @@ describe('GroceryList', () => {
       field().form?.requestSubmit();
     }
     field().dispatchEvent(new KeyboardEvent('keyup', enter));
-    await fixture.whenStable();
+    await stable();
   }
 
   function field(): HTMLInputElement {
@@ -853,17 +1558,21 @@ describe('GroceryList', () => {
     return input!;
   }
 
-  // Space on the button, then the click a browser sends on keyup. jsdom takes any click event for
-  // a pointer, so the line repeats the keyup while the click is on its way to the button, which
-  // makes jsdom see the key as the last input again, as a browser would
   async function pressRemove(item: HTMLElement) {
-    const button = removeButtonOf(item);
-    const keyup = () => button.dispatchEvent(new KeyboardEvent('keyup', { key: ' ' }));
+    await pressButton(removeButtonOf(item), ' ');
+  }
+
+  // The key on the button, then the click a browser sends on keyup (on keydown for Enter). jsdom
+  // takes any click event for a pointer, so the button's parent repeats the keyup while the click is
+  // on its way to the button, which makes jsdom see the key as the last input again, as a browser
+  // would
+  async function pressButton(button: HTMLButtonElement, key: ' ' | 'Enter') {
+    const keyup = () => button.dispatchEvent(new KeyboardEvent('keyup', { key }));
     button.focus();
-    button.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-    item.addEventListener('click', keyup, { capture: true, once: true });
+    button.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+    button.parentElement!.addEventListener('click', keyup, { capture: true, once: true });
     button.click();
-    await fixture.whenStable();
+    await stable();
   }
 
   function removeButtonOf(item: HTMLElement): HTMLButtonElement {

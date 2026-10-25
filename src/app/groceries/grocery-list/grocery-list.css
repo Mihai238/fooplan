@@ -2,6 +2,11 @@
   display: block;
 }
 
+/* Room for the undo bar at the end of the scroll, also without the bar so the page doesn't jump */
+:host(.accepted) {
+  padding-bottom: 4.5rem;
+}
+
 h1 {
   margin: 0 0 1.5rem;
   font-size: 1.75rem;
@@ -150,6 +155,40 @@ summary {
 .cart label {
   color: var(--muted);
   text-decoration: line-through;
+}
+
+.undo-bar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 1rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-sizing: border-box;
+  width: calc(100% - 2rem);
+  max-width: 28rem;
+  min-height: 44px;
+  margin-inline: auto;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+}
+
+.undo-bar span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.undo-bar .link {
+  min-height: 44px;
+  padding: 0 0.5rem;
+  white-space: nowrap;
 }
 
 summary:focus-visible,
