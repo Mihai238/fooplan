@@ -137,23 +137,7 @@ full, and a list is either complete or the rule says what decides membership. No
   Variants of one rule can share a criterion, separated by `;`.
 - Every rule in the spec has a criterion, and no criterion says something the spec doesn't.
 
-## 6. Review for ambiguity
-
-Before filing, a fresh agent that hasn't seen the chat reads the ticket as `develop-ticket`'s intake
-would, with the code at hand, and never changes a file. It reports, each with the sentence or criterion
-it concerns:
-
-- where two developers could build different things;
-- states, inputs or limits from the precision list that the spec doesn't settle;
-- criteria that can't be tested as written, or that disagree with the spec;
-- claims about today's behavior that the code contradicts;
-- texts or names that don't match the app.
-
-Settle every point in the ticket and add it to the list of settled details. Repeat with a fresh agent
-until a round finds nothing that changes what would be built, at most three rounds. Ask the user about
-whatever is still open after the third.
-
-## 7. File
+## 6. File
 
 Create the issues in dependency order, so a later one can name an earlier one's number:
 
@@ -167,8 +151,8 @@ Add `--label bug` for a bug; no other labels, no assignee, no milestone. Never e
 change to another issue's spec lives in this ticket's `Changes` line and spec. Stop any dev server the
 flow started.
 
-## 8. Report
+## 7. Report
 
 For each issue filed: its URL, title and dependencies. Then a short list of the details settled in
-steps 4 and 6, so the user can edit the issue where they'd have decided differently before running
+step 4, so the user can edit the issue where they'd have decided differently before running
 `/develop-ticket <number>`, and what step 2 couldn't check in a desktop browser.
