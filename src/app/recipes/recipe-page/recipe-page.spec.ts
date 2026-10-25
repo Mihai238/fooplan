@@ -757,7 +757,7 @@ describe('RecipePage', () => {
   });
 
   describe('"Don\'t suggest" and "Suggest again"', () => {
-    it('shows a "Don\'t suggest" button in a p.suggest between the servings and the ingredients, which turns into "Not suggested" and a focused "Suggest again", and back into a focused "Don\'t suggest", on clicks', async () => {
+    it('shows a "Don\'t suggest" button in a p.suggest between the servings and the ingredients, which turns into "Not suggested" and a focused "Suggest again", and back into a focused "Don\'t suggest", on clicks, removing the recipe at once without a dialog', async () => {
       harness = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
       const suggest = page().querySelector('p.servings')?.nextElementSibling;
       expect(suggest?.matches('p.suggest'), 'p.suggest after the servings').toBe(true);
@@ -769,6 +769,11 @@ describe('RecipePage', () => {
       const dontSuggest = button("Don't suggest");
       dontSuggest.focus();
       await click(dontSuggest);
+      expect(
+        document.querySelector('dialog[open]'),
+        'dialog open after "Don\'t suggest"',
+      ).toBeNull();
+      expect(TestBed.inject(PlanStore).removed()).toEqual(['Shakshuka with bread']);
       expect(
         Array.from(page().querySelector('p.suggest')!.children).map((child) => [
           child.tagName,

@@ -406,7 +406,7 @@ describe('RecipeList', () => {
   });
 
   describe('"Don\'t suggest" and "Suggest again"', () => {
-    it('shows a "Don\'t suggest <recipe>" button in a p.suggest between the servings and the ingredients of every card, which turns into "Not suggested" and a focused "Suggest again: Shakshuka with bread", and back into a focused "Don\'t suggest", on clicks', async () => {
+    it('shows a "Don\'t suggest <recipe>" button in a p.suggest between the servings and the ingredients of every card, which turns into "Not suggested" and a focused "Suggest again: Shakshuka with bread", and back into a focused "Don\'t suggest", on clicks, removing the recipe at once without a dialog', async () => {
       expectAllRecipesRendered();
       articles().forEach((article, i) => {
         const name = RECIPES[i].name;
@@ -424,6 +424,11 @@ describe('RecipeList', () => {
       const dontSuggest = suggestButtons(card)[0];
       dontSuggest.focus();
       await click(dontSuggest);
+      expect(
+        document.querySelector('dialog[open]'),
+        'dialog open after "Don\'t suggest"',
+      ).toBeNull();
+      expect(store().removed()).toEqual(['Shakshuka with bread']);
       const suggest = card.querySelector('p.suggest')!;
       expect(Array.from(suggest.children).map((child) => [child.tagName, textOf(child)])).toEqual([
         ['SPAN', 'Not suggested'],

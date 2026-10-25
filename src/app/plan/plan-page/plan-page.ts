@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { afterNextRender, Component, computed, inject, Injector, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RecipeStore } from '../../recipes/recipe-store';
@@ -15,6 +15,11 @@ import {
 } from '../plan';
 import { PlanStore, TODAY } from '../plan-store';
 
+interface RemovalRow {
+  dontSuggest: HTMLButtonElement;
+  suggestion: HTMLButtonElement;
+}
+
 @Component({
   imports: [DatePipe, RouterLink],
   selector: 'app-plan-page',
@@ -25,6 +30,7 @@ export class PlanPage {
   protected readonly store = inject(PlanStore);
   private readonly recipes = inject(RecipeStore);
   private readonly readToday = inject(TODAY);
+  private readonly injector = inject(Injector);
   protected readonly plan = this.store.plan;
   // Not a live date: it is read when the page opens and taken from a new plan's first day when one
   // starts, so a page left open past midnight keeps its marking until then
@@ -46,6 +52,8 @@ export class PlanPage {
   private readonly minutesByRecipe = computed(
     () => new Map(this.recipes.all().map((recipe) => [recipe.name, recipe.minutes])),
   );
+  protected readonly removing = signal('');
+  private removalRow: RemovalRow | null = null;
   private pressedOnBackdrop = false;
 
   protected stepDays(delta: number): void {
@@ -64,15 +72,6 @@ export class PlanPage {
     }
   }
 
-  // The row keeps its elements when its recipe changes, so a focused "×" keeps the focus; only at
-  // the limit, where the "×" buttons go away and would drop the focus to the page, does it move on
-  // to the row's suggestion
-  protected keepFocusInRow(dontSuggest: HTMLButtonElement, suggestion: HTMLButtonElement): void {
-    if (!this.store.canRemove() && document.activeElement === dontSuggest) {
-      suggestion.focus();
-    }
-  }
-
   protected leftovers(kind: MealKind, day: number): string | null {
     return kind === 'lunch' ? leftoversOf(this.plan(), day) : null;
   }
@@ -83,10 +82,7 @@ export class PlanPage {
 
   protected newPlan(dialog: HTMLDialogElement): void {
     if (this.filled() > 0 || this.plan().accepted) {
-      // A leftover press from the last time would otherwise let a click without a press of its own
-      // (element.click(), some assistive technology) close the dialog right after reopening
-      this.pressedOnBackdrop = false;
-      dialog.showModal();
+      this.openDialog(dialog);
     } else {
       this.startPlan();
     }
@@ -95,6 +91,31 @@ export class PlanPage {
   protected startNewPlan(dialog: HTMLDialogElement): void {
     this.startPlan();
     dialog.close();
+  }
+
+  protected askDontSuggest(recipe: string, row: RemovalRow, dialog: HTMLDialogElement): void {
+    this.removing.set(recipe);
+    this.removalRow = row;
+    // A screen reader reads the heading as the dialog's name when it opens, so the dialog opens
+    // once the heading names the recipe
+    afterNextRender(() => this.openDialog(dialog), { injector: this.injector });
+  }
+
+  protected confirmDontSuggest(dialog: HTMLDialogElement): void {
+    this.store.removeRecipe(this.removing());
+    dialog.close();
+  }
+
+  // The row keeps its elements when its recipe changes, so its "×" takes the focus back, named after
+  // the replacement; only at the limit, where the "×" buttons go away, does the focus move on to the
+  // row's suggestion
+  protected focusRow(): void {
+    if (!this.removalRow) {
+      return;
+    }
+    const { dontSuggest, suggestion } = this.removalRow;
+    (this.store.canRemove() ? dontSuggest : suggestion).focus();
+    this.removalRow = null;
   }
 
   // A click on the backdrop targets the dialog itself, as does one on its padding, which lies
@@ -121,6 +142,17 @@ export class PlanPage {
     event.preventDefault();
     const [from, to] = event.shiftKey ? [last, first] : [first, last];
     (document.activeElement === from ? to : from).focus();
+  }
+
+  private openDialog(dialog: HTMLDialogElement): void {
+    // A second click on a "×" before the first one's render opens the dialog asks to open it again
+    if (dialog.open) {
+      return;
+    }
+    // A leftover press from the last time would otherwise let a click without a press of its own
+    // (element.click(), some assistive technology) close the dialog right after reopening
+    this.pressedOnBackdrop = false;
+    dialog.showModal();
   }
 
   private startPlan(): void {

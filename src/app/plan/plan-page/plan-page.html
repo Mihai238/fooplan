@@ -79,7 +79,7 @@
     #newPlanButton
     type="button"
     [class]="plan().accepted ? 'primary' : 'link'"
-    (click)="newPlan(dialog)"
+    (click)="newPlan(newPlanDialog)"
   >
     New plan
   </button>
@@ -163,7 +163,7 @@
                     class="dont-suggest"
                     title="Don't suggest"
                     [attr.aria-label]="'Don\'t suggest ' + recipe"
-                    (click)="store.removeRecipe(recipe); keepFocusInRow(dontSuggest, suggestion)"
+                    (click)="askDontSuggest(recipe, { dontSuggest, suggestion }, dontSuggestDialog)"
                   >
                     <span aria-hidden="true">×</span>
                   </button>
@@ -191,12 +191,12 @@
      clicked button. tabindex="-1" keeps the focus in the dialog on a click on its text or padding,
      where the browser would otherwise move it to the page -->
 <dialog
-  #dialog
+  #newPlanDialog
   tabindex="-1"
   aria-labelledby="new-plan-title"
   aria-describedby="new-plan-lost new-plan-next"
-  (pointerdown)="pressBackdrop($event, dialog)"
-  (click)="closeOnBackdrop($event, dialog)"
+  (pointerdown)="pressBackdrop($event, newPlanDialog)"
+  (click)="closeOnBackdrop($event, newPlanDialog)"
   (keydown)="trapFocus($event, keepButton, startButton)"
   (close)="newPlanButton.focus()"
 >
@@ -222,11 +222,49 @@
     {{ plan().people === 1 ? 'person' : 'people' }}.
   </p>
   <div class="actions">
-    <button #keepButton type="button" class="secondary" autofocus (click)="dialog.close()">
+    <button #keepButton type="button" class="secondary" autofocus (click)="newPlanDialog.close()">
       Keep this plan
     </button>
-    <button #startButton type="button" class="primary danger" (click)="startNewPlan(dialog)">
+    <button #startButton type="button" class="primary danger" (click)="startNewPlan(newPlanDialog)">
       Start new plan
+    </button>
+  </div>
+</dialog>
+
+<!-- Puts the focus back itself for the same reason, and because a removal at the limit takes away
+     the "×" it opened from -->
+<dialog
+  #dontSuggestDialog
+  tabindex="-1"
+  aria-labelledby="dont-suggest-title"
+  aria-describedby="dont-suggest-text"
+  (pointerdown)="pressBackdrop($event, dontSuggestDialog)"
+  (click)="closeOnBackdrop($event, dontSuggestDialog)"
+  (keydown)="trapFocus($event, keepSuggestingButton, dontSuggestButton)"
+  (close)="focusRow()"
+>
+  <h2 id="dont-suggest-title">Don't suggest {{ removing() }}?</h2>
+  <p id="dont-suggest-text">
+    Another recipe takes its place, and it won't be suggested again. "Suggest again" on the Recipes
+    page brings it back.
+  </p>
+  <div class="actions">
+    <button
+      #keepSuggestingButton
+      type="button"
+      class="secondary"
+      autofocus
+      (click)="dontSuggestDialog.close()"
+    >
+      Keep suggesting
+    </button>
+    <button
+      #dontSuggestButton
+      type="button"
+      class="primary"
+      (click)="confirmDontSuggest(dontSuggestDialog)"
+    >
+      Don't suggest
     </button>
   </div>
 </dialog>

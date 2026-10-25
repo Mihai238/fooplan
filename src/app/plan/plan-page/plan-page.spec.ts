@@ -21,6 +21,12 @@ import { PlanPage } from './plan-page';
 
 const ARROWS = ['One more day', 'One day fewer', 'One more person', 'One person fewer'] as const;
 
+// jsdom lays out nothing, so a dialog's box is stubbed, and these points are placed around it
+const BOX = { left: 100, top: 100, right: 400, bottom: 300 } as DOMRect;
+const OUTSIDE = { clientX: 50, clientY: 50 };
+const PADDING = { clientX: 110, clientY: 110 };
+const INSIDE = { clientX: 250, clientY: 200 };
+
 describe('PlanPage', () => {
   let fixture: ComponentFixture<PlanPage>;
   let element: HTMLElement;
@@ -915,13 +921,19 @@ describe('PlanPage', () => {
   });
 
   describe('"×" to stop suggesting a recipe', () => {
+    const SHAKSHUKA_ROW = ['Shakshuka with bread', 'Niçoise salad', 'Chickpea and spinach curry'];
     const SHAKSHUKA_LUNCH = planOf([
+      planDay('2026-10-24', open(...SHAKSHUKA_ROW), picked('Spaghetti carbonara')),
+    ]);
+    const SHAKSHUKA_TWICE = planOf([
       planDay(
         '2026-10-24',
-        open('Shakshuka with bread', 'Niçoise salad', 'Chickpea and spinach curry'),
-        picked('Spaghetti carbonara'),
+        open(...SHAKSHUKA_ROW),
+        open('Fish tacos', 'Shakshuka with bread', 'Potato goulash'),
       ),
     ]);
+    const DONT_SUGGEST_TEXT =
+      'Another recipe takes its place, and it won\'t be suggested again. "Suggest again" on the Recipes page brings it back.';
 
     it('shows the suggestion button, the "Recipe" link and a "×" button named "Don\'t suggest Shakshuka with bread" with the title "Don\'t suggest", in this order, in the row of a suggested "Shakshuka with bread"', async () => {
       await openWith(SHAKSHUKA_LUNCH);
@@ -968,52 +980,355 @@ describe('PlanPage', () => {
       expect(crossesOf(element)).toHaveLength(3);
     });
 
-    it('shows another recipe in the row, removes "Shakshuka with bread" and keeps the focus on the same "×", named after the new suggestion, when the user clicks the focused "Don\'t suggest Shakshuka with bread"', async () => {
+    it('opens a modal "Don\'t suggest Shakshuka with bread?" dialog with its text and "Keep suggesting", focused, before "Don\'t suggest", without the browser\'s confirm box, keeping the row and removing nothing, when the user clicks "Don\'t suggest Shakshuka with bread"', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+      expect(openDialogOrNull(), 'dialog open before the click').toBeNull();
+      const dialog = await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      expect(modalDialogs.has(dialog), 'opened with showModal()').toBe(true);
+      expect(confirm).not.toHaveBeenCalled();
+      expect(textOf(dialog.querySelector('h2'))).toBe("Don't suggest Shakshuka with bread?");
+      expect(Array.from(dialog.querySelectorAll('p')).map(textOf)).toEqual([DONT_SUGGEST_TEXT]);
+      expect(buttonTexts(dialog)).toEqual(['Keep suggesting', "Don't suggest"]);
+      expect(document.activeElement).toBe(button(dialog, 'Keep suggesting'));
+      expect(suggestionsOf(meal(0)).map(recipeOf)).toEqual(SHAKSHUKA_ROW);
+      expect(store.removed()).toEqual([]);
+    });
+
+    it('builds the "Don\'t suggest" dialog like the "New plan" one: tabindex -1, the heading h2#dont-suggest-title, the text p#dont-suggest-text, and its buttons in a div.actions, "Keep suggesting" .secondary and "Don\'t suggest" .primary without .danger', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const dialog = await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      expect(dialog.getAttribute('tabindex')).toBe('-1');
+      expect(dialog.querySelector('h2')?.id).toBe('dont-suggest-title');
+      expect(dialog.querySelector('p')?.id).toBe('dont-suggest-text');
+      const actions = dialog.querySelectorAll('div.actions');
+      expect(actions, 'div.actions in the dialog').toHaveLength(1);
+      expect(
+        Array.from(actions[0].children).map((child) => [
+          child.tagName.toLowerCase(),
+          textOf(child),
+          Array.from(child.classList).sort(),
+        ]),
+      ).toEqual([
+        ['button', 'Keep suggesting', ['secondary']],
+        ['button', "Don't suggest", ['primary']],
+      ]);
+    });
+
+    it('saves nothing while the "Don\'t suggest" dialog is open, and shows the page with the dialog closed and "Shakshuka with bread" still suggested on a reload', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const saved = { ...localStorage };
+      await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      expect({ ...localStorage }).toEqual(saved);
+
+      await reload();
+      expect(openDialogOrNull()).toBeNull();
+      expect(suggestionsOf(meal(0)).map(recipeOf)).toEqual(SHAKSHUKA_ROW);
+      expect(store.removed()).toEqual([]);
+      expect({ ...localStorage }).toEqual(saved);
+    });
+
+    it('names the "Don\'t suggest" dialog "Don\'t suggest Shakshuka with bread?" after its heading and describes it by its text', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const dialog = await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      expect(labelOf(dialog)).toBe("Don't suggest Shakshuka with bread?");
+      expect(textOfIdRefs(dialog, 'aria-describedby')).toBe(DONT_SUGGEST_TEXT);
+    });
+
+    it('already heads and names the "Don\'t suggest" dialog "Don\'t suggest Shakshuka with bread?" when it opens, also when reopened from the "Shakshuka with bread" row after "Keep suggesting" in the dialog of "Niçoise salad"', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const showModal = HTMLDialogElement.prototype.showModal;
+      const openedAs: [string, string][] = [];
+      vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (
+        this: HTMLDialogElement,
+      ) {
+        openedAs.push([textOf(this.querySelector('h2')), labelOf(this)]);
+        showModal.call(this);
+      });
+      const first = await openDontSuggestDialog(dontSuggest(meal(0), 'Niçoise salad'));
+      await click(button(first, 'Keep suggesting'));
+      await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      expect(openedAs).toEqual([
+        ["Don't suggest Niçoise salad?", "Don't suggest Niçoise salad?"],
+        ["Don't suggest Shakshuka with bread?", "Don't suggest Shakshuka with bread?"],
+      ]);
+    });
+
+    it('closes, keeps the row with its other suggestions in their places, removes nothing and puts the focus back on "Don\'t suggest Shakshuka with bread" when the user clicks "Keep suggesting", presses Escape or clicks the backdrop', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const before = store.plan();
+      const savedRemoved = localStorage.getItem('fooplan.removed');
+      const closings: [string, (dialog: HTMLDialogElement) => Promise<unknown>][] = [
+        ['"Keep suggesting"', (dialog) => click(button(dialog, 'Keep suggesting'))],
+        ['Escape', () => pressKey('Escape')],
+        ['backdrop', () => clickBackdrop()],
+      ];
+      for (const [way, close] of closings) {
+        const cross = dontSuggest(meal(0), 'Shakshuka with bread');
+        await close(await openDontSuggestDialog(cross));
+        expect(openDialogOrNull(), way).toBeNull();
+        expect(suggestionsOf(meal(0)).map(recipeOf), way).toEqual(SHAKSHUKA_ROW);
+        expect(store.removed(), way).toEqual([]);
+        expect(store.plan(), way).toBe(before);
+        expect(localStorage.getItem('fooplan.removed'), way).toBe(savedRemoved);
+        expect(document.activeElement, `${way}: focus`).toBe(cross);
+      }
+    });
+
+    it('stays open and removes nothing when the user clicks the heading, the text or the padding of the "Don\'t suggest" dialog, presses inside it and releases on the backdrop, or presses the backdrop and releases inside it', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const dialog = await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      // The text sits at 0,0 in jsdom, outside the dialog's box: only the click's target tells it
+      // from the backdrop
+      for (const node of Array.from(dialog.querySelectorAll<HTMLElement>('h2, p'))) {
+        await pressAndRelease(node, { clientX: 0, clientY: 0 });
+        expect(openDialogOrNull(), `closed by a click on "${textOf(node)}"`).toBe(dialog);
+      }
+      await pressAndRelease(dialog, PADDING);
+      expect(openDialogOrNull(), 'closed by a click on the padding').toBe(dialog);
+      await pressAndRelease(dialog.querySelector('p')!, INSIDE, dialog, OUTSIDE);
+      expect(openDialogOrNull(), 'closed by a press inside').toBe(dialog);
+      await pressAndRelease(dialog, OUTSIDE, dialog, INSIDE);
+      expect(openDialogOrNull(), 'closed by a release inside').toBe(dialog);
+      expect(suggestionsOf(meal(0)).map(recipeOf)).toEqual(SHAKSHUKA_ROW);
+      expect(store.removed()).toEqual([]);
+    });
+
+    it('keeps the "Don\'t suggest" dialog open on a click on the backdrop without a press after a press on the backdrop without a click and Escape', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const cross = dontSuggest(meal(0), 'Shakshuka with bread');
+      await press(await openDontSuggestDialog(cross), OUTSIDE);
+      await pressKey('Escape');
+      expect(openDialogOrNull(), 'open after Escape').toBeNull();
+      const dialog = await openDontSuggestDialog(cross);
+      await release(dialog, OUTSIDE);
+      expect(openDialogOrNull()).toBe(dialog);
+      expect(store.removed()).toEqual([]);
+    });
+
+    it('closes, shows another recipe in the row in place of "Shakshuka with bread" with the two other suggestions unchanged, removes "Shakshuka with bread", keeps the picked dinner and puts the focus on the row\'s "×", named after the new suggestion, when the user clicks "Don\'t suggest" in the dialog of the focused "Don\'t suggest Shakshuka with bread"', async () => {
       await openWith(SHAKSHUKA_LUNCH);
       const cross = dontSuggest(meal(0), 'Shakshuka with bread');
       cross.focus();
-      await click(cross);
+      await confirmDontSuggest(cross);
 
+      expect(openDialogOrNull()).toBeNull();
       const recipes = suggestionsOf(meal(0)).map(recipeOf);
+      expect(recipes).toHaveLength(3);
       expect(recipes[0]).not.toBe('Shakshuka with bread');
       expect(recipes.slice(1)).toEqual(['Niçoise salad', 'Chickpea and spinach curry']);
       expect(store.removed()).toEqual(['Shakshuka with bread']);
-      expect(document.activeElement, 'focus after the click').toBe(cross);
-      expect(nameOf(cross)).toBe(`Don't suggest ${recipes[0]}`);
+      expect(JSON.parse(localStorage.getItem('fooplan.removed') ?? 'null')).toEqual([
+        'Shakshuka with bread',
+      ]);
+      expect(textOf(meal(1).querySelector('p.recipe'))).toBe('Spaghetti carbonara');
+      expect(document.activeElement, 'focus after "Don\'t suggest"').toBe(
+        dontSuggest(meal(0), recipes[0]),
+      );
     });
 
-    it('removes every "×" and moves the focus to the row\'s suggestion when the focused "×" leaves exactly 15 recipes suggested, and leaves the focus alone when the "×" clicked was not focused', async () => {
+    it('shows a replacement in the last row of the last day and puts the focus on its "×" when the user confirms from that row', async () => {
+      const last = meal(9);
+      const before = suggestionsOf(last).map(recipeOf);
+      expect(before, 'suggestions of the last dinner').toHaveLength(3);
+      await confirmDontSuggest(dontSuggest(last, before[2]));
+
+      const after = suggestionsOf(last).map(recipeOf);
+      expect(after.slice(0, 2)).toEqual(before.slice(0, 2));
+      expect(after[2]).not.toBe(before[2]);
+      expect(store.removed()).toEqual([before[2]]);
+      expect(document.activeElement).toBe(dontSuggest(last, after[2]));
+    });
+
+    it('keeps the picks and the leftovers when the user confirms "Don\'t suggest Shakshuka with bread"', async () => {
+      await openWith(
+        planOf([
+          planDay('2026-10-24', open(...SHAKSHUKA_ROW), picked('Spaghetti carbonara'), true),
+          planDay('2026-10-25', covered(), picked('Potato goulash')),
+        ]),
+      );
+      await confirmDontSuggest(dontSuggest(meal(0), 'Shakshuka with bread'));
+
+      expect(store.removed()).toEqual(['Shakshuka with bread']);
+      expect(suggestionsOf(meal(0)).map(recipeOf)).not.toContain('Shakshuka with bread');
+      expect(Array.from(element.querySelectorAll('p.recipe')).map(textOf)).toEqual([
+        'Spaghetti carbonara',
+        'Leftovers: Spaghetti carbonara',
+        'Potato goulash',
+      ]);
+    });
+
+    it('puts the focus on the row\'s "×", named after the new suggestion, when the user confirms "Don\'t suggest" in the dialog of a "Don\'t suggest Shakshuka with bread" clicked without having the focus', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      (document.activeElement as HTMLElement | null)?.blur();
+      expect(document.activeElement, 'focus before the click').toBe(document.body);
+      await confirmDontSuggest(dontSuggest(meal(0), 'Shakshuka with bread'));
+
+      const replacement = recipeOf(suggestionsOf(meal(0))[0]);
+      expect(replacement).not.toBe('Shakshuka with bread');
+      expect(document.activeElement).toBe(dontSuggest(meal(0), replacement));
+    });
+
+    it('removes every "×" and moves the focus to the row\'s suggestion when the user confirms "Don\'t suggest" from a focused "×" at exactly 16 recipes suggested', async () => {
+      leaveSuggested(store, 16);
+      await fixture.whenStable();
+      const removed = store.removed().length;
+      const cross = crossesOf(element)[0];
+      expect(cross, 'no "×" button at 16 recipes suggested').toBeDefined();
+      const row = cross.closest('div.option')!;
+      cross.focus();
+      await confirmDontSuggest(cross);
+      expect(openDialogOrNull()).toBeNull();
+      expect(store.removed()).toHaveLength(removed + 1);
+      expect(crossesOf(element), '"×" buttons at 15').toEqual([]);
+      expect(document.activeElement).toBe(row.querySelector('button.suggestion'));
+    });
+
+    it('also moves the focus to the row\'s suggestion at exactly 16 recipes suggested when the "×" was clicked without having the focus', async () => {
       leaveSuggested(store, 16);
       await fixture.whenStable();
       const cross = crossesOf(element)[0];
       expect(cross, 'no "×" button at 16 recipes suggested').toBeDefined();
       const row = cross.closest('div.option')!;
-      cross.focus();
-      await click(cross);
-      expect(crossesOf(element), '"×" buttons at 15').toEqual([]);
-      expect(document.activeElement).toBe(row.querySelector('button.suggestion'));
-
-      store.restoreRecipe(store.removed().at(-1)!);
-      await fixture.whenStable();
-      const unfocused = crossesOf(element)[0];
-      expect(unfocused, 'no "×" button at 16 recipes suggested again').toBeDefined();
       (document.activeElement as HTMLElement | null)?.blur();
       expect(document.activeElement, 'focus before the click').toBe(document.body);
-      await click(unfocused);
-      expect(crossesOf(element), '"×" buttons at 15 again').toEqual([]);
-      expect(document.activeElement).toBe(document.body);
+      await confirmDontSuggest(cross);
+      expect(crossesOf(element), '"×" buttons at 15').toEqual([]);
+      expect(document.activeElement).toBe(row.querySelector('button.suggestion'));
     });
 
-    it('shows "×" buttons while planning and no "Don\'t suggest" button once the plan is accepted', async () => {
+    it('shows a replacement in both rows of a plan suggesting "Shakshuka with bread" in two meals, and puts the focus on the first meal\'s row\'s "×", when the user confirms from the first meal', async () => {
+      await openWith(SHAKSHUKA_TWICE);
+      await confirmDontSuggest(dontSuggest(meal(0), 'Shakshuka with bread'));
+
+      const lunch = suggestionsOf(meal(0)).map(recipeOf);
+      const dinner = suggestionsOf(meal(1)).map(recipeOf);
+      expect(lunch[0]).not.toBe('Shakshuka with bread');
+      expect(lunch.slice(1)).toEqual(['Niçoise salad', 'Chickpea and spinach curry']);
+      expect(dinner[1]).not.toBe('Shakshuka with bread');
+      expect([dinner[0], dinner[2]]).toEqual(['Fish tacos', 'Potato goulash']);
+      expect(store.removed()).toEqual(['Shakshuka with bread']);
+      expect(document.activeElement).toBe(dontSuggest(meal(0), lunch[0]));
+    });
+
+    it('puts the focus on the second meal\'s row\'s "×" when the user confirms from the second of two meals suggesting "Shakshuka with bread"', async () => {
+      await openWith(SHAKSHUKA_TWICE);
+      await confirmDontSuggest(dontSuggest(meal(1), 'Shakshuka with bread'));
+
+      const dinner = suggestionsOf(meal(1)).map(recipeOf);
+      expect(dinner[1]).not.toBe('Shakshuka with bread');
+      expect(suggestionsOf(meal(0)).map(recipeOf)).not.toContain('Shakshuka with bread');
+      expect(document.activeElement).toBe(dontSuggest(meal(1), dinner[1]));
+    });
+
+    it('keeps the focus on the two buttons of the "Don\'t suggest" dialog when the user presses Tab or Shift+Tab repeatedly', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const dialog = await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      for (const shiftKey of [false, true]) {
+        button(dialog, 'Keep suggesting').focus();
+        const focused: string[] = [];
+        for (let i = 0; i < 4; i++) {
+          await pressKey('Tab', shiftKey);
+          focused.push(textOf(document.activeElement));
+        }
+        expect(focused, shiftKey ? 'Shift+Tab' : 'Tab').toEqual([
+          "Don't suggest",
+          'Keep suggesting',
+          "Don't suggest",
+          'Keep suggesting',
+        ]);
+      }
+      expect(openDialogOrNull()).toBe(dialog);
+      expect(store.removed()).toEqual([]);
+    });
+
+    it('moves the focus to "Keep suggesting" on Tab and to "Don\'t suggest" on Shift+Tab after a click on the text of the "Don\'t suggest" dialog', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const dialog = await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      const text = dialog.querySelector('p')!;
+      for (const [shiftKey, expected] of [
+        [false, 'Keep suggesting'],
+        [true, "Don't suggest"],
+      ] as const) {
+        await pressAndRelease(text, INSIDE);
+        expect(document.activeElement, 'focus after a click on the text').toBe(dialog);
+        await pressKey('Tab', shiftKey);
+        expect(textOf(document.activeElement), shiftKey ? 'Shift+Tab' : 'Tab').toBe(expected);
+      }
+      expect(openDialogOrNull()).toBe(dialog);
+    });
+
+    it('moves the focus between the buttons of the "Don\'t suggest" dialog itself on every Tab, as Safari\'s own Tab skips buttons', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const dialog = await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      for (const [shiftKey, from, to] of [
+        [false, 'Keep suggesting', "Don't suggest"],
+        [true, "Don't suggest", 'Keep suggesting'],
+      ] as const) {
+        const key = shiftKey ? 'Shift+Tab' : 'Tab';
+        button(dialog, from).focus();
+        expect(await pressKey('Tab', shiftKey), `${key} from "${from}" left to the browser`).toBe(
+          true,
+        );
+        expect(textOf(document.activeElement), key).toBe(to);
+      }
+    });
+
+    it('heads the dialog "Don\'t suggest Niçoise salad?" when the user clicks "Keep suggesting" in the dialog of "Shakshuka with bread" and then the "×" of the "Niçoise salad" row', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const first = await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      await click(button(first, 'Keep suggesting'));
+      const dialog = await openDontSuggestDialog(dontSuggest(meal(0), 'Niçoise salad'));
+      expect(element.querySelectorAll('dialog[open]'), 'open dialogs').toHaveLength(1);
+      expect(textOf(dialog.querySelector('h2'))).toBe("Don't suggest Niçoise salad?");
+      expect(labelOf(dialog)).toBe("Don't suggest Niçoise salad?");
+    });
+
+    it('removes "Niçoise salad", not "Shakshuka with bread", and puts the focus on the "Niçoise salad" row\'s "×" when the user confirms in the dialog reopened from that row after "Keep suggesting"', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const first = await openDontSuggestDialog(dontSuggest(meal(0), 'Shakshuka with bread'));
+      await click(button(first, 'Keep suggesting'));
+      await confirmDontSuggest(dontSuggest(meal(0), 'Niçoise salad'));
+
+      const recipes = suggestionsOf(meal(0)).map(recipeOf);
+      expect(store.removed()).toEqual(['Niçoise salad']);
+      expect(recipes[0]).toBe('Shakshuka with bread');
+      expect(recipes[1]).not.toBe('Niçoise salad');
+      expect(recipes[2]).toBe('Chickpea and spinach curry');
+      expect(document.activeElement).toBe(dontSuggest(meal(0), recipes[1]));
+    });
+
+    it('shows "×" buttons while planning, and no "Don\'t suggest" button once the plan is accepted or on a picked meal and a leftovers lunch', async () => {
       expect(crossesOf(element).length, '"×" buttons while planning').toBeGreaterThan(0);
       await acceptOneDayPlan();
       expect(store.plan().accepted, 'plan not accepted').toBe(true);
-      expect(crossesOf(element)).toEqual([]);
+      expect(crossesOf(element), 'accepted plan').toEqual([]);
+
+      await openWith(
+        planOf([
+          planDay(
+            '2026-10-24',
+            picked('Chickpea and spinach curry'),
+            picked('Potato goulash'),
+            true,
+          ),
+          planDay(
+            '2026-10-25',
+            covered(),
+            open('Niçoise salad', 'Shakshuka with bread', 'Fish tacos'),
+          ),
+        ]),
+      );
+      for (const index of [0, 1, 2]) {
+        expect(crossesOf(meal(index)), `"×" buttons of meal ${index}`).toEqual([]);
+      }
     });
 
+    // The "×" buttons of the rows, not the "Don't suggest" button of the dialog
     function crossesOf(root: HTMLElement): HTMLButtonElement[] {
-      return Array.from(root.querySelectorAll('button')).filter((candidate) =>
-        nameOf(candidate).startsWith("Don't suggest"),
+      return Array.from(root.querySelectorAll('button')).filter(
+        (candidate) =>
+          !candidate.closest('dialog') && nameOf(candidate).startsWith("Don't suggest"),
       );
     }
 
@@ -1022,17 +1337,24 @@ describe('PlanPage', () => {
       expect(found, `"Don't suggest ${recipe}" buttons`).toHaveLength(1);
       return found[0];
     }
+
+    async function confirmDontSuggest(cross: HTMLButtonElement) {
+      const dialog = await openDontSuggestDialog(cross);
+      await click(button(dialog, "Don't suggest"));
+    }
+
+    // Stubs the box of the dialog the click opened, as the "New plan" dialog tests do
+    async function openDontSuggestDialog(cross: HTMLButtonElement): Promise<HTMLDialogElement> {
+      await click(cross);
+      const dialog = openDialog();
+      vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue(BOX);
+      return dialog;
+    }
   });
 
   describe('"New plan" dialog', () => {
-    // jsdom lays out nothing, so the dialog's box is stubbed, and these points are placed around it
-    const BOX = { left: 100, top: 100, right: 400, bottom: 300 } as DOMRect;
-    const OUTSIDE = { clientX: 50, clientY: 50 };
-    const PADDING = { clientX: 110, clientY: 110 };
-    const INSIDE = { clientX: 250, clientY: 200 };
-
     beforeEach(() => {
-      const dialog = element.querySelector('dialog');
+      const dialog = element.querySelector('dialog[aria-labelledby="new-plan-title"]');
       expect(dialog, 'no dialog').not.toBeNull();
       vi.spyOn(dialog!, 'getBoundingClientRect').mockReturnValue(BOX);
     });
@@ -1322,79 +1644,6 @@ describe('PlanPage', () => {
       }
     }
 
-    // What the browser does on Escape and Tab when the page's keydown handlers let it: Escape
-    // cancels the modal dialog, and Tab moves through the dialog only, since the page behind is
-    // inert, leaving the page for the browser's toolbar after the last button. Resolves to whether
-    // the page handled the key itself
-    async function pressKey(key: 'Escape' | 'Tab', shiftKey = false): Promise<boolean> {
-      const target = document.activeElement ?? document.body;
-      const keydown = new KeyboardEvent('keydown', {
-        key,
-        shiftKey,
-        bubbles: true,
-        cancelable: true,
-      });
-      const handled = !target.dispatchEvent(keydown);
-      if (!handled) {
-        const dialog = openDialog();
-        if (key === 'Escape') {
-          if (dialog.dispatchEvent(new Event('cancel', { cancelable: true }))) {
-            dialog.close();
-          }
-        } else {
-          const tabbable = Array.from(dialog.querySelectorAll<HTMLElement>(TABBABLE));
-          const next = tabbable[tabbable.indexOf(target as HTMLElement) + (shiftKey ? -1 : 1)];
-          if (next) {
-            next.focus();
-          } else {
-            (target as HTMLElement).blur();
-          }
-        }
-      }
-      await fixture.whenStable();
-      return handled;
-    }
-
-    // A click on the backdrop targets the dialog itself, at a point outside its box
-    async function clickBackdrop() {
-      await pressAndRelease(openDialog(), OUTSIDE);
-    }
-
-    // What the browser fires for a press and its release: pointerdown on the pressed element, whose
-    // default moves the focus to the closest focusable element around it, else off to the page; then
-    // click on the closest element around both the pressed and the released one
-    async function pressAndRelease(
-      pressed: HTMLElement,
-      pressAt: { clientX: number; clientY: number },
-      clicked = pressed,
-      releaseAt = pressAt,
-    ) {
-      await press(pressed, pressAt);
-      await release(clicked, releaseAt);
-    }
-
-    async function press(pressed: HTMLElement, at: { clientX: number; clientY: number }) {
-      const pointerdown = new PointerEvent('pointerdown', {
-        bubbles: true,
-        cancelable: true,
-        ...at,
-      });
-      if (pressed.dispatchEvent(pointerdown)) {
-        const focusable = pressed.closest<HTMLElement>('button, input, [tabindex]');
-        if (focusable) {
-          focusable.focus();
-        } else if (document.activeElement instanceof HTMLElement) {
-          document.activeElement.blur();
-        }
-      }
-      await fixture.whenStable();
-    }
-
-    async function release(clicked: HTMLElement, at: { clientX: number; clientY: number }) {
-      clicked.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...at }));
-      await fixture.whenStable();
-    }
-
     function lostParagraph(): string {
       const paragraphs = Array.from(openDialog().querySelectorAll('p')).map(textOf);
       const lost = paragraphs.find((text) => text.includes('Sat 24 Oct'));
@@ -1600,6 +1849,7 @@ describe('PlanPage', () => {
       const dontSuggest = meal(0).querySelector<HTMLButtonElement>('button.dont-suggest');
       expect(dontSuggest, 'no "×" button').not.toBeNull();
       await click(dontSuggest!);
+      await click(button(openDialog(), "Don't suggest"));
       expect(store.removed()).toEqual([others[0]]);
       expect(suggestionsOf(meal(0)).map(recipeOf)).not.toContain(others[0]);
       expect(marks()[0], 'after "×"').toBe('Fri 23 Oct past');
@@ -1824,9 +2074,8 @@ describe('PlanPage', () => {
 
     // The page as it opens on a cleared localStorage, as on the first visit
     async function reopen() {
-      TestBed.resetTestingModule();
       localStorage.clear();
-      await createPage();
+      await reload();
     }
 
     // Navigating to the Plan page creates it anew, with the plan kept in the store
@@ -1910,12 +2159,90 @@ describe('PlanPage', () => {
     }
   });
 
+  // What the browser does on Escape and Tab when the page's keydown handlers let it: Escape
+  // cancels the modal dialog, and Tab moves through the dialog only, since the page behind is
+  // inert, leaving the page for the browser's toolbar after the last button. Resolves to whether
+  // the page handled the key itself
+  async function pressKey(key: 'Escape' | 'Tab', shiftKey = false): Promise<boolean> {
+    const target = document.activeElement ?? document.body;
+    const keydown = new KeyboardEvent('keydown', {
+      key,
+      shiftKey,
+      bubbles: true,
+      cancelable: true,
+    });
+    const handled = !target.dispatchEvent(keydown);
+    if (!handled) {
+      const dialog = openDialog();
+      if (key === 'Escape') {
+        if (dialog.dispatchEvent(new Event('cancel', { cancelable: true }))) {
+          dialog.close();
+        }
+      } else {
+        const tabbable = Array.from(dialog.querySelectorAll<HTMLElement>(TABBABLE));
+        const next = tabbable[tabbable.indexOf(target as HTMLElement) + (shiftKey ? -1 : 1)];
+        if (next) {
+          next.focus();
+        } else {
+          (target as HTMLElement).blur();
+        }
+      }
+    }
+    await fixture.whenStable();
+    return handled;
+  }
+
+  // A click on the backdrop targets the dialog itself, at a point outside its box
+  async function clickBackdrop() {
+    await pressAndRelease(openDialog(), OUTSIDE);
+  }
+
+  // What the browser fires for a press and its release: pointerdown on the pressed element, whose
+  // default moves the focus to the closest focusable element around it, else off to the page; then
+  // click on the closest element around both the pressed and the released one
+  async function pressAndRelease(
+    pressed: HTMLElement,
+    pressAt: { clientX: number; clientY: number },
+    clicked = pressed,
+    releaseAt = pressAt,
+  ) {
+    await press(pressed, pressAt);
+    await release(clicked, releaseAt);
+  }
+
+  async function press(pressed: HTMLElement, at: { clientX: number; clientY: number }) {
+    const pointerdown = new PointerEvent('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+      ...at,
+    });
+    if (pressed.dispatchEvent(pointerdown)) {
+      const focusable = pressed.closest<HTMLElement>('button, input, [tabindex]');
+      if (focusable) {
+        focusable.focus();
+      } else if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }
+    await fixture.whenStable();
+  }
+
+  async function release(clicked: HTMLElement, at: { clientX: number; clientY: number }) {
+    clicked.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ...at }));
+    await fixture.whenStable();
+  }
+
   // The page as it opens with this plan saved, as after a reload
   async function openWith(plan: Plan) {
-    TestBed.resetTestingModule();
     localStorage.setItem('fooplan.plan', JSON.stringify(plan));
-    await createPage();
+    await reload();
     expect(store.plan(), 'saved plan not loaded').toEqual(plan);
+  }
+
+  // The page as it opens again with what is saved
+  async function reload() {
+    TestBed.resetTestingModule();
+    await createPage();
   }
 
   async function createPage() {
@@ -2042,7 +2369,11 @@ describe('PlanPage', () => {
   }
 
   function labelOf(node: Element): string {
-    const ids = (node.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean);
+    return textOfIdRefs(node, 'aria-labelledby');
+  }
+
+  function textOfIdRefs(node: Element, attribute: string): string {
+    const ids = (node.getAttribute(attribute) ?? '').split(/\s+/).filter(Boolean);
     return ids.map((id) => textOf(document.getElementById(id))).join(' ');
   }
 
