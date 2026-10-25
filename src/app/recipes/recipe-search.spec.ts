@@ -36,7 +36,11 @@ describe('searchRecipes', () => {
   });
 
   it('finds the recipes with an ingredient whose name contains the search text, in RECIPES order', () => {
-    expect(namesFor('feta')).toEqual(['Shakshuka with bread', 'Greek salad with feta and bread']);
+    expect(namesFor('feta')).toEqual([
+      'Shakshuka with bread',
+      'Greek salad with feta and bread',
+      'Spinach and feta omelette',
+    ]);
   });
 
   it("does not match the search text against an ingredient's amount or unit", () => {
@@ -61,6 +65,7 @@ describe('searchRecipes', () => {
     expect(namesFor(' Cherry ')).toEqual([
       'Pesto pasta with cherry tomatoes',
       'Couscous salad with halloumi',
+      'Hummus plate with bread and vegetables',
     ]);
   });
 

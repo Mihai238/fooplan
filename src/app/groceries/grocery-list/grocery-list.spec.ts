@@ -431,6 +431,55 @@ describe('GroceryList', () => {
     ]);
   });
 
+  it('lists "350 g bread" under "Bread & bakery", "4 pc tomato" and "1 pc avocado" under "Fruit & vegetables", "250 g mozzarella" and "2 pc egg" under "Dairy & eggs", and no olive oil, for "Caprese salad with bread" and "Avocado toast with fried egg" accepted for 2', async () => {
+    await openAccepted('Caprese salad with bread', 'Avocado toast with fried egg');
+
+    expect(
+      sections().map((section) => [textOf(section.querySelector('h2')), labelsIn(section)]),
+    ).toEqual([
+      ['Fruit & vegetables', ['1 pc avocado', '15 g basil', '1 pc lemon', '4 pc tomato']],
+      ['Dairy & eggs', ['2 pc egg', '250 g mozzarella']],
+      ['Bread & bakery', ['350 g bread']],
+      ['Spices & sauces', ['1 tsp chili flakes']],
+    ]);
+    expect(
+      listed()
+        .map(labelOf)
+        .filter((line) => line.includes('olive oil')),
+    ).toEqual([]);
+  });
+
+  it('lists "200 g hummus" and "400 g canned white beans" under "Cans & jars", "2 pc lemon" under "Fruit & vegetables", "400 g bread" under "Bread & bakery", and no olive oil, for "Hummus plate with bread and vegetables" and "Tuna and white bean salad with bread" accepted for 2', async () => {
+    await openAccepted(
+      'Hummus plate with bread and vegetables',
+      'Tuna and white bean salad with bread',
+    );
+
+    expect(
+      sections().map((section) => [textOf(section.querySelector('h2')), labelsIn(section)]),
+    ).toEqual([
+      [
+        'Fruit & vegetables',
+        [
+          '2 pc carrot',
+          '150 g cherry tomato',
+          '1 pc cucumber',
+          '2 pc lemon',
+          '10 g parsley',
+          '1 pc red onion',
+        ],
+      ],
+      ['Bread & bakery', ['400 g bread']],
+      ['Cans & jars', ['150 g canned tuna', '400 g canned white beans', '200 g hummus']],
+      ['Spices & sauces', ['1 tsp paprika']],
+    ]);
+    expect(
+      listed()
+        .map(labelOf)
+        .filter((line) => line.includes('olive oil')),
+    ).toEqual([]);
+  });
+
   it('follows an edit of "Quick Dal" in an accepted plan for 2 at once: its ticked 100 g canned chickpeas become 150 g, still ticked, after changing 200 g to 300 g, and 150 pc unticked, with no g line, after changing the unit to pc', async () => {
     storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
     const chickpeas = itemKey({ name: 'canned chickpeas', unit: 'g' });
@@ -605,10 +654,9 @@ describe('GroceryList', () => {
     });
 
     it('says "Added "lime" to Fruit & vegetables." for an entry named like a plan line, and lists both lime lines', async () => {
-      acceptOneDayPlan(store);
+      await openAccepted('Fish tacos', 'Spaghetti carbonara');
       const lime = groceryList(store.plan(), RECIPES).find((item) => item.name === 'lime');
       expect(lime, 'no lime in the plan').toBeDefined();
-      await open();
 
       await add('lime');
       expect(statusText()).toBe('Added "lime" to Fruit & vegetables.');
@@ -657,10 +705,9 @@ describe('GroceryList', () => {
     });
 
     it('says "Added" for an entry named like a ticked plan line, as only added items count', async () => {
-      acceptOneDayPlan(store);
+      await openAccepted('Fish tacos', 'Spaghetti carbonara');
       const lime = groceryList(store.plan(), RECIPES).find((item) => item.name === 'lime');
       expect(lime, 'no lime in the plan').toBeDefined();
-      await open();
       await click(checkboxOf(listed().find((item) => labelOf(item) === lineOf(lime!))!));
       expect(inCart().map(labelOf), 'plan line not ticked').toEqual([lineOf(lime!)]);
 
@@ -1461,6 +1508,17 @@ describe('GroceryList', () => {
         { provide: TODAY, useValue: () => '2026-10-24' },
       ],
     });
+  }
+
+  // A fresh app on an accepted one-day plan for 2 with these picks, as a reload makes
+  async function openAccepted(lunch: string, dinner: string) {
+    const saved = planOf([day('2026-10-24', picked(lunch), picked(dinner))], { accepted: true });
+    localStorage.setItem('fooplan.plan', JSON.stringify(saved));
+    TestBed.resetTestingModule();
+    configure();
+    store = TestBed.inject(PlanStore);
+    expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+    await open();
   }
 
   async function open() {

@@ -23,6 +23,13 @@ import {
 const STORAGE_KEY = 'fooplan.plan';
 const REMOVED_KEY = 'fooplan.removed';
 const NAMES = RECIPES.map((recipe) => recipe.name);
+const EASY_RECIPES = [
+  'Hummus plate with bread and vegetables',
+  'Avocado toast with fried egg',
+  'Caprese salad with bread',
+  'Spinach and feta omelette',
+  'Tuna and white bean salad with bread',
+];
 
 describe('PlanStore', () => {
   let today: string;
@@ -40,7 +47,7 @@ describe('PlanStore', () => {
     expectFreshPlan(store.plan(), '2026-10-24');
   });
 
-  it('suggests three different recipes for each of the 10 meals of a new 5-day plan, all from the 29 recipes, and one recipe for two meals', () => {
+  it('suggests three different recipes for each of the 10 meals of a new 5-day plan, 30 different ones from the 34 recipes, leaving 4 unshown', () => {
     const plan = store.plan();
     expect(plan.days, 'days').toHaveLength(5);
     for (const planDay of plan.days) {
@@ -54,52 +61,56 @@ describe('PlanStore', () => {
     }
     const suggestions = suggestionsOf(plan);
     expect(suggestions, 'suggestions').toHaveLength(30);
-    expect(new Set(suggestions).size, 'different recipes suggested').toBe(29);
-    expect(NAMES, 'recipes').toHaveLength(29);
+    expect(new Set(suggestions).size, 'different recipes suggested').toBe(30);
+    expect(NAMES, 'recipes').toHaveLength(34);
     expect(suggestions.filter((name) => !NAMES.includes(name))).toEqual([]);
-    const repeated = suggestions.filter((name, i) => suggestions.indexOf(name) !== i);
-    expect(repeated).toEqual([plan.days[0].lunch.suggestions[0]]);
-    expect(plan.days[4].dinner.suggestions).toContain(plan.days[0].lunch.suggestions[0]);
+    expect(NAMES.filter((name) => !suggestions.includes(name))).toHaveLength(4);
   });
 
   it('suggests no recipe whose name contains "soup" in a new 5-day plan', () => {
     expect(suggestionsOf(store.plan()).filter((name) => /soup/i.test(name))).toEqual([]);
   });
 
-  it("suggests 27 different recipes for the first 9 meals of a new 5-day plan and, for the last dinner, the 2 recipes left and the first suggestion of day 1's lunch, whatever the draw", () => {
+  it('suggests 30 different recipes for the 10 meals of a new 5-day plan, leaving 4 of the 34 unshown, whatever the draw', () => {
     for (let draw = 1; draw <= 10; draw++) {
       localStorage.clear();
       seed = draw * 7;
       store = reload();
-      const plan = store.plan();
-      const firstNine = suggestionsOf(plan).slice(0, 27);
-      expect(new Set(firstNine).size, `draw ${draw}: first 9 meals`).toBe(27);
-      const left = NAMES.filter((name) => !firstNine.includes(name));
-      expect([...plan.days[4].dinner.suggestions].sort(), `draw ${draw}: last dinner`).toEqual(
-        [...left, plan.days[0].lunch.suggestions[0]].sort(),
-      );
+      const suggestions = suggestionsOf(store.plan());
+      expect(new Set(suggestions).size, `draw ${draw}: different recipes`).toBe(30);
+      expect(
+        NAMES.filter((name) => !suggestions.includes(name)),
+        `draw ${draw}: unshown`,
+      ).toHaveLength(4);
     }
   });
 
-  it('shows every recipe in a new 5-day plan, so the first "Other suggestions" brings 3 other recipes shown earlier', () => {
+  it('brings 3 of the 4 recipes a new 5-day plan does not show on the first "Other suggestions", and the last one with the first 2 suggestions the meal started with on the second', () => {
     const plan = store.plan();
-    expect(new Set(suggestionsOf(plan)).size).toBe(RECIPES.length);
+    const notShown = NAMES.filter((name) => !suggestionsOf(plan).includes(name));
+    expect(notShown, 'recipes not shown').toHaveLength(4);
     const before = plan.days[0].lunch.suggestions;
 
     store.otherSuggestions(LUNCH);
-    const after = store.plan().days[0].lunch.suggestions;
-    expect(new Set(after).size, after.join(', ')).toBe(3);
-    expect(after.filter((name) => before.includes(name))).toEqual([]);
+    const first = store.plan().days[0].lunch.suggestions;
+    expect(new Set(first).size, first.join(', ')).toBe(3);
+    expect(first.filter((name) => !notShown.includes(name))).toEqual([]);
+
+    store.otherSuggestions(LUNCH);
+    const second = store.plan().days[0].lunch.suggestions;
+    const left = notShown.filter((name) => !first.includes(name));
+    expect([...second].sort()).toEqual([...left, before[0], before[1]].sort());
   });
 
-  it('suggests 30 different recipes, the own recipe "Grandma\'s Soup" among them, in a new 5-day plan of the 29 recipes and "Grandma\'s Soup"', () => {
+  it('suggests all 30 recipes still suggested, the own recipe "Grandma\'s Soup" among them, in a new 5-day plan of the 34 recipes and "Grandma\'s Soup" with the 5 easy ones taken out', () => {
     localStorage.clear();
     storeOwnRecipes(ownRecipe("Grandma's Soup"));
+    localStorage.setItem(REMOVED_KEY, JSON.stringify(EASY_RECIPES));
     store = reload();
 
-    const suggestions = suggestionsOf(store.plan());
-    expect(new Set(suggestions).size).toBe(30);
-    expect(suggestions).toContain("Grandma's Soup");
+    const suggested = [...NAMES.filter((name) => !EASY_RECIPES.includes(name)), "Grandma's Soup"];
+    expect(suggested, 'recipes still suggested').toHaveLength(30);
+    expect([...suggestionsOf(store.plan())].sort()).toEqual(suggested.sort());
   });
 
   it('starts a fresh plan for today when the stored plan suggests "Lentil soup", and reads "Lentil soup" in the saved removed recipes as unknown', () => {
@@ -170,7 +181,7 @@ describe('PlanStore', () => {
     store = reload();
     expect(store.plan(), 'saved plan not loaded').toEqual(saved);
 
-    // 23 of the 29 recipes start unshown, enough for 3 new ones on each of the 7 clicks
+    // 28 of the 34 recipes start unshown, enough for 3 new ones on each of the 7 clicks
     clickOtherSuggestions(1, 3);
     const before = store.plan();
     store = reload();
@@ -937,6 +948,16 @@ describe('PlanStore', () => {
 
       store.removeRecipe(suggested[0]);
       expect(saved()).toEqual(before);
+    });
+
+    it('takes out the 5 easy recipes of #29 like any other, and 14 more of the 34 recipes but not a 20th, as 15 stay suggested', () => {
+      EASY_RECIPES.forEach((name) => store.removeRecipe(name));
+      expect(store.removed(), 'easy recipes not removed').toEqual(EASY_RECIPES);
+      expect(suggestionsOf(store.plan()).filter((name) => EASY_RECIPES.includes(name))).toEqual([]);
+
+      NAMES.slice(0, 15).forEach((name) => store.removeRecipe(name));
+      expect(store.removed()).toEqual([...EASY_RECIPES, ...NAMES.slice(0, 14)]);
+      expect(store.canRemove()).toBe(false);
     });
 
     it('keeps the removed recipes, saved in the order removed, after a reload and "New plan", and reads a saved list without unknown names and duplicates, or as empty when it is not a list of names or leaves fewer than 15 suggested', () => {

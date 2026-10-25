@@ -54,6 +54,16 @@ describe('checkRecipe', () => {
     }
   });
 
+  it('asks for another name for "Caprese salad with bread" and "caprese salad with bread", as for "Spaghetti pomodoro"', () => {
+    for (const name of [
+      'Spaghetti pomodoro',
+      'Caprese salad with bread',
+      'caprese salad with bread',
+    ]) {
+      expect(problemsOf(draft({ name })), name).toEqual({ name: NAME_TAKEN, rows: [{}] });
+    }
+  });
+
   it('asks for a whole number from 1 to 12 for the servings 0, 13, 2.5, +2 and two, and takes 1 and 12', () => {
     for (const servings of ['0', '13', '2.5', '+2', 'two']) {
       expect(problemsOf(draft({ servings })), servings).toEqual({ servings: SERVINGS, rows: [{}] });
@@ -110,6 +120,20 @@ describe('checkRecipe', () => {
           name: NAME_TAKEN,
           rows: [{}],
         });
+      }
+    });
+
+    it('asks for another name for the other 4 easy recipes of #29 and for names with the slug of one of the 5, like "Avocado-toast with fried egg!" or "  SPINACH AND FETA   OMELETTE "', () => {
+      for (const name of [
+        'Hummus plate with bread and vegetables',
+        'Avocado toast with fried egg',
+        'Spinach and feta omelette',
+        'Tuna and white bean salad with bread',
+        'Avocado-toast with fried egg!',
+        '  SPINACH AND FETA   OMELETTE ',
+        'Caprese Salad, with Bread',
+      ]) {
+        expect(problemsOf(draft({ name })), name).toEqual({ name: NAME_TAKEN, rows: [{}] });
       }
     });
 

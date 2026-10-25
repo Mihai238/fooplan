@@ -564,7 +564,7 @@ describe('PlanPage', () => {
       ).toEqual(['Recipe', 'Recipe', 'Recipe']);
     });
 
-    it('gives the 30 "Recipe" links of a 5-day plan the visible text "Recipe" and 29 different names, each "Recipe for" its suggestion', () => {
+    it('gives the 30 "Recipe" links of a 5-day plan the visible text "Recipe" and 30 different names, each "Recipe for" its suggestion', () => {
       expect(days(), 'days of the plan').toHaveLength(5);
       const names: string[] = [];
       for (let index = 0; index < 10; index++) {
@@ -581,7 +581,7 @@ describe('PlanPage', () => {
         }
         names.push(...links.map(nameOf));
       }
-      expect(new Set(names).size).toBe(29);
+      expect(new Set(names).size).toBe(30);
     });
 
     it('moves the "Recipe" links to the new suggestions when the user clicks "Other suggestions"', async () => {
@@ -753,6 +753,36 @@ describe('PlanPage', () => {
       const name = meal(1).querySelector('p.recipe');
       expect(textOf(name)).toBe('Spaghetti carbonara');
       expect(partOf(name?.nextElementSibling)).toEqual(['p.minutes', '20 minutes']);
+    });
+
+    it('shows the suggestions "Tuna and white bean salad with bread 10 minutes", "Avocado toast with fried egg 15 minutes" and "Spinach and feta omelette 15 minutes", and the picked "Tuna and white bean salad with bread" linking to /recipes/tuna-and-white-bean-salad-with-bread with a p.minutes "10 minutes"', async () => {
+      await openWith(
+        planOf([
+          planDay(
+            '2026-10-24',
+            open(
+              'Tuna and white bean salad with bread',
+              'Avocado toast with fried egg',
+              'Spinach and feta omelette',
+            ),
+            picked('Spaghetti carbonara'),
+          ),
+        ]),
+      );
+      expect(suggestionsOf(meal(0)).map(textOf)).toEqual([
+        'Tuna and white bean salad with bread 10 minutes',
+        'Avocado toast with fried egg 15 minutes',
+        'Spinach and feta omelette 15 minutes',
+      ]);
+
+      await click(suggestionsOf(meal(0))[0]);
+      const link = recipeLink(meal(0));
+      expect(textOf(link)).toBe('Tuna and white bean salad with bread');
+      expect(link.getAttribute('href')).toBe('/recipes/tuna-and-white-bean-salad-with-bread');
+      expect(partOf(meal(0).querySelector('p.recipe')?.nextElementSibling)).toEqual([
+        'p.minutes',
+        '10 minutes',
+      ]);
     });
 
     it("puts no link in or around a picked meal's time, and keeps the time out of the recipe name's link", async () => {

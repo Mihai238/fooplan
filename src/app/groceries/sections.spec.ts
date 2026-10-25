@@ -8,7 +8,6 @@ const REMOVED_INGREDIENTS = [
   'beer',
   'canned kidney beans',
   'canned pineapple',
-  'canned white beans',
   'cannelloni tube',
   'celery stalk',
   'chicken drumstick',
@@ -24,7 +23,6 @@ const REMOVED_INGREDIENTS = [
   'garam masala',
   'ground lamb',
   'gruyère',
-  'hummus',
   'lasagne sheet',
   'mussel',
   'naan',
@@ -75,7 +73,7 @@ describe('sections', () => {
     expect(mapped.filter((name) => !used.has(name))).toEqual([]);
   });
 
-  it('maps none of the 41 ingredients only removed recipes used, and still every ingredient of the recipes except the pantry staples', () => {
+  it('maps none of the 39 ingredients only removed recipes used, and still every ingredient of the recipes except the pantry staples', () => {
     const mapped = Object.values(INGREDIENTS_BY_SECTION).flat();
     expect(mapped.filter((name) => REMOVED_INGREDIENTS.includes(name))).toEqual([]);
 
@@ -98,6 +96,13 @@ describe('sections', () => {
       (name) => !PANTRY_STAPLES.includes(name) && !mapped.includes(name),
     );
     expect(unmapped).toEqual([]);
+  });
+
+  it('lists "canned white beans" right after "canned tuna" and "hummus" right after "green curry paste" in "Cans & jars", and puts both there', () => {
+    const cansAndJars = INGREDIENTS_BY_SECTION['Cans & jars'];
+    expect(cansAndJars[cansAndJars.indexOf('canned tuna') + 1]).toBe('canned white beans');
+    expect(cansAndJars[cansAndJars.indexOf('green curry paste') + 1]).toBe('hummus');
+    expect(['hummus', 'canned white beans'].map(sectionOf)).toEqual(['Cans & jars', 'Cans & jars']);
   });
 
   it('puts each of the 6 ingredients only the soups used under "Other", but keeps sour cream, pine nut, sesame seed, potato and red onion in their sections', () => {

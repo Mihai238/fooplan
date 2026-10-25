@@ -53,6 +53,29 @@ describe('routes', () => {
     }
   });
 
+  it('shows the recipe page of each of the 5 easy recipes of #29 at its slug, opened directly, with "Step 1 of" its step count and its first step', async () => {
+    for (const [url, name] of [
+      ['/recipes/hummus-plate-with-bread-and-vegetables', 'Hummus plate with bread and vegetables'],
+      ['/recipes/avocado-toast-with-fried-egg', 'Avocado toast with fried egg'],
+      ['/recipes/caprese-salad-with-bread', 'Caprese salad with bread'],
+      ['/recipes/spinach-and-feta-omelette', 'Spinach and feta omelette'],
+      ['/recipes/tuna-and-white-bean-salad-with-bread', 'Tuna and white bean salad with bread'],
+    ]) {
+      const harness = await RouterTestingHarness.create(url);
+      expect(TestBed.inject(Router).url).toBe(url);
+      expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim(), url).toBe(name);
+      const steps = RECIPES.find((recipe) => recipe.name === name)?.steps ?? [];
+      expect(steps.length, `${url} steps`).toBeGreaterThan(0);
+      const page = harness.routeNativeElement!;
+      expect(page.querySelector('.counter')?.textContent?.trim(), url).toBe(
+        `Step 1 of ${steps.length}`,
+      );
+      expect(page.querySelector('.step')?.textContent?.trim(), url).toBe(steps[0]);
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+    }
+  });
+
   it('redirects an unknown recipe slug to /recipes, showing the recipes and no recipe page', async () => {
     const harness = await RouterTestingHarness.create('/recipes/pizza-hawaii');
     expect(TestBed.inject(Router).url).toBe('/recipes');

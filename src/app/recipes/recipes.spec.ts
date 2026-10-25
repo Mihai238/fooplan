@@ -31,6 +31,11 @@ const SPEC_NAMES = [
   'Potato goulash',
   'Sweet potato and black bean chili',
   'Niçoise salad',
+  'Hummus plate with bread and vegetables',
+  'Avocado toast with fried egg',
+  'Caprese salad with bread',
+  'Spinach and feta omelette',
+  'Tuna and white bean salad with bread',
 ];
 
 const SPEC_TIMES: Record<string, { minutes: number; workMinutes: number }> = {
@@ -63,7 +68,120 @@ const SPEC_TIMES: Record<string, { minutes: number; workMinutes: number }> = {
   'Potato goulash': { minutes: 45, workMinutes: 20 },
   'Sweet potato and black bean chili': { minutes: 45, workMinutes: 20 },
   'Niçoise salad': { minutes: 30, workMinutes: 15 },
+  'Hummus plate with bread and vegetables': { minutes: 10, workMinutes: 10 },
+  'Avocado toast with fried egg': { minutes: 15, workMinutes: 15 },
+  'Caprese salad with bread': { minutes: 10, workMinutes: 10 },
+  'Spinach and feta omelette': { minutes: 15, workMinutes: 15 },
+  'Tuna and white bean salad with bread': { minutes: 10, workMinutes: 5 },
 };
+
+// #29's data, so a changed amount or a typo in a step fails, not just a broken rule
+const EASY_RECIPES: Recipe[] = [
+  {
+    name: 'Hummus plate with bread and vegetables',
+    servings: 2,
+    minutes: 10,
+    workMinutes: 10,
+    ingredients: [
+      { name: 'hummus', amount: 200, unit: 'g' },
+      { name: 'bread', amount: 200, unit: 'g' },
+      { name: 'cucumber', amount: 1, unit: 'pc' },
+      { name: 'carrot', amount: 2, unit: 'pc' },
+      { name: 'cherry tomato', amount: 150, unit: 'g' },
+      { name: 'lemon', amount: 0.5, unit: 'pc' },
+      { name: 'olive oil', amount: 1, unit: 'tbsp' },
+      { name: 'paprika', amount: 1, unit: 'tsp' },
+    ],
+    steps: [
+      'Cut the cucumber and the carrots into sticks and halve the cherry tomatoes.',
+      'Spread the hummus in a shallow bowl, squeeze the lemon over it, drizzle it with the olive oil and sprinkle it with the paprika.',
+      'Toast the bread slices in a dry pan over medium heat, about 1 minute per side.',
+      'Serve the hummus with the bread and the vegetables for dipping.',
+    ],
+  },
+  {
+    name: 'Avocado toast with fried egg',
+    servings: 2,
+    minutes: 15,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'bread', amount: 150, unit: 'g' },
+      { name: 'avocado', amount: 1, unit: 'pc' },
+      { name: 'lemon', amount: 0.5, unit: 'pc' },
+      { name: 'egg', amount: 2, unit: 'pc' },
+      { name: 'olive oil', amount: 1, unit: 'tbsp' },
+      { name: 'chili flakes', amount: 0.5, unit: 'tsp' },
+    ],
+    steps: [
+      'Toast the bread slices in a toaster or a dry pan until golden.',
+      'Halve the avocado, scoop out the flesh and mash it with the juice of the lemon, salt and pepper.',
+      'Heat the olive oil in a pan over medium heat and fry the eggs for 3 to 4 minutes until the whites are set and the yolks still soft.',
+      'Spread the avocado on the toast, top each slice with a fried egg and sprinkle with the chili flakes.',
+    ],
+  },
+  {
+    name: 'Caprese salad with bread',
+    servings: 2,
+    minutes: 10,
+    workMinutes: 10,
+    ingredients: [
+      { name: 'tomato', amount: 4, unit: 'pc' },
+      { name: 'mozzarella', amount: 250, unit: 'g' },
+      { name: 'basil', amount: 15, unit: 'g' },
+      { name: 'olive oil', amount: 3, unit: 'tbsp' },
+      { name: 'bread', amount: 200, unit: 'g' },
+    ],
+    steps: [
+      'Slice the tomatoes and the mozzarella into rounds about 1 cm thick.',
+      'Arrange them on a plate in alternating, overlapping slices and tuck the basil leaves in between.',
+      'Season with salt and pepper and drizzle the olive oil over the salad.',
+      'Slice the bread and serve it with the salad.',
+    ],
+  },
+  {
+    name: 'Spinach and feta omelette',
+    servings: 2,
+    minutes: 15,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'egg', amount: 4, unit: 'pc' },
+      { name: 'spinach', amount: 100, unit: 'g' },
+      { name: 'feta', amount: 100, unit: 'g' },
+      { name: 'spring onion', amount: 2, unit: 'pc' },
+      { name: 'butter', amount: 20, unit: 'g' },
+    ],
+    steps: [
+      'Rinse the spinach and slice the spring onions finely.',
+      'Whisk the eggs with salt and pepper and crumble the feta.',
+      'Melt the butter in a non-stick pan over medium heat and cook the spring onions and the spinach for 2 minutes until the spinach wilts.',
+      'Pour in the eggs, scatter the feta over them and cook for 3 to 4 minutes until the omelette is set at the edges but still soft on top.',
+      'Fold the omelette in half, cut it in two and serve.',
+    ],
+  },
+  {
+    name: 'Tuna and white bean salad with bread',
+    servings: 2,
+    minutes: 10,
+    workMinutes: 5,
+    ingredients: [
+      { name: 'canned white beans', amount: 400, unit: 'g' },
+      { name: 'canned tuna', amount: 150, unit: 'g' },
+      { name: 'red onion', amount: 0.5, unit: 'pc' },
+      { name: 'parsley', amount: 10, unit: 'g' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'olive oil', amount: 3, unit: 'tbsp' },
+      { name: 'bread', amount: 200, unit: 'g' },
+    ],
+    steps: [
+      'Drain and rinse the canned white beans and drain the canned tuna.',
+      'Slice the red onion into thin half-rings and chop the parsley.',
+      'Mix the beans, the tuna, the red onion and the parsley in a bowl with the juice of the lemon, the olive oil, salt and pepper.',
+      'Let the salad stand for 5 minutes, then slice the bread and serve it alongside.',
+    ],
+  },
+];
+
+const EASY_START = SPEC_NAMES.length - EASY_RECIPES.length;
 
 const REMOVED_NAMES = [
   'Lasagne',
@@ -129,11 +247,31 @@ describe('RECIPES', () => {
     expect(problems).toEqual([]);
   });
 
-  it('contains exactly the 29 recipes of the spec table, in its order, each with its minutes and workMinutes', () => {
+  it('contains exactly the 34 recipes of the spec table, in its order, each with its minutes and workMinutes', () => {
     expect(Object.keys(SPEC_TIMES), 'recipes in the times table').toEqual(SPEC_NAMES);
     expect(
       RECIPES.map(({ name, minutes, workMinutes }) => ({ name, minutes, workMinutes })),
     ).toEqual(SPEC_NAMES.map((name) => ({ name, ...SPEC_TIMES[name] })));
+  });
+
+  it('holds the 5 easy recipes of #29 after the first 29, in their order, each with exactly its servings, minutes, workMinutes, ingredients and steps', () => {
+    expect(RECIPES.slice(EASY_START)).toEqual(EASY_RECIPES);
+  });
+
+  it('uses "canned white beans" and "hummus" as the only ingredient names in the 5 easy recipes that the first 29 recipes do not use', () => {
+    const known = new Set(
+      RECIPES.slice(0, EASY_START).flatMap((recipe) =>
+        recipe.ingredients.map((ingredient) => ingredient.name),
+      ),
+    );
+    const easy = RECIPES.slice(EASY_START).flatMap((recipe) =>
+      recipe.ingredients.map((ingredient) => ingredient.name),
+    );
+    expect(easy.length, 'no easy recipes loaded').toBeGreaterThan(0);
+    expect([...new Set(easy.filter((name) => !known.has(name)))].sort()).toEqual([
+      'canned white beans',
+      'hummus',
+    ]);
   });
 
   it('has workMinutes that are a whole multiple of 5 from 5 up to its minutes and at most 30, and minutes of at most 45, for every recipe', () => {

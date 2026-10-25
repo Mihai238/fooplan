@@ -173,6 +173,28 @@ describe('RecipePage', () => {
     expect(button('Next').disabled).toBe(false);
   });
 
+  it('shows "Tuna and white bean salad with bread", "2 servings", its 7 ingredient lines and "Step 1 of 4" with its first step at /recipes/tuna-and-white-bean-salad-with-bread, and "Step 1 of 5" at /recipes/spinach-and-feta-omelette', async () => {
+    harness = await RouterTestingHarness.create('/recipes/tuna-and-white-bean-salad-with-bread');
+    expect(router().url).toBe('/recipes/tuna-and-white-bean-salad-with-bread');
+    expect(headings().map(textOf)).toEqual(['Tuna and white bean salad with bread']);
+    expect(textOf(page())).toContain('2 servings');
+    expect(ingredientLines()).toEqual([
+      '400 g canned white beans',
+      '150 g canned tuna',
+      '0.5 pc red onion',
+      '10 g parsley',
+      '1 pc lemon',
+      '3 tbsp olive oil',
+      '200 g bread',
+    ]);
+    expect(stepCounters()).toEqual(['Step 1 of 4']);
+    elementShowing('Drain and rinse the canned white beans and drain the canned tuna.');
+
+    await harness.navigateByUrl('/recipes/spinach-and-feta-omelette');
+    expect(headings().map(textOf)).toEqual(['Spinach and feta omelette']);
+    expect(stepCounters()).toEqual(['Step 1 of 5']);
+  });
+
   it('shows only the current step, never the others, on every step', async () => {
     harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
