@@ -3,8 +3,10 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from './app.routes';
+import { PlanStore } from './plan/plan-store';
+import { RecipeStore } from './recipes/recipe-store';
 import { RECIPES } from './recipes/recipes';
-import { QUICK_DAL, storeOwnRecipes } from './recipes/testing';
+import { ownRecipe, QUICK_DAL, storeOwnRecipes } from './recipes/testing';
 
 describe('routes', () => {
   beforeEach(() => {
@@ -103,6 +105,59 @@ describe('routes', () => {
     location.back();
     await harness.fixture.whenStable();
     expect(location.path()).toBe('/groceries');
+  });
+
+  it('shows the Recipes page for /recipes/spaghetti-carbonara/edit, a built-in recipe, and /recipes/imaginary-stew/edit, no recipe', async () => {
+    for (const url of ['/recipes/spaghetti-carbonara/edit', '/recipes/imaginary-stew/edit']) {
+      const harness = await RouterTestingHarness.create(url);
+      expect(TestBed.inject(Router).url, url).toBe('/recipes');
+      expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim(), url).toBe(
+        'Recipes',
+      );
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+    }
+  });
+
+  it('shows the Recipes page for the page and the edit form of "Grandma\'s Soup" once it is renamed to "Red Soup", and of "Quick Dal" once it is deleted', async () => {
+    storeOwnRecipes(ownRecipe("Grandma's Soup"), QUICK_DAL);
+    const harness = await RouterTestingHarness.create('/recipes/grandmas-soup');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+      "Grandma's Soup",
+    );
+    TestBed.inject(RecipeStore).replace("Grandma's Soup", ownRecipe('Red Soup'));
+    TestBed.inject(PlanStore).renameRecipe("Grandma's Soup", 'Red Soup');
+    TestBed.inject(PlanStore).deleteRecipe('Quick Dal');
+    expect(TestBed.inject(RecipeStore).bySlug('red-soup'), 'not renamed').toBeDefined();
+    // The router ignores a navigation to the URL it is on
+    await harness.navigateByUrl('/plan');
+
+    for (const url of [
+      '/recipes/grandmas-soup',
+      '/recipes/grandmas-soup/edit',
+      '/recipes/quick-dal',
+      '/recipes/quick-dal/edit',
+    ]) {
+      await harness.navigateByUrl(url);
+      expect(TestBed.inject(Router).url, url).toBe('/recipes');
+      expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim(), url).toBe(
+        'Recipes',
+      );
+    }
+  });
+
+  describe('edge cases', () => {
+    it('leaves no history entry for the edit form of a built-in recipe, so going back skips it', async () => {
+      const harness = await RouterTestingHarness.create('/plan');
+      await harness.navigateByUrl('/groceries');
+      await harness.navigateByUrl('/recipes/spaghetti-carbonara/edit');
+      expect(TestBed.inject(Router).url, 'not redirected').toBe('/recipes');
+      const location = TestBed.inject(Location);
+      expect(location.path()).toBe('/recipes');
+      location.back();
+      await harness.fixture.whenStable();
+      expect(location.path()).toBe('/groceries');
+    });
   });
 
   it("opens the recipe page of every recipe from its name's link on /recipes", async () => {

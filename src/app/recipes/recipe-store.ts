@@ -23,6 +23,29 @@ export class RecipeStore {
   // The caller checks the recipe first, with checkRecipe
   add(recipe: Recipe): void {
     this.ownState.update((own) => [...own, { ...recipe, own: true }]);
+    this.save();
+  }
+
+  // The caller checks the recipe first, with checkRecipe
+  replace(oldName: string, recipe: Recipe): void {
+    if (!this.own().some((other) => other.name === oldName)) {
+      return;
+    }
+    this.ownState.update((own) =>
+      own.map((other) => (other.name === oldName ? { ...recipe, own: true } : other)),
+    );
+    this.save();
+  }
+
+  remove(name: string): void {
+    if (!this.own().some((other) => other.name === name)) {
+      return;
+    }
+    this.ownState.update((own) => own.filter((other) => other.name !== name));
+    this.save();
+  }
+
+  private save(): void {
     writeStored(
       STORAGE_KEY,
       this.own().map(({ name, servings, ingredients }) => ({ name, servings, ingredients })),

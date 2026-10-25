@@ -174,6 +174,41 @@ export function setCookExtra(
   });
 }
 
+export function renameRecipe(plan: Plan, from: string, to: string): Plan {
+  if (from === to || !holdsRecipe(plan, from)) {
+    return plan;
+  }
+  const rename = (name: string) => (name === from ? to : name);
+  const renamed = withMeals(plan, (meal) => {
+    const recipe = meal.recipe === null ? null : rename(meal.recipe);
+    const changed = { ...meal, recipe, suggestions: meal.suggestions.map(rename) };
+    return meal.offered === undefined ? changed : { ...changed, offered: meal.offered.map(rename) };
+  });
+  return { ...renamed, shown: plan.shown.map(rename) };
+}
+
+// The recipes are the ones still suggested, without the forgotten one
+export function forgetRecipe(
+  plan: Plan,
+  name: string,
+  recipes: readonly string[],
+  random: Random,
+): Plan {
+  if (isPicked(plan, name) || !holdsRecipe(plan, name)) {
+    return plan;
+  }
+  // A meal that loses its remembered suggestions draws fresh ones when its pick is undone, as one
+  // picked before they were kept
+  const forgotten = withMeals(dropSuggestion(plan, name, recipes, random), (meal) => {
+    if (!meal.offered?.includes(name)) {
+      return meal;
+    }
+    const { offered, ...rest } = meal;
+    return rest;
+  });
+  return { ...forgotten, shown: forgotten.shown.filter((other) => other !== name) };
+}
+
 export function dropSuggestion(
   plan: Plan,
   recipe: string,
@@ -304,6 +339,10 @@ export function leftoversOf(plan: Plan, day: number): string | null {
     return null;
   }
   return plan.days[day - 1].dinner.recipe;
+}
+
+export function isPicked(plan: Plan, recipe: string): boolean {
+  return pickedRecipes(plan).has(recipe);
 }
 
 export function sameItem(a: string, b: string): boolean {
@@ -497,6 +536,29 @@ function isCovered(plan: Plan, ref: MealRef): boolean {
 
 function isLunchCovered(plan: Plan, day: number): boolean {
   return plan.days[day - 1]?.cookExtra === true;
+}
+
+function holdsRecipe(plan: Plan, recipe: string): boolean {
+  return (
+    plan.shown.includes(recipe) ||
+    mealsOf(plan).some(
+      (meal) =>
+        meal.recipe === recipe ||
+        meal.suggestions.includes(recipe) ||
+        meal.offered?.includes(recipe) === true,
+    )
+  );
+}
+
+function withMeals(plan: Plan, change: (meal: Meal) => Meal): Plan {
+  return {
+    ...plan,
+    days: plan.days.map((day) => ({
+      ...day,
+      lunch: change(day.lunch),
+      dinner: change(day.dinner),
+    })),
+  };
 }
 
 function withMeal(plan: Plan, ref: MealRef, meal: Meal): Plan {

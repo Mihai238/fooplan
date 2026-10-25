@@ -8,6 +8,7 @@ import {
   DEFAULT_PEOPLE,
   dropSuggestion,
   filledMeals,
+  forgetRecipe,
   isComplete,
   leftoversOf,
   Meal,
@@ -17,6 +18,7 @@ import {
   pickRecipe,
   Plan,
   removeItem,
+  renameRecipe,
   sameItem,
   setCookExtra,
   setDays,
@@ -31,6 +33,7 @@ import {
   LUNCH,
   open,
   picked,
+  planOf,
   seededRandom,
   suggestionsOf,
 } from './testing';
@@ -884,6 +887,177 @@ describe('plan', () => {
       expect(
         leftoversOf(dropSuggestion(cookExtraPlan(), 'Curry', RECIPES, seededRandom(1)), 1),
       ).toBe('Curry');
+    });
+  });
+
+  describe('renameRecipe', () => {
+    it('renames "Quick Dal" to "Daily Dal" at the same indexes in a pick, another meal\'s offered and shown, and in an open meal\'s suggestions and shown, leaving no "Quick Dal"', () => {
+      const planA = planOf([
+        day(
+          '2026-10-24',
+          picked('Quick Dal', ['Chili', 'Quick Dal', 'Curry']),
+          open('Dal', 'Fajitas', 'Goulash'),
+        ),
+        day(
+          '2026-10-25',
+          picked('Lasagne', ['Minestrone', 'Lasagne', 'Quick Dal']),
+          open('Pesto', 'Quiche', 'Risotto'),
+        ),
+      ]);
+      const planB = planOf([day('2026-10-24', open('Chili', 'Quick Dal', 'Curry'), picked('Dal'))]);
+      for (const [label, plan] of [
+        ['plan A', planA],
+        ['plan B', planB],
+      ] as const) {
+        expect(JSON.stringify(plan), `${label}: "Quick Dal" not in the plan`).toContain(
+          '"Quick Dal"',
+        );
+        const before = structuredClone(plan);
+        const result = renameRecipe(plan, 'Quick Dal', 'Daily Dal');
+        expect(result, label).toEqual(renamed(plan, 'Quick Dal', 'Daily Dal'));
+        expect(JSON.stringify(result), label).not.toContain('Quick Dal');
+        expect(plan, `${label}: the input plan was modified`).toEqual(before);
+      }
+    });
+
+    describe('edge cases', () => {
+      it('returns the plan unchanged for a name it does not hold, while it renames one it holds', () => {
+        const plan = planOf([
+          day(
+            '2026-10-24',
+            open('Chili', 'Curry', 'Dal'),
+            picked('Fajitas', ['Fajitas', 'Goulash', 'Lasagne']),
+          ),
+        ]);
+        expect(renameRecipe(plan, 'Chili', 'Red Chili').days[0].lunch, 'held name').toEqual(
+          open('Red Chili', 'Curry', 'Dal'),
+        );
+        expectUnchanged(plan, (p) => renameRecipe(p, 'Quick Dal', 'Daily Dal'));
+      });
+
+      it('renames the pick, offered and shown of an accepted plan too, and leaves an added grocery item named "Quick Dal" as it is', () => {
+        const plan: Plan = {
+          ...planOf(
+            [
+              day(
+                '2026-10-24',
+                picked('Quick Dal', ['Chili', 'Quick Dal', 'Curry']),
+                picked('Dal', ['Dal', 'Fajitas', 'Goulash']),
+              ),
+            ],
+            { accepted: true },
+          ),
+          added: ['Quick Dal'],
+          ticked: [addedKey('Quick Dal')],
+        };
+        const result = renameRecipe(plan, 'Quick Dal', 'Daily Dal');
+        expect(result.days[0].lunch).toEqual(picked('Daily Dal', ['Chili', 'Daily Dal', 'Curry']));
+        expect(result.shown).toEqual(
+          plan.shown.map((name) => (name === 'Quick Dal' ? 'Daily Dal' : name)),
+        );
+        expect(result.accepted).toBe(true);
+        expect(result.added).toEqual(['Quick Dal']);
+        expect(result.ticked).toEqual([addedKey('Quick Dal')]);
+      });
+    });
+
+    // Every recipe name equal to `from` replaced, everything else as it is
+    function renamed(plan: Plan, from: string, to: string): Plan {
+      const rename = (name: string) => (name === from ? to : name);
+      const renameMeal = (meal: Meal): Meal => ({
+        ...meal,
+        recipe: meal.recipe === null ? null : rename(meal.recipe),
+        suggestions: meal.suggestions.map(rename),
+        ...(meal.offered ? { offered: meal.offered.map(rename) } : {}),
+      });
+      return {
+        ...plan,
+        days: plan.days.map((d) => ({
+          ...d,
+          lunch: renameMeal(d.lunch),
+          dinner: renameMeal(d.dinner),
+        })),
+        shown: plan.shown.map(rename),
+      };
+    }
+  });
+
+  describe('forgetRecipe', () => {
+    it('replaces "Quick Dal" in its place among an open meal\'s suggestions, drops the offered of a meal remembering it and takes it out of shown, also on an accepted plan, and returns a plan that picked it unchanged', () => {
+      const plan = planOf([
+        day(
+          '2026-10-24',
+          open('Chili', 'Quick Dal', 'Curry'),
+          picked('Dal', ['Fajitas', 'Dal', 'Quick Dal']),
+        ),
+      ]);
+      expect(plan.shown, 'Quick Dal not shown').toContain('Quick Dal');
+      for (const seed of SEEDS) {
+        const result = forgetRecipe(plan, 'Quick Dal', RECIPES, seededRandom(seed));
+        const { lunch, dinner } = result.days[0];
+        const context = `seed ${seed}: ${lunch.suggestions.join(', ')}`;
+        expect(lunch.recipe, context).toBeNull();
+        expect(lunch.suggestions[0], context).toBe('Chili');
+        expect(lunch.suggestions[2], context).toBe('Curry');
+        expectNoneOf([lunch.suggestions[1]], ['Quick Dal', 'Dal', 'Chili', 'Curry'], context);
+        expect(RECIPES, context).toContain(lunch.suggestions[1]);
+        expect(dinner, `seed ${seed}`).toEqual(picked('Dal'));
+        expect('offered' in dinner, `seed ${seed}: offered kept`).toBe(false);
+        expect(result.shown, `seed ${seed}`).not.toContain('Quick Dal');
+      }
+
+      const accepted = planOf(
+        [day('2026-10-24', picked('Chili', ['Chili', 'Quick Dal', 'Curry']), picked('Dal'))],
+        { accepted: true },
+      );
+      const forgotten = forgetRecipe(accepted, 'Quick Dal', RECIPES, seededRandom(1));
+      expect(forgotten.days[0].lunch, 'accepted plan').toEqual(picked('Chili'));
+      expect('offered' in forgotten.days[0].lunch, 'accepted plan: offered kept').toBe(false);
+      expect(forgotten.shown, 'accepted plan').not.toContain('Quick Dal');
+      expect(forgotten.accepted).toBe(true);
+
+      const pickedPlan = planOf([
+        day(
+          '2026-10-24',
+          picked('Quick Dal', ['Chili', 'Quick Dal', 'Curry']),
+          picked('Dal', ['Fajitas', 'Dal', 'Quick Dal']),
+        ),
+      ]);
+      expectUnchanged(pickedPlan, (p) => forgetRecipe(p, 'Quick Dal', RECIPES, seededRandom(1)));
+    });
+
+    describe('edge cases', () => {
+      it('replaces "Quick Dal" in every open meal suggesting it, so no meal suggests it', () => {
+        const plan = planOf([
+          day(
+            '2026-10-24',
+            open('Chili', 'Quick Dal', 'Curry'),
+            open('Quick Dal', 'Dal', 'Fajitas'),
+          ),
+          day('2026-10-25', open('Goulash', 'Lasagne', 'Quick Dal'), picked('Pesto')),
+        ]);
+        for (const seed of SEEDS) {
+          const result = forgetRecipe(plan, 'Quick Dal', RECIPES, seededRandom(seed));
+          expect(suggestionsOf(result), `seed ${seed}`).not.toContain('Quick Dal');
+          for (const meal of openMealsOf(result)) {
+            expectValidSuggestions(meal, result, RECIPES, seed);
+          }
+          expect(
+            result.days[0].lunch.suggestions
+              .slice(0, 1)
+              .concat(result.days[0].lunch.suggestions.slice(2)),
+            `seed ${seed}`,
+          ).toEqual(['Chili', 'Curry']);
+          expect(result.days[0].dinner.suggestions.slice(1), `seed ${seed}`).toEqual([
+            'Dal',
+            'Fajitas',
+          ]);
+          expect(result.days[1].lunch.suggestions.slice(0, 2), `seed ${seed}`).toEqual([
+            'Goulash',
+            'Lasagne',
+          ]);
+        }
+      });
     });
   });
 

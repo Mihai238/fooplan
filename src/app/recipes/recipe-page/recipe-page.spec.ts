@@ -3,13 +3,30 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
-import { leaveSuggested, seededRandom } from '../../plan/testing';
+import { Plan } from '../../plan/plan';
+import {
+  covered,
+  day,
+  leaveSuggested,
+  LUNCH,
+  open,
+  picked,
+  planOf,
+  seededRandom,
+} from '../../plan/testing';
+import { installDialog, modalDialogs } from '../../testing';
 import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
+import { RecipeStore } from '../recipe-store';
 import { RECIPES } from '../recipes';
-import { ownRecipe, QUICK_DAL, RECIPES_KEY } from '../testing';
+import { ownRecipe, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../testing';
 
 const LIMIT_NOTE = 'At least 15 recipes stay suggested, so no more can be removed.';
+const PLAN_NOTE = 'This recipe is in your plan. Undo its pick or start a new plan to delete it.';
+const ACCEPTED_NOTE = 'This recipe is in your accepted plan. Start a new plan to delete it.';
+const DELETE_LIMIT_NOTE = "At least 15 recipes stay suggested, so this recipe can't be deleted.";
+const DELETE_TEXT =
+  "It disappears from the Recipes page and won't be suggested again. This can't be undone.";
 
 // The recipe page is reached through the app's routes, as its recipe comes from the URL and its
 // "Back" link from the navigation before it
@@ -439,6 +456,322 @@ describe('RecipePage', () => {
       expect(Array.from(suggest!.children).map(textOf)).toEqual(['Not suggested', 'Suggest again']);
       expect(textOf(page())).not.toContain(LIMIT_NOTE);
     });
+  });
+
+  describe('"Edit" and "Delete"', () => {
+    // jsdom lays out nothing, so the dialog's box is stubbed, and these points are placed around it
+    const BOX = { left: 100, top: 100, right: 400, bottom: 300 } as DOMRect;
+    const OUTSIDE = { clientX: 50, clientY: 50 };
+    const INSIDE = { clientX: 250, clientY: 200 };
+    let uninstallDialog: () => void;
+
+    beforeAll(() => {
+      uninstallDialog = installDialog();
+    });
+
+    afterAll(() => {
+      uninstallDialog();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('shows a div.manage right after the ingredient list of the own recipe "Quick Dal" with a link "Edit" to /recipes/quick-dal/edit and then a button "Delete", and no div.manage on a built-in recipe\'s page', async () => {
+      await openQuickDal();
+      const manage = page().querySelector('article div.manage');
+      expect(manage, 'no div.manage').not.toBeNull();
+      expect(page().querySelector('article ul')?.nextElementSibling, 'after the ingredients').toBe(
+        manage,
+      );
+      expect(
+        Array.from(manage!.children).map((child) => [
+          child.tagName,
+          textOf(child),
+          child.getAttribute('href') ?? child.getAttribute('type'),
+        ]),
+      ).toEqual([
+        ['A', 'Edit', '/recipes/quick-dal/edit'],
+        ['BUTTON', 'Delete', 'button'],
+      ]);
+
+      await harness.navigateByUrl('/recipes/spaghetti-carbonara');
+      expect(headings().map(textOf)).toEqual(['Spaghetti carbonara']);
+      expect(page().querySelector('div.manage')).toBeNull();
+    });
+
+    it('shows that "Quick Dal" is in the plan instead of "Delete" while it is picked in an unaccepted plan or as a dinner cooked extra there, "Delete" again once the pick is undone, and that it is in the accepted plan while picked there', async () => {
+      await openQuickDal({
+        plan: planOf([
+          day(
+            '2026-10-24',
+            picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+            open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
+          ),
+        ]),
+      });
+      expectNote(PLAN_NOTE, 'picked for a lunch');
+      TestBed.inject(PlanStore).clear(LUNCH);
+      await harness.fixture.whenStable();
+      expect(TestBed.inject(PlanStore).plan().days[0].lunch.recipe, 'pick not undone').toBeNull();
+      expect(manageNotes()).toEqual([]);
+      button('Delete');
+
+      await reopenQuickDal({
+        plan: planOf([
+          day(
+            '2026-10-24',
+            open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
+            picked('Quick Dal'),
+            true,
+          ),
+          day(
+            '2026-10-25',
+            covered(),
+            open('Spaghetti carbonara', 'Niçoise salad', 'Bean burritos'),
+          ),
+        ]),
+      });
+      expectNote(PLAN_NOTE, 'dinner cooked extra');
+
+      await reopenQuickDal({
+        plan: planOf([day('2026-10-24', picked('Quick Dal'), picked('Lentil soup'))], {
+          accepted: true,
+        }),
+      });
+      expectNote(ACCEPTED_NOTE, 'accepted plan');
+    });
+
+    it('shows that at least 15 recipes stay suggested instead of "Delete" while "Quick Dal" is one of exactly 15 suggested, next to #21\'s note, and "Delete" while it is removed instead', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      leaveSuggested(TestBed.inject(PlanStore), 15, 'Quick Dal');
+      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
+      expectNote(DELETE_LIMIT_NOTE, '15 suggested');
+      expect(Array.from(page().querySelectorAll('p.note')).map(textOf)).toEqual([
+        LIMIT_NOTE,
+        DELETE_LIMIT_NOTE,
+      ]);
+
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      configure();
+      storeOwnRecipes(QUICK_DAL);
+      leaveSuggested(TestBed.inject(PlanStore), 15);
+      expect(TestBed.inject(PlanStore).removed(), 'Quick Dal not removed').toContain('Quick Dal');
+      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      expect(manageNotes()).toEqual([]);
+      button('Delete');
+    });
+
+    it('opens a modal dialog "Delete Quick Dal?" with its text, "Keep recipe" focused and "Delete recipe" on "Delete", and closes it on Escape, a click on the backdrop or "Keep recipe", deleting nothing and putting the focus back on "Delete"', async () => {
+      await openQuickDal({ removed: ['Quick Dal'] });
+      const closings: [string, (dialog: HTMLDialogElement) => Promise<void>][] = [
+        ['Escape', pressEscape],
+        ['backdrop', (dialog) => pressAndRelease(dialog, OUTSIDE)],
+        ['"Keep recipe"', (dialog) => click(buttonIn(dialog, 'Keep recipe'))],
+      ];
+      for (const [way, close] of closings) {
+        const dialog = await openDeleteDialog();
+        expect(modalDialogs.has(dialog), `${way}: opened with showModal()`).toBe(true);
+        expect(textOf(dialog.querySelector('h2')), way).toBe('Delete Quick Dal?');
+        expect(textOf(dialog.querySelector('p')), way).toBe(DELETE_TEXT);
+        expect(Array.from(dialog.querySelectorAll('button')).map(textOf), way).toEqual([
+          'Keep recipe',
+          'Delete recipe',
+        ]);
+        expect(document.activeElement, `${way}: focus on opening`).toBe(
+          buttonIn(dialog, 'Keep recipe'),
+        );
+
+        await close(dialog);
+        expect(openDialogOrNull(), `${way}: still open`).toBeNull();
+        expect(TestBed.inject(RecipeStore).own(), way).toEqual([QUICK_DAL]);
+        expect(TestBed.inject(PlanStore).removed(), way).toEqual(['Quick Dal']);
+        expect(document.activeElement, `${way}: focus after closing`).toBe(button('Delete'));
+      }
+    });
+
+    it('deletes "Quick Dal" on "Delete recipe" and shows the Recipes page at /recipes without it, with it gone from fooplan.recipes and the removed recipes', async () => {
+      await openQuickDal({ removed: ['Lentil soup', 'Quick Dal'] });
+      await click(buttonIn(await openDeleteDialog(), 'Delete recipe'));
+
+      expect(router().url).toBe('/recipes');
+      expect(headings().map(textOf)).toEqual(['Recipes']);
+      const listed = Array.from(page().querySelectorAll('article h2')).map(textOf);
+      expect(listed).toHaveLength(RECIPES.length);
+      expect(listed).not.toContain('Quick Dal');
+      expect(JSON.parse(localStorage.getItem(RECIPES_KEY) ?? 'null')).toEqual([]);
+      expect(JSON.parse(localStorage.getItem('fooplan.removed') ?? 'null')).toEqual([
+        'Lentil soup',
+      ]);
+    });
+
+    it('keeps showing "Quick Dal" and its ingredients, without an error, when RecipeStore.remove("Quick Dal") or replace("Quick Dal", …) with a new name is called while its page is shown', async () => {
+      const changes: [string, (recipes: RecipeStore) => void][] = [
+        ['remove', (recipes) => recipes.remove('Quick Dal')],
+        [
+          'replace',
+          (recipes) =>
+            recipes.replace('Quick Dal', {
+              name: 'Daily Dal',
+              servings: 2,
+              ingredients: [{ name: 'rice', amount: 100, unit: 'g' }],
+            }),
+        ],
+      ];
+      for (const [label, change] of changes) {
+        await openQuickDal();
+        const recipes = TestBed.inject(RecipeStore);
+        change(recipes);
+        await harness.fixture.whenStable();
+        // The change itself, so this can't pass with a store that ignored it
+        expect(recipes.bySlug('quick-dal'), `${label}: Quick Dal still found`).toBeUndefined();
+        expect(headings().map(textOf), label).toEqual(['Quick Dal']);
+        expect(textOf(page().querySelector('p.servings')), label).toBe('4 servings');
+        expect(ingredientLines(), label).toEqual(linesOf(QUICK_DAL));
+        TestBed.resetTestingModule();
+        localStorage.clear();
+        configure();
+      }
+    });
+
+    it('loads the plan as it was right after deleting "Quick Dal" through its page, where it was suggested for an open meal, remembered by another and shown', async () => {
+      const plan = planOf([
+        day(
+          '2026-10-24',
+          open('Lentil soup', 'Quick Dal', 'Pumpkin soup'),
+          picked('Fish tacos', ['Fish tacos', 'Quick Dal', 'Bean burritos']),
+        ),
+      ]);
+      await openQuickDal({ plan });
+      expect(TestBed.inject(PlanStore).plan(), 'saved plan not loaded').toEqual(plan);
+      await click(buttonIn(await openDeleteDialog(), 'Delete recipe'));
+      const deleted = TestBed.inject(PlanStore).plan();
+      expect(JSON.stringify(deleted), 'Quick Dal left in the plan').not.toContain('Quick Dal');
+
+      // A fresh app on the same localStorage, as a reload makes
+      TestBed.resetTestingModule();
+      configure();
+      expect(TestBed.inject(PlanStore).plan()).toEqual(deleted);
+    });
+
+    describe('edge cases', () => {
+      it('names the delete dialog by its heading and describes it by its text, with tabindex -1', async () => {
+        await openQuickDal();
+        const dialog = await openDeleteDialog();
+        expect(dialog.getAttribute('tabindex')).toBe('-1');
+        expect(textsOf(dialog.getAttribute('aria-labelledby'))).toBe('Delete Quick Dal?');
+        expect(textsOf(dialog.getAttribute('aria-describedby'))).toBe(DELETE_TEXT);
+      });
+
+      it('keeps the delete dialog open when the user presses inside it and releases on the backdrop, or presses the backdrop and releases inside', async () => {
+        await openQuickDal();
+        const dialog = await openDeleteDialog();
+        await pressAndRelease(dialog.querySelector('p')!, INSIDE, dialog, OUTSIDE);
+        expect(openDialogOrNull(), 'pressed inside').toBe(dialog);
+        await pressAndRelease(dialog, OUTSIDE, dialog, INSIDE);
+        expect(openDialogOrNull(), 'pressed on the backdrop').toBe(dialog);
+        expect(TestBed.inject(RecipeStore).own()).toEqual([QUICK_DAL]);
+      });
+    });
+
+    // Opens the page of "Quick Dal", saved as an own recipe, with this plan and these removed
+    // recipes saved
+    async function openQuickDal({ plan, removed }: { plan?: Plan; removed?: string[] } = {}) {
+      storeOwnRecipes(QUICK_DAL);
+      if (plan) {
+        localStorage.setItem('fooplan.plan', JSON.stringify(plan));
+      }
+      if (removed) {
+        localStorage.setItem('fooplan.removed', JSON.stringify(removed));
+      }
+      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
+      if (plan) {
+        expect(TestBed.inject(PlanStore).plan(), 'saved plan not loaded').toEqual(plan);
+      }
+    }
+
+    async function reopenQuickDal(saved: { plan?: Plan; removed?: string[] }) {
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      configure();
+      await openQuickDal(saved);
+    }
+
+    function expectNote(note: string, context: string) {
+      expect(manageNotes(), context).toEqual([note]);
+      expect(buttonsLabelled('Delete'), context).toEqual([]);
+    }
+
+    function manageNotes(): string[] {
+      return Array.from(page().querySelectorAll('div.manage p.note')).map(textOf);
+    }
+
+    async function openDeleteDialog(): Promise<HTMLDialogElement> {
+      await click(button('Delete'));
+      const dialog = openDialogOrNull();
+      expect(dialog, 'no open dialog').not.toBeNull();
+      vi.spyOn(dialog!, 'getBoundingClientRect').mockReturnValue(BOX);
+      return dialog!;
+    }
+
+    function openDialogOrNull(): HTMLDialogElement | null {
+      return page().querySelector('dialog[open]');
+    }
+
+    function buttonIn(root: HTMLElement, label: string): HTMLButtonElement {
+      const found = Array.from(root.querySelectorAll('button')).filter(
+        (candidate) => textOf(candidate) === label,
+      );
+      expect(found, `"${label}" buttons`).toHaveLength(1);
+      return found[0];
+    }
+
+    function textsOf(ids: string | null): string {
+      return (ids ?? '')
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((id) => textOf(document.getElementById(id)))
+        .join(' ');
+    }
+
+    // What the browser does on Escape when the page's keydown handlers let it: the modal dialog
+    // gets "cancel" and closes unless that is cancelled
+    async function pressEscape(dialog: HTMLDialogElement) {
+      const target = document.activeElement ?? document.body;
+      const keydown = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        bubbles: true,
+        cancelable: true,
+      });
+      if (
+        target.dispatchEvent(keydown) &&
+        dialog.dispatchEvent(new Event('cancel', { cancelable: true }))
+      ) {
+        dialog.close();
+      }
+      await harness.fixture.whenStable();
+    }
+
+    // A press fires pointerdown on the pressed element, its release a click on the closest element
+    // around both; a click on the backdrop targets the dialog itself, at a point outside its box
+    async function pressAndRelease(
+      pressed: HTMLElement,
+      pressAt: { clientX: number; clientY: number },
+      clicked = pressed,
+      releaseAt = pressAt,
+    ) {
+      pressed.dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, cancelable: true, ...pressAt }),
+      );
+      await harness.fixture.whenStable();
+      clicked.dispatchEvent(
+        new MouseEvent('click', { bubbles: true, cancelable: true, ...releaseAt }),
+      );
+      await harness.fixture.whenStable();
+    }
   });
 
   function configure() {

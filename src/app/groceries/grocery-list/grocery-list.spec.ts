@@ -5,6 +5,8 @@ import { addedKey } from '../../plan/plan';
 import { acceptOneDayPlan, day, picked, planOf, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
+import { Unit } from '../../recipes/recipe';
+import { RecipeStore } from '../../recipes/recipe-store';
 import { PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
 import { byName, bySection, GroceryItem, groceryList, itemKey } from '../groceries';
 import { Section, SECTIONS } from '../sections';
@@ -427,6 +429,44 @@ describe('GroceryList', () => {
       ['Cans & jars', ['100 g canned chickpeas']],
       ['Other', ['1 pc mystery spice']],
     ]);
+  });
+
+  it('follows an edit of "Quick Dal" in an accepted plan for 2 at once: its ticked 100 g canned chickpeas become 150 g, still ticked, after changing 200 g to 300 g, and 150 pc unticked, with no g line, after changing the unit to pc', async () => {
+    storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+    const chickpeas = itemKey({ name: 'canned chickpeas', unit: 'g' });
+    const saved = {
+      ...planOf([day('2026-10-24', picked('Quick Dal'), picked('Plain Rice'))], {
+        accepted: true,
+      }),
+      ticked: [chickpeas],
+    };
+    localStorage.setItem('fooplan.plan', JSON.stringify(saved));
+    // A fresh app on this localStorage, as a reload makes
+    TestBed.resetTestingModule();
+    configure();
+    store = TestBed.inject(PlanStore);
+    expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+    await open();
+    expect(inCart().map(labelOf), 'ticked before the edit').toEqual(['100 g canned chickpeas']);
+
+    const recipes = TestBed.inject(RecipeStore);
+    const withChickpeas = (amount: number, unit: Unit) => ({
+      ...QUICK_DAL,
+      ingredients: QUICK_DAL.ingredients.map((ingredient) =>
+        ingredient.name === 'canned chickpeas' ? { ...ingredient, amount, unit } : ingredient,
+      ),
+    });
+    recipes.replace('Quick Dal', withChickpeas(300, 'g'));
+    await fixture.whenStable();
+    expect(inCart().map(labelOf)).toEqual(['150 g canned chickpeas']);
+    expect(checkboxOf(inCart()[0]).checked).toBe(true);
+
+    recipes.replace('Quick Dal', withChickpeas(300, 'pc'));
+    await fixture.whenStable();
+    expect(labelsIn(sectionHeaded('Cans & jars'))).toEqual(['150 pc canned chickpeas']);
+    expect(checkboxOf(listedIn(sectionHeaded('Cans & jars'))[0]).checked).toBe(false);
+    expect(cart()).toBeNull();
+    expect(textOf(element)).not.toContain('g canned chickpeas');
   });
 
   describe('status after "Add"', () => {

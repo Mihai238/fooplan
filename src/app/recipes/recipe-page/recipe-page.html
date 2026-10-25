@@ -41,6 +41,31 @@
       <li>{{ shown.amount }} {{ shown.unit }} {{ ingredient.name }}</li>
     }
   </ul>
+  @if (recipe.own) {
+    <div class="manage">
+      <a class="secondary" [routerLink]="['/recipes', recipeSlug(recipe.name), 'edit']">Edit</a>
+      @switch (store.deleteBlock(recipe.name)) {
+        @case ('picked') {
+          <p class="note">
+            This recipe is in your plan. Undo its pick or start a new plan to delete it.
+          </p>
+        }
+        @case ('accepted') {
+          <p class="note">This recipe is in your accepted plan. Start a new plan to delete it.</p>
+        }
+        @case ('limit') {
+          <p class="note">
+            At least {{ minSuggested }} recipes stay suggested, so this recipe can't be deleted.
+          </p>
+        }
+        @default {
+          <button #deleteButton type="button" class="secondary delete" (click)="openDeleteDialog()">
+            Delete
+          </button>
+        }
+      }
+    </div>
+  }
   @if (recipe.steps; as steps) {
     <div class="steps">
       <!-- Screen readers announce changes inside a live region already on the page, not a region
@@ -70,3 +95,37 @@
     </div>
   }
 </article>
+@if (recipe.own) {
+  <!-- On close, the browser returns the focus to where it was before the dialog opened, which is
+       nowhere when the click on "Delete" didn't focus it: Safari and Firefox on macOS don't focus a
+       clicked button. tabindex="-1" keeps the focus in the dialog on a click on its text or
+       padding, where the browser would otherwise move it to the page -->
+  <dialog
+    #dialog
+    tabindex="-1"
+    aria-labelledby="delete-title"
+    aria-describedby="delete-text"
+    (pointerdown)="pressBackdrop($event, dialog)"
+    (click)="closeOnBackdrop($event, dialog)"
+    (keydown)="trapFocus($event, keepButton, deleteRecipeButton)"
+    (close)="focusDelete()"
+  >
+    <h2 id="delete-title">Delete {{ recipe.name }}?</h2>
+    <p id="delete-text">
+      It disappears from the Recipes page and won't be suggested again. This can't be undone.
+    </p>
+    <div class="actions">
+      <button #keepButton type="button" class="secondary" autofocus (click)="dialog.close()">
+        Keep recipe
+      </button>
+      <button
+        #deleteRecipeButton
+        type="button"
+        class="primary danger"
+        (click)="deleteRecipe(recipe.name)"
+      >
+        Delete recipe
+      </button>
+    </div>
+  </dialog>
+}

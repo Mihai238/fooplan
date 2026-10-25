@@ -3,14 +3,24 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
-import { RANDOM, TODAY } from '../../plan/plan-store';
-import { seededRandom } from '../../plan/testing';
-import { Unit } from '../recipe';
+import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
+import { day, open, picked, planOf, seededRandom } from '../../plan/testing';
+import { Recipe, Unit } from '../recipe';
 import { RecipeStore } from '../recipe-store';
-import { QUICK_DAL, RECIPES_KEY } from '../testing';
+import { ownRecipe, PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../testing';
 
 const AMOUNT = 'Enter an amount above 0.';
 const UNIT_OPTIONS = ['g', 'ml', 'pc', 'tbsp', 'tsp'];
+const EXISTS = 'A recipe with this name already exists.';
+const DAL: Recipe = {
+  name: 'Quick Dal',
+  servings: 4,
+  ingredients: [
+    { name: 'onion', amount: 1.5, unit: 'pc' },
+    { name: 'canned chickpeas', amount: 200, unit: 'g' },
+  ],
+  own: true,
+};
 
 // The form is reached through the app's routes, as saving it opens the new recipe's page
 describe('RecipeForm', () => {
@@ -415,6 +425,299 @@ describe('RecipeForm', () => {
           .map((recipe) => recipe.name),
       ).toEqual(['Quick Dal', 'Plain Rice']);
     });
+  });
+
+  describe('editing an own recipe', () => {
+    it('opens the form "Edit recipe" from "Edit" on the page of "Quick Dal", filled with its name, 4 servings and the rows 1.5 pc onion and 200 g canned chickpeas, with "Save changes", and shows its page on "Cancel", whose "Back" leads to /recipes', async () => {
+      storeOwnRecipes(DAL);
+      harness = await RouterTestingHarness.create('/plan');
+      await harness.navigateByUrl('/recipes/quick-dal');
+      const edit = Array.from(page().querySelectorAll<HTMLAnchorElement>('a')).filter(
+        (link) => textOf(link) === 'Edit',
+      );
+      expect(edit, '"Edit" links').toHaveLength(1);
+      await click(edit[0]);
+
+      expect(router().url).toBe('/recipes/quick-dal/edit');
+      expect(Array.from(page().querySelectorAll('h1')).map(textOf)).toEqual(['Edit recipe']);
+      expect(input('Name').value).toBe('Quick Dal');
+      expect(input('Servings').value).toBe('4');
+      expect(rows()).toEqual([
+        ['1.5', 'pc', 'onion'],
+        ['200', 'g', 'canned chickpeas'],
+      ]);
+      expect(control<HTMLButtonElement>('Save changes').type).toBe('submit');
+      expect(controlsNamed('Save recipe')).toEqual([]);
+      const cancel = control('Cancel');
+      expect(cancel.tagName).toBe('A');
+      expect(cancel.getAttribute('href')).toBe('/recipes/quick-dal');
+
+      await click(cancel);
+      expect(router().url).toBe('/recipes/quick-dal');
+      expect(Array.from(page().querySelectorAll('h1')).map(textOf)).toEqual(['Quick Dal']);
+      expect(backLinks()).toEqual(['/recipes']);
+    });
+
+    it('shows the page of "Quick Dal" and changes nothing when its edit form is saved unchanged, and "A recipe with this name already exists." for the name "Spaghetti carbonara"', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      const stored = JSON.parse(localStorage.getItem(RECIPES_KEY) ?? 'null');
+      await openEditForm('quick-dal');
+      const plan = planStore().plan();
+
+      await click(control('Save changes'));
+      expect(router().url).toBe('/recipes/quick-dal');
+      expect(Array.from(page().querySelectorAll('h1')).map(textOf)).toEqual(['Quick Dal']);
+      expect(recipeStore().own()).toEqual([QUICK_DAL]);
+      expect(JSON.parse(localStorage.getItem(RECIPES_KEY) ?? 'null')).toEqual(stored);
+      expect(planStore().plan()).toEqual(plan);
+
+      await harness.navigateByUrl('/recipes/quick-dal/edit');
+      await type('Name', 'Spaghetti carbonara');
+      await click(control('Save changes'));
+      expectProblem(input('Name'), EXISTS);
+      expect(router().url).toBe('/recipes/quick-dal/edit');
+      expect(recipeStore().own()).toEqual([QUICK_DAL]);
+    });
+
+    it('renames "Grandma\'s Soup" to "Red Soup" on "Save changes", showing its page at /recipes/red-soup with "Back" to /recipes, and lists it before "Quick Dal"', async () => {
+      storeOwnRecipes(ownRecipe("Grandma's Soup"), QUICK_DAL);
+      harness = await RouterTestingHarness.create('/recipes');
+      await harness.navigateByUrl('/recipes/grandmas-soup/edit');
+      await type('Name', 'Red Soup');
+      await click(control('Save changes'));
+
+      expect(router().url).toBe('/recipes/red-soup');
+      expect(Array.from(page().querySelectorAll('h1')).map(textOf)).toEqual(['Red Soup']);
+      expect(backLinks()).toEqual(['/recipes']);
+      expect(
+        recipeStore()
+          .own()
+          .map((recipe) => recipe.name),
+      ).toEqual(['Red Soup', 'Quick Dal']);
+      await harness.navigateByUrl('/recipes');
+      const listed = Array.from(page().querySelectorAll('article h2')).map(textOf);
+      expect(listed.slice(-2)).toEqual(['Red Soup', 'Quick Dal']);
+    });
+
+    it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" through the edit form, keeping it second there, and loads the plan and the removed recipes unchanged after a reload', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      localStorage.setItem(
+        'fooplan.plan',
+        JSON.stringify(
+          planOf([
+            day(
+              '2026-10-24',
+              picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+              open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
+            ),
+          ]),
+        ),
+      );
+      localStorage.setItem(
+        'fooplan.removed',
+        JSON.stringify(['Bean burritos', 'Quick Dal', 'Fish tacos']),
+      );
+      await openEditForm('quick-dal');
+      expect(planStore().removed(), 'removed recipes not loaded').toHaveLength(3);
+      await type('Name', 'Daily Dal');
+      await click(control('Save changes'));
+
+      expect(router().url).toBe('/recipes/daily-dal');
+      expect(planStore().removed()).toEqual(['Bean burritos', 'Daily Dal', 'Fish tacos']);
+      expect(planStore().plan().days[0].lunch).toEqual(
+        picked('Daily Dal', ['Lentil soup', 'Daily Dal', 'Pumpkin soup']),
+      );
+      const plan = planStore().plan();
+      const removed = planStore().removed();
+
+      // A fresh app on the same localStorage, as a reload makes
+      TestBed.resetTestingModule();
+      configure();
+      expect(planStore().plan(), 'plan after a reload').toEqual(plan);
+      expect(planStore().removed(), 'removed recipes after a reload').toEqual(removed);
+    });
+
+    it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" in the saved plan and removed recipes, in place, when the edit form is opened directly and PlanStore is first created on "Save changes"', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      localStorage.setItem(
+        'fooplan.plan',
+        JSON.stringify(
+          planOf([
+            day(
+              '2026-10-24',
+              picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+              open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
+            ),
+          ]),
+        ),
+      );
+      localStorage.setItem(
+        'fooplan.removed',
+        JSON.stringify(['Bean burritos', 'Quick Dal', 'Fish tacos']),
+      );
+      await openEditForm('quick-dal');
+      await type('Name', 'Daily Dal');
+      await click(control('Save changes'));
+
+      expect(router().url).toBe('/recipes/daily-dal');
+      const lunch = picked('Daily Dal', ['Lentil soup', 'Daily Dal', 'Pumpkin soup']);
+      const removed = ['Bean burritos', 'Daily Dal', 'Fish tacos'];
+      expect(JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null').days[0].lunch).toEqual(
+        lunch,
+      );
+      expect(JSON.parse(localStorage.getItem('fooplan.removed') ?? 'null')).toEqual(removed);
+
+      // A fresh app on the same localStorage, as a reload makes
+      TestBed.resetTestingModule();
+      configure();
+      expect(planStore().plan().days[0].lunch, 'plan after a reload').toEqual(lunch);
+      expect(planStore().removed(), 'removed recipes after a reload').toEqual(removed);
+    });
+
+    it('keeps showing the edit form of "Quick Dal", without an error, when RecipeStore.remove("Quick Dal") or replace("Quick Dal", …) with a new name is called while it is shown', async () => {
+      const changes: [string, (recipes: RecipeStore) => void][] = [
+        ['remove', (recipes) => recipes.remove('Quick Dal')],
+        [
+          'replace',
+          (recipes) =>
+            recipes.replace('Quick Dal', {
+              name: 'Daily Dal',
+              servings: 2,
+              ingredients: [{ name: 'rice', amount: 100, unit: 'g' }],
+            }),
+        ],
+      ];
+      for (const [label, change] of changes) {
+        storeOwnRecipes(DAL);
+        await openEditForm('quick-dal');
+        change(recipeStore());
+        await harness.fixture.whenStable();
+        // The change itself, so this can't pass with a store that ignored it
+        expect(
+          recipeStore().bySlug('quick-dal'),
+          `${label}: Quick Dal still found`,
+        ).toBeUndefined();
+        expect(Array.from(page().querySelectorAll('h1')).map(textOf), label).toEqual([
+          'Edit recipe',
+        ]);
+        expect(input('Name').value, label).toBe('Quick Dal');
+        expect(input('Servings').value, label).toBe('4');
+        expect(rows(), label).toEqual([
+          ['1.5', 'pc', 'onion'],
+          ['200', 'g', 'canned chickpeas'],
+        ]);
+        TestBed.resetTestingModule();
+        localStorage.clear();
+        configure();
+      }
+    });
+
+    describe('edge cases', () => {
+      it('saves "Quick Dal" renamed to "QUICK  dal", which keeps its slug, at /recipes/quick-dal, and shows "A recipe with this name already exists." for "plain rice", the slug of another own recipe', async () => {
+        storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+        await openEditForm('quick-dal');
+        await type('Name', 'plain rice');
+        await click(control('Save changes'));
+        expectProblem(input('Name'), EXISTS);
+        expect(recipeStore().own()).toEqual([QUICK_DAL, PLAIN_RICE]);
+
+        await type('Name', 'QUICK  dal');
+        await click(control('Save changes'));
+        expect(router().url).toBe('/recipes/quick-dal');
+        expect(
+          recipeStore()
+            .own()
+            .map((recipe) => recipe.name),
+        ).toEqual(['QUICK dal', 'Plain Rice']);
+      });
+
+      it('fills a row of 15 ml with 15 and ml rather than as shown on the recipe page (1 tbsp), and amounts of 0.25 g and 10000 g as 0.25 and 10000', async () => {
+        storeOwnRecipes({
+          name: 'Oily Rice',
+          servings: 2,
+          ingredients: [
+            { name: 'vegetable oil', amount: 15, unit: 'ml' },
+            { name: 'saffron', amount: 0.25, unit: 'g' },
+            { name: 'rice', amount: 10000, unit: 'g' },
+          ],
+          own: true,
+        });
+        await openEditForm('oily-rice');
+        expect(input('Servings').value).toBe('2');
+        expect(rows()).toEqual([
+          ['15', 'ml', 'vegetable oil'],
+          ['0.25', 'g', 'saffron'],
+          ['10000', 'g', 'rice'],
+        ]);
+      });
+
+      it('saves again on another "Save changes" after the navigation to the saved recipe returns false, without "A recipe with this name already exists.", following a rename in between in the recipes and the plan', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        localStorage.setItem(
+          'fooplan.plan',
+          JSON.stringify(
+            planOf([
+              day(
+                '2026-10-24',
+                picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+                open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
+              ),
+            ]),
+          ),
+        );
+        await openEditForm('quick-dal');
+        const navigate = vi.spyOn(router(), 'navigate').mockResolvedValue(false);
+        await type('Name', 'Daily Dal');
+        await click(control('Save changes'));
+        expect(router().url).toBe('/recipes/quick-dal/edit');
+        expect(ownNames()).toEqual(['Daily Dal']);
+
+        await click(control('Save changes'));
+        expect(errors()).toEqual([]);
+        expect(navigate).toHaveBeenCalledTimes(2);
+        expect(ownNames()).toEqual(['Daily Dal']);
+
+        await type('Name', 'Red Dal');
+        await type('Servings', '6');
+        await click(control('Save changes'));
+        expect(errors()).toEqual([]);
+        expect(navigate).toHaveBeenCalledTimes(3);
+        expect(navigate).toHaveBeenLastCalledWith(['/recipes', 'red-dal'], { replaceUrl: true });
+        expect(recipeStore().own()).toEqual([{ ...QUICK_DAL, name: 'Red Dal', servings: 6 }]);
+        expect(planStore().plan().days[0].lunch).toEqual(
+          picked('Red Dal', ['Lentil soup', 'Red Dal', 'Pumpkin soup']),
+        );
+      });
+    });
+
+    async function openEditForm(slug: string) {
+      harness = await RouterTestingHarness.create(`/recipes/${slug}/edit`);
+      expect(router().url, 'edit form not opened').toBe(`/recipes/${slug}/edit`);
+    }
+
+    function rows(): [string, string, string][] {
+      return Array.from({ length: rowCount() }, (_, i) => [
+        input(`Amount ${i + 1}`).value,
+        control<HTMLSelectElement>(`Unit ${i + 1}`).value,
+        input(`Ingredient ${i + 1}`).value,
+      ]);
+    }
+
+    function backLinks(): (string | null)[] {
+      return Array.from(page().querySelectorAll('a'))
+        .filter((link) => textOf(link) === 'Back')
+        .map((link) => link.getAttribute('href'));
+    }
+
+    function planStore(): PlanStore {
+      return TestBed.inject(PlanStore);
+    }
+
+    function ownNames(): string[] {
+      return recipeStore()
+        .own()
+        .map((recipe) => recipe.name);
+    }
   });
 
   function configure() {

@@ -15,7 +15,10 @@ import { MIN_SUGGESTED } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
 import { displayAmount } from '../amount';
 import { servingsText } from '../recipe';
+import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
+
+const FORM_URL = /^\/(add-recipe|recipes\/[^/]+\/edit)$/;
 
 @Component({
   imports: [RouterLink],
@@ -45,12 +48,16 @@ export class RecipePage {
   protected readonly displayAmount = displayAmount;
   protected readonly servingsText = servingsText;
   protected readonly minSuggested = MIN_SUGGESTED;
+  protected readonly recipeSlug = recipeSlug;
   private readonly nextButton = viewChild<ElementRef<HTMLButtonElement>>('nextButton');
   private readonly doneLink = viewChild<ElementRef<HTMLAnchorElement>>('doneLink');
   private readonly dontSuggestButton =
     viewChild<ElementRef<HTMLButtonElement>>('dontSuggestButton');
   private readonly suggestAgainButton =
     viewChild<ElementRef<HTMLButtonElement>>('suggestAgainButton');
+  private readonly deleteButton = viewChild<ElementRef<HTMLButtonElement>>('deleteButton');
+  private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
+  private pressedOnBackdrop = false;
 
   // A button disabled while it has the focus drops the focus to the page, so on the first step the
   // focus moves on to "Next". In a recipe of two steps "Next" replaces "Done" there, so it exists
@@ -91,13 +98,68 @@ export class RecipePage {
     }
   }
 
+  protected openDeleteDialog(): void {
+    // A leftover press from the last time would otherwise let a click without a press of its own
+    // (element.click(), some assistive technology) close the dialog right after reopening
+    this.pressedOnBackdrop = false;
+    this.dialog()?.nativeElement.showModal();
+  }
+
+  protected deleteRecipe(name: string): void {
+    this.store.deleteRecipe(name);
+    void this.router.navigateByUrl('/recipes', { replaceUrl: true });
+  }
+
+  protected focusDelete(): void {
+    this.deleteButton()?.nativeElement.focus();
+  }
+
+  // A click on the backdrop targets the dialog itself, as does one on its padding, which lies
+  // inside its box. So does a press inside the dialog released on the backdrop (selecting its
+  // text, say), so only a press that started on the backdrop too closes it
+  protected pressBackdrop(event: PointerEvent, dialog: HTMLDialogElement): void {
+    this.pressedOnBackdrop = this.isOnBackdrop(event, dialog);
+  }
+
+  protected closeOnBackdrop(event: MouseEvent, dialog: HTMLDialogElement): void {
+    if (this.pressedOnBackdrop && this.isOnBackdrop(event, dialog)) {
+      dialog.close();
+    }
+    this.pressedOnBackdrop = false;
+  }
+
+  // A modal dialog keeps Tab off the page behind, but lets it leave for the browser's toolbar, and
+  // Safari's Tab skips buttons by default; so every Tab moves between the two buttons here, with
+  // the focus elsewhere in the dialog counting as before the first and after the last
+  protected trapFocus(event: KeyboardEvent, first: HTMLElement, last: HTMLElement): void {
+    if (event.key !== 'Tab') {
+      return;
+    }
+    event.preventDefault();
+    const [from, to] = event.shiftKey ? [last, first] : [first, last];
+    (document.activeElement === from ? to : from).focus();
+  }
+
   // The params change while the navigation here runs, so the one before it is where the user came
-  // from; there is none when the app started on this page. A recipe saved from the form replaced it
-  // in the history, so "Back" leads where the form's "Cancel" does rather than to an empty form
+  // from; there is none when the app started on this page. A recipe saved from a form replaced it
+  // in the history, so after a form "Back" leads to the Recipes page rather than back into it
   private previousUrl(): UrlTree {
     const previous = this.router.currentNavigation()?.previousNavigation?.finalUrl;
-    return previous && this.router.serializeUrl(previous) !== '/add-recipe'
+    return previous && !FORM_URL.test(this.router.serializeUrl(previous))
       ? previous
       : this.router.parseUrl('/recipes');
+  }
+
+  private isOnBackdrop(event: MouseEvent, dialog: HTMLDialogElement): boolean {
+    if (event.target !== dialog) {
+      return false;
+    }
+    const box = dialog.getBoundingClientRect();
+    return (
+      event.clientX < box.left ||
+      event.clientX > box.right ||
+      event.clientY < box.top ||
+      event.clientY > box.bottom
+    );
   }
 }

@@ -123,6 +123,37 @@ describe('RecipeStore', () => {
     expect(store.bySlug('no-such-dal'), 'after a reload').toBeUndefined();
   });
 
+  it('replaces "Grandma\'s Soup" by "Red Soup" in its place before "Quick Dal", as an own recipe found by red-soup and no longer by grandmas-soup, saved in fooplan.recipes in that order and kept after a reload', () => {
+    store.add(ownRecipe("Grandma's Soup"));
+    store.add(QUICK_DAL);
+
+    // As the form passes it: checked, without `own`
+    store.replace("Grandma's Soup", stored(ownRecipe('Red Soup', 2)));
+    expect(store.own()).toEqual([ownRecipe('Red Soup', 2), QUICK_DAL]);
+    expect(store.all()).toEqual([...RECIPES, ownRecipe('Red Soup', 2), QUICK_DAL]);
+    expect(store.bySlug('red-soup')).toEqual(ownRecipe('Red Soup', 2));
+    expect(store.bySlug('grandmas-soup')).toBeUndefined();
+    expect(storedRecipes()).toEqual([stored(ownRecipe('Red Soup', 2)), stored(QUICK_DAL)]);
+
+    store = reload();
+    expect(store.own(), 'after a reload').toEqual([ownRecipe('Red Soup', 2), QUICK_DAL]);
+  });
+
+  it('removes "Quick Dal" from own(), all(), bySlug and fooplan.recipes, keeping the other own recipes in their order, also after a reload', () => {
+    store.add(ownRecipe("Grandma's Soup"));
+    store.add(QUICK_DAL);
+    store.add(PLAIN_RICE);
+
+    store.remove('Quick Dal');
+    expect(store.own()).toEqual([ownRecipe("Grandma's Soup"), PLAIN_RICE]);
+    expect(store.all()).toEqual([...RECIPES, ownRecipe("Grandma's Soup"), PLAIN_RICE]);
+    expect(store.bySlug('quick-dal')).toBeUndefined();
+    expect(storedRecipes()).toEqual([stored(ownRecipe("Grandma's Soup")), stored(PLAIN_RICE)]);
+
+    store = reload();
+    expect(store.own(), 'after a reload').toEqual([ownRecipe("Grandma's Soup"), PLAIN_RICE]);
+  });
+
   describe('bySlug', () => {
     it('finds the recipe of every slug made from a recipe name', () => {
       for (const recipe of RECIPES) {

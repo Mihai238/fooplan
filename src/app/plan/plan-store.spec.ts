@@ -1,12 +1,14 @@
+import { computed } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { groceryList, itemKey } from '../groceries/groceries';
 import { RecipeStore } from '../recipes/recipe-store';
 import { RECIPES } from '../recipes/recipes';
-import { PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../recipes/testing';
+import { PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../recipes/testing';
 import { addedKey, DEFAULT_DAYS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
 import {
   acceptOneDayPlan,
+  covered,
   day,
   DINNER,
   leaveSuggested,
@@ -381,6 +383,301 @@ describe('PlanStore', () => {
       expect(reload().removed()).toEqual(removals);
     });
 
+    describe('editing and deleting', () => {
+      it('changes nothing on deleteRecipe("Quick Dal") and tells "picked" from deleteBlock while it is picked in an unaccepted plan or as a dinner cooked extra there, null once the pick is undone, and "accepted" while it is picked in an accepted plan', () => {
+        storeOwnRecipes(QUICK_DAL);
+        load(
+          planOf([
+            day(
+              '2026-10-24',
+              picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+              open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
+            ),
+          ]),
+        );
+        expect(store.deleteBlock('Quick Dal'), 'picked for a lunch').toBe('picked');
+        expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
+        store.clear(LUNCH);
+        expect(store.plan().days[0].lunch.recipe, 'pick not undone').toBeNull();
+        expect(store.deleteBlock('Quick Dal'), 'pick undone').toBeNull();
+
+        load(
+          planOf([
+            day(
+              '2026-10-24',
+              open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
+              picked('Quick Dal'),
+              true,
+            ),
+            day(
+              '2026-10-25',
+              covered(),
+              open('Spaghetti carbonara', 'Niçoise salad', 'Bean burritos'),
+            ),
+          ]),
+        );
+        expect(store.deleteBlock('Quick Dal'), 'dinner cooked extra').toBe('picked');
+        expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
+
+        load(
+          planOf([day('2026-10-24', picked('Quick Dal'), picked('Lentil soup'))], {
+            accepted: true,
+          }),
+        );
+        expect(store.deleteBlock('Quick Dal'), 'accepted plan').toBe('accepted');
+        expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
+      });
+
+      it('changes neither fooplan.recipes, the plan nor the removed recipes on deleteRecipe("Quick Dal") and tells "limit" from deleteBlock while it is one of exactly 15 recipes suggested and not picked, and null while it is removed instead', () => {
+        storeOwnRecipes(QUICK_DAL);
+        store = reload();
+        leaveSuggested(store, 15, 'Quick Dal');
+        expect(store.deleteBlock('Quick Dal')).toBe('limit');
+        expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
+
+        localStorage.clear();
+        storeOwnRecipes(QUICK_DAL);
+        store = reload();
+        leaveSuggested(store, 15);
+        expect(store.removed(), 'Quick Dal not removed').toContain('Quick Dal');
+        expect(store.deleteBlock('Quick Dal')).toBeNull();
+      });
+
+      it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" in the plan and in its place in the removed recipes on renameRecipe after RecipeStore.replace, and loads both unchanged after a reload', () => {
+        storeOwnRecipes(QUICK_DAL);
+        localStorage.setItem(
+          REMOVED_KEY,
+          JSON.stringify(['Lentil soup', 'Quick Dal', 'Fish tacos']),
+        );
+        load(
+          planOf([
+            day(
+              '2026-10-24',
+              picked('Quick Dal', ['Pumpkin soup', 'Quick Dal', 'Bean burritos']),
+              open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
+            ),
+          ]),
+        );
+        expect(store.removed(), 'removed recipes not loaded').toEqual([
+          'Lentil soup',
+          'Quick Dal',
+          'Fish tacos',
+        ]);
+        const before = store.plan();
+
+        recipes().replace('Quick Dal', { ...QUICK_DAL, name: 'Daily Dal' });
+        store.renameRecipe('Quick Dal', 'Daily Dal');
+        const expected: Plan = {
+          ...before,
+          days: [
+            {
+              ...before.days[0],
+              lunch: picked('Daily Dal', ['Pumpkin soup', 'Daily Dal', 'Bean burritos']),
+            },
+          ],
+          shown: before.shown.map((name) => (name === 'Quick Dal' ? 'Daily Dal' : name)),
+        };
+        expect(store.plan()).toEqual(expected);
+        expect(store.removed()).toEqual(['Lentil soup', 'Daily Dal', 'Fish tacos']);
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(expected);
+
+        store = reload();
+        expect(store.plan(), 'plan after a reload').toEqual(expected);
+        expect(store.removed(), 'removed after a reload').toEqual([
+          'Lentil soup',
+          'Daily Dal',
+          'Fish tacos',
+        ]);
+      });
+
+      it('deletes "Quick Dal", not picked and removed, from the own recipes, fooplan.recipes, the removed recipes and the plan\'s shown recipes and remembered suggestions on deleteRecipe, saving each', () => {
+        storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+        localStorage.setItem(REMOVED_KEY, JSON.stringify(['Lentil soup', 'Quick Dal']));
+        load(
+          planOf([
+            day(
+              '2026-10-24',
+              picked('Pumpkin soup', ['Pumpkin soup', 'Quick Dal', 'Fish tacos']),
+              open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
+            ),
+          ]),
+        );
+        expect(store.deleteBlock('Quick Dal')).toBeNull();
+
+        store.deleteRecipe('Quick Dal');
+        expect(recipes().own()).toEqual([PLAIN_RICE]);
+        expect(JSON.parse(localStorage.getItem(RECIPES_KEY) ?? 'null')).toEqual([
+          {
+            name: PLAIN_RICE.name,
+            servings: PLAIN_RICE.servings,
+            ingredients: PLAIN_RICE.ingredients,
+          },
+        ]);
+        expect(store.removed()).toEqual(['Lentil soup']);
+        expect(JSON.parse(localStorage.getItem(REMOVED_KEY) ?? 'null')).toEqual(['Lentil soup']);
+        expect(store.plan().days[0].lunch).toEqual(picked('Pumpkin soup'));
+        expect(JSON.stringify(store.plan())).not.toContain('Quick Dal');
+        expect(localStorage.getItem(STORAGE_KEY)).not.toContain('Quick Dal');
+      });
+
+      it('loads the plan saved without "Quick Dal", and "Quick Dal" still removed, after a reload when saving fooplan.recipes, and every write after it, fails on deleteRecipe', () => {
+        storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+        localStorage.setItem(REMOVED_KEY, JSON.stringify(['Quick Dal']));
+        load(
+          planOf([
+            day(
+              '2026-10-24',
+              picked('Pumpkin soup', ['Pumpkin soup', 'Quick Dal', 'Fish tacos']),
+              open('Spaghetti carbonara', 'Lentil soup', 'Penne arrabbiata'),
+            ),
+          ]),
+        );
+        const setItem = Storage.prototype.setItem;
+        let full = false;
+        const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (
+          this: Storage,
+          key: string,
+          value: string,
+        ) {
+          full ||= key === RECIPES_KEY;
+          if (full) {
+            throw new DOMException('quota exceeded', 'QuotaExceededError');
+          }
+          setItem.call(this, key, value);
+        });
+
+        try {
+          store.deleteRecipe('Quick Dal');
+        } finally {
+          spy.mockRestore();
+        }
+        expect(full, 'fooplan.recipes not written').toBe(true);
+        expect(store.removed()).toEqual([]);
+        const deleted = store.plan();
+        expect(JSON.stringify(deleted)).not.toContain('Quick Dal');
+
+        store = reload();
+        expect(recipes().own()).toEqual([QUICK_DAL, PLAIN_RICE]);
+        expect(store.removed()).toEqual(['Quick Dal']);
+        expect(store.plan()).toEqual(deleted);
+      });
+
+      describe('edge cases', () => {
+        it('tells "picked" from deleteBlock for "Quick Dal" picked while exactly 15 recipes are suggested, and "accepted" once the plan is accepted', () => {
+          storeOwnRecipes(QUICK_DAL);
+          load(
+            planOf([
+              day(
+                '2026-10-24',
+                picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+                open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
+              ),
+            ]),
+          );
+          leaveSuggested(
+            store,
+            15,
+            'Quick Dal',
+            'Spaghetti carbonara',
+            'Niçoise salad',
+            'Fish tacos',
+          );
+          expect(store.canRemove(), 'limit not reached').toBe(false);
+          expect(store.deleteBlock('Quick Dal')).toBe('picked');
+
+          store.pick(DINNER, 'Spaghetti carbonara');
+          store.accept();
+          expect(store.plan().accepted, 'plan not accepted').toBe(true);
+          expect(store.deleteBlock('Quick Dal')).toBe('accepted');
+          expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
+        });
+
+        it('deletes the removed "Quick Dal" while exactly 15 recipes are suggested, leaving 15 suggested', () => {
+          storeOwnRecipes(QUICK_DAL);
+          store = reload();
+          const suggested = leaveSuggested(store, 15);
+          expect(store.removed(), 'Quick Dal not removed').toContain('Quick Dal');
+
+          store.deleteRecipe('Quick Dal');
+          expect(recipes().own()).toEqual([]);
+          expect(store.removed()).not.toContain('Quick Dal');
+          expect(suggestedNames()).toEqual(suggested);
+        });
+
+        it('deletes "Quick Dal" while it is one of 16 recipes suggested, leaving 15 suggested and telling "limit" for the own recipe "Plain Rice" among them', () => {
+          storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+          store = reload();
+          const suggested = leaveSuggested(store, 16, 'Quick Dal', 'Plain Rice');
+          expect(store.deleteBlock('Quick Dal')).toBeNull();
+
+          store.deleteRecipe('Quick Dal');
+          expect(recipes().own()).toEqual([PLAIN_RICE]);
+          expect(suggestedNames()).toEqual(suggested.filter((name) => name !== 'Quick Dal'));
+          expect(store.deleteBlock('Plain Rice')).toBe('limit');
+        });
+
+        it('turns deleteBlock("Quick Dal") read in a computed from "limit" to null when another own recipe is added', () => {
+          storeOwnRecipes(QUICK_DAL);
+          store = reload();
+          leaveSuggested(store, 15, 'Quick Dal');
+          const block = computed(() => store.deleteBlock('Quick Dal'));
+          expect(block()).toBe('limit');
+
+          recipes().add(PLAIN_RICE);
+          expect(block()).toBeNull();
+        });
+
+        it('replaces a suggestion of the deleted "Quick Dal" with a recipe neither removed nor "Quick Dal", in its place, and saves the plan', () => {
+          storeOwnRecipes(QUICK_DAL);
+          const removed = NAMES.slice(20);
+          localStorage.setItem(REMOVED_KEY, JSON.stringify(removed));
+          // Every recipe still suggested has been shown, so a draw among all recipes would take a
+          // removed one, never shown
+          load({
+            ...planOf([
+              day(
+                '2026-10-24',
+                open('Lentil soup', 'Quick Dal', 'Pumpkin soup'),
+                open('Spaghetti carbonara', 'Fish tacos', 'Penne arrabbiata'),
+              ),
+            ]),
+            shown: [...NAMES.slice(0, 20), 'Quick Dal'],
+          });
+          expect(store.removed(), 'removed recipes not loaded').toEqual(removed);
+
+          store.deleteRecipe('Quick Dal');
+          const [first, replacement, last] = store.plan().days[0].lunch.suggestions;
+          expect([first, last]).toEqual(['Lentil soup', 'Pumpkin soup']);
+          expect(NAMES.slice(0, 20)).toContain(replacement);
+          expect(['Spaghetti carbonara', 'Fish tacos', 'Penne arrabbiata']).not.toContain(
+            replacement,
+          );
+          expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(store.plan());
+        });
+      });
+
+      function load(plan: Plan) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
+        store = reload();
+        expect(store.plan(), 'saved plan not loaded').toEqual(plan);
+      }
+
+      function expectNotDeleted(change: () => void) {
+        const before = snapshot();
+        const own = recipes().own();
+        change();
+        expect(snapshot()).toEqual(before);
+        expect(recipes().own()).toEqual(own);
+      }
+
+      function suggestedNames(): string[] {
+        return recipes()
+          .all()
+          .map((recipe) => recipe.name)
+          .filter((name) => !store.removed().includes(name));
+      }
+    });
+
     function recipes(): RecipeStore {
       return TestBed.inject(RecipeStore);
     }
@@ -391,6 +688,7 @@ describe('PlanStore', () => {
         removed: store.removed(),
         storedPlan: localStorage.getItem(STORAGE_KEY),
         storedRemoved: localStorage.getItem(REMOVED_KEY),
+        storedRecipes: localStorage.getItem(RECIPES_KEY),
       };
     }
   });

@@ -7,6 +7,8 @@ import {
   clearMeal,
   createPlan,
   dropSuggestion,
+  forgetRecipe,
+  isPicked,
   MealRef,
   MIN_SUGGESTED,
   otherSuggestions,
@@ -15,6 +17,7 @@ import {
   Plan,
   Random,
   removeItem,
+  renameRecipe,
   setCookExtra,
   setDays,
   setPeople,
@@ -103,6 +106,40 @@ export class PlanStore {
     }
     this.setRemoved([...this.removed(), name]);
     this.update((plan) => dropSuggestion(plan, name, this.suggested(), this.random));
+  }
+
+  // Called once RecipeStore holds the recipe under its new name
+  renameRecipe(from: string, to: string): void {
+    if (from === to) {
+      return;
+    }
+    if (this.removed().includes(from)) {
+      this.setRemoved(this.removed().map((name) => (name === from ? to : name)));
+    }
+    this.update((plan) => renameRecipe(plan, from, to));
+  }
+
+  deleteRecipe(name: string): void {
+    if (
+      !this.recipes.own().some((recipe) => recipe.name === name) ||
+      this.deleteBlock(name) !== null
+    ) {
+      return;
+    }
+    // The plan goes first: a write failing after it leaves a plan without the recipe, which loads
+    // whether the recipe and its removal are still saved or not
+    const suggested = this.suggested().filter((other) => other !== name);
+    this.update((plan) => forgetRecipe(plan, name, suggested, this.random));
+    this.recipes.remove(name);
+    this.restoreRecipe(name);
+  }
+
+  deleteBlock(name: string): 'picked' | 'accepted' | 'limit' | null {
+    const plan = this.plan();
+    if (isPicked(plan, name)) {
+      return plan.accepted ? 'accepted' : 'picked';
+    }
+    return this.suggested().includes(name) && !this.canRemove() ? 'limit' : null;
   }
 
   restoreRecipe(name: string): void {

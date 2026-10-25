@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
+import { QUICK_DAL, storeOwnRecipes } from './recipes/testing';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -75,6 +76,25 @@ describe('App', () => {
       // RouterLinkActive applies its class and aria-current in a microtask after the navigation
       await Promise.resolve();
     }
+  });
+
+  it('marks the "Recipes" link as current, and active, on the edit form /recipes/quick-dal/edit, and no other nav link', async () => {
+    storeOwnRecipes(QUICK_DAL);
+    const fixture = TestBed.createComponent(App);
+    const compiled = fixture.nativeElement as HTMLElement;
+    await TestBed.inject(Router).navigateByUrl('/recipes/quick-dal/edit');
+    await fixture.whenStable();
+    // RouterLinkActive applies its class and aria-current in a microtask after the navigation
+    await Promise.resolve();
+
+    expect(TestBed.inject(Router).url, 'form not opened').toBe('/recipes/quick-dal/edit');
+    expect(
+      Array.from(compiled.querySelectorAll('nav a[aria-current]')).map((a) => [
+        a.textContent?.trim(),
+        a.getAttribute('aria-current'),
+        a.classList.contains('active'),
+      ]),
+    ).toEqual([['Recipes', 'true', true]]);
   });
 
   it('marks the "Recipes" link as current, and active, on /add-recipe, and no other nav link', async () => {
