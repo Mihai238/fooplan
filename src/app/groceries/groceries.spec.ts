@@ -1,7 +1,17 @@
-import { acceptPlan, Plan, PlanDay } from '../plan/plan';
+import { acceptPlan, addedKey, Plan, PlanDay } from '../plan/plan';
 import { covered, day, picked } from '../plan/testing';
 import { Recipe } from '../recipes/recipe';
-import { byName, bySection, GroceryItem, groceryList, itemKey, shoppingView } from './groceries';
+import {
+  AddedItem,
+  addedItems,
+  byName,
+  bySection,
+  GroceryItem,
+  groceryList,
+  itemKey,
+  listItems,
+  shoppingView,
+} from './groceries';
 import { Section, SECTIONS, sectionOf } from './sections';
 
 const RECIPES: readonly Recipe[] = [
@@ -208,6 +218,85 @@ describe('groceries', () => {
     });
   });
 
+  describe('addedItems', () => {
+    it('lists nothing for a plan that is not accepted, even one with added items', () => {
+      const plan = withAdded(
+        planFor(2, day('2026-10-24', picked('Rice'), picked('Salad'))),
+        'coffee',
+      );
+      expect(addedItems({ ...plan, accepted: true }), 'accepted plan').toEqual([
+        added('coffee', 'Other'),
+      ]);
+
+      expect(addedItems(plan)).toEqual([]);
+    });
+
+    it('puts an added item matching an ingredient name under that ingredient\'s section, sorted by name among the plan\'s items, and olive oil, salt and other text under "Other"', () => {
+      const plan = withAdded(
+        acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice'))),
+        'toilet paper',
+        'salt',
+        'lemon',
+        'olive oil',
+      );
+      expect(shoppingView(listItems(plan, RECIPES), []).sections).toEqual([
+        {
+          section: 'Fruit & vegetables',
+          items: [
+            item('basil', 20, 'g'),
+            added('lemon', 'Fruit & vegetables'),
+            item('zucchini', 200, 'g'),
+            item('zucchini', 1, 'pc'),
+          ],
+        },
+        { section: 'Meat & fish', items: [item('beef', 300, 'g')] },
+        { section: 'Dairy & eggs', items: [item('parmesan', 50, 'g')] },
+        { section: 'Pasta, rice & grains', items: [item('rice', 150, 'g')] },
+        {
+          section: 'Other',
+          items: [
+            added('olive oil', 'Other'),
+            added('salt', 'Other'),
+            added('toilet paper', 'Other'),
+          ],
+        },
+      ]);
+    });
+
+    it('matches the whole text with an ingredient name ignoring case, and keeps the text as typed', () => {
+      const plan = withAdded(
+        acceptedPlanFor(2, day('2026-10-24', picked('Rice'), picked('Salad'))),
+        'Lemon',
+        'Canned Tomatoes',
+        '2 lemons',
+        'lemon juice',
+      );
+      expect(addedItems(plan)).toEqual([
+        added('Lemon', 'Fruit & vegetables'),
+        added('Canned Tomatoes', 'Cans & jars'),
+        added('2 lemons', 'Other'),
+        added('lemon juice', 'Other'),
+      ]);
+    });
+
+    it("lists an added item named like a plan item on its own line, after the plan's lines of that name", () => {
+      const plan = withAdded(
+        acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice'))),
+        'zucchini',
+      );
+      const [vegetables] = shoppingView(listItems(plan, RECIPES), []).sections;
+      expect(vegetables).toEqual({
+        section: 'Fruit & vegetables',
+        items: [
+          item('basil', 20, 'g'),
+          item('zucchini', 200, 'g'),
+          item('zucchini', 1, 'pc'),
+          added('zucchini', 'Fruit & vegetables'),
+        ],
+      });
+    });
+  });
+
   describe('shoppingView', () => {
     const basil = item('basil', 20, 'g', 'Fruit & vegetables');
     const zucchini = item('zucchini', 1, 'pc', 'Fruit & vegetables');
@@ -224,6 +313,30 @@ describe('groceries', () => {
       expect(shoppingView(list, ticked)).toEqual({
         sections: [{ section: 'Dairy & eggs', items: [parmesan] }],
         inCart: [basil, beef, zucchini],
+      });
+    });
+
+    it("sorts added and plan items in the cart together by name, the plan's line first for the same name", () => {
+      const plan = withAdded(
+        acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice'))),
+        'toilet paper',
+        'zucchini',
+        'coffee',
+      );
+      const list = listItems(plan, RECIPES);
+      expect(shoppingView(list, list.map(itemKey))).toEqual({
+        sections: [],
+        inCart: [
+          item('basil', 20, 'g'),
+          item('beef', 300, 'g'),
+          added('coffee', 'Other'),
+          item('parmesan', 50, 'g'),
+          item('rice', 150, 'g'),
+          added('toilet paper', 'Other'),
+          item('zucchini', 200, 'g'),
+          item('zucchini', 1, 'pc'),
+          added('zucchini', 'Fruit & vegetables'),
+        ],
       });
     });
 
@@ -261,6 +374,24 @@ describe('groceries', () => {
       expect(itemKey(item('onion', 1, 'g'))).not.toBe(onionPieces);
       expect(itemKey(item('garlic', 1, 'pc'))).not.toBe(onionPieces);
     });
+
+    it('gives an added item the key addedKey makes, which no plan item of that name has, so the two are ticked separately', () => {
+      const planOnion = item('onion', 1, 'pc');
+      const addedOnion = added('onion', 'Fruit & vegetables');
+      expect(itemKey(addedOnion)).toBe(addedKey('onion'));
+      expect(itemKey(addedOnion)).not.toBe(itemKey(planOnion));
+      expect(itemKey(addedOnion)).not.toBe(itemKey(item('onion', 1, 'g')));
+
+      const list = [planOnion, addedOnion];
+      expect(shoppingView(list, [itemKey(planOnion)])).toEqual({
+        sections: [{ section: 'Fruit & vegetables', items: [addedOnion] }],
+        inCart: [planOnion],
+      });
+      expect(shoppingView(list, [itemKey(addedOnion)])).toEqual({
+        sections: [{ section: 'Fruit & vegetables', items: [planOnion] }],
+        inCart: [addedOnion],
+      });
+    });
   });
 
   function acceptedPlanFor(people: number, ...days: PlanDay[]): Plan {
@@ -268,7 +399,15 @@ describe('groceries', () => {
   }
 
   function planFor(people: number, ...days: PlanDay[]): Plan {
-    return { days, people, accepted: false, ticked: [], shown: [] };
+    return { days, people, accepted: false, ticked: [], added: [], shown: [] };
+  }
+
+  function withAdded(plan: Plan, ...texts: string[]): Plan {
+    return { ...plan, added: texts };
+  }
+
+  function added(name: string, section: Section): AddedItem {
+    return { name, section, added: true };
   }
 
   function item(

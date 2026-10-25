@@ -1,5 +1,7 @@
 import {
   acceptPlan,
+  addedKey,
+  addItem,
   clearMeal,
   createPlan,
   DEFAULT_DAYS,
@@ -12,6 +14,7 @@ import {
   parsePlan,
   pickRecipe,
   Plan,
+  removeItem,
   setCookExtra,
   setDays,
   setPeople,
@@ -142,6 +145,7 @@ describe('plan', () => {
         people: 3,
         accepted: false,
         ticked: [],
+        added: [],
         shown: [],
       };
       const grown = setDays(plan, 5, RECIPES, seededRandom(1));
@@ -228,6 +232,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        added: [],
         shown: [],
       };
       const shrunk = setDays(plan, 1, recipes, seededRandom(1));
@@ -252,6 +257,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        added: [],
         shown: [],
       };
       const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
@@ -270,6 +276,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        added: [],
         shown: [],
       };
       const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
@@ -343,6 +350,7 @@ describe('plan', () => {
           people: 2,
           accepted: false,
           ticked: [],
+          added: [],
           shown: ['Risotto', 'Shakshuka', ...shown, 'Quiche'],
         };
         const withPick = pickRecipe(sharing, LUNCH, 'Chili', FOURTEEN_RECIPES, seededRandom(seed));
@@ -378,6 +386,7 @@ describe('plan', () => {
           people: 2,
           accepted: false,
           ticked: [],
+          added: [],
           shown: ['C', 'G', 'H', 'I', 'A', 'B', 'D', 'E', 'F'],
         };
         const cookExtra = setCookExtra(nextLunchPicked, 0, true, recipes, seededRandom(seed));
@@ -400,6 +409,7 @@ describe('plan', () => {
           people: 2,
           accepted: false,
           ticked: [],
+          added: [],
           shown: ['B', 'C', 'G', 'H', 'I', 'A', 'D', 'E', 'F'],
         };
         const shrunk = setDays(lastDayPicked, 1, recipes, seededRandom(seed));
@@ -436,6 +446,7 @@ describe('plan', () => {
           people: 2,
           accepted: false,
           ticked: [],
+          added: [],
           shown: [],
         };
         const result = pickRecipe(plan, LUNCH, 'Chili', RECIPES, seededRandom(seed));
@@ -457,6 +468,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        added: [],
         shown: ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne', 'Minestrone', 'Pesto'],
       };
       // Always takes the first fresh candidate, so drawing the second replacement before the first
@@ -484,6 +496,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        added: [],
         shown: [],
       };
       const result = pickRecipe(plan, LUNCH, 'Chili', RECIPES, seededRandom(1));
@@ -823,6 +836,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        added: [],
         shown: [],
       };
       const result = setCookExtra(plan, 0, true, recipes, seededRandom(1));
@@ -854,6 +868,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        added: [],
         shown: [],
       };
       expectUnchanged(off, (p) => setCookExtra(p, 0, false, RECIPES, seededRandom(1)));
@@ -872,6 +887,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        added: [],
         shown: [],
       };
       const result = setCookExtra(plan, 0, true, RECIPES, seededRandom(1));
@@ -901,6 +917,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        added: [],
         shown: [],
       };
       expectUnchanged(lastDay, (p) => setCookExtra(p, 1, true, RECIPES, seededRandom(1)));
@@ -920,6 +937,7 @@ describe('plan', () => {
         people: 2,
         accepted: true,
         ticked: [],
+        added: [],
         shown: [],
       };
       expectUnchanged(accepted, (p) => setCookExtra(p, 0, true, RECIPES, seededRandom(1)));
@@ -1028,6 +1046,96 @@ describe('plan', () => {
     });
   });
 
+  describe('addItem', () => {
+    it('adds nothing for an empty or blank entry, and adds an entry with its surrounding spaces trimmed', () => {
+      const plan = acceptedPlan();
+      expectUnchanged(plan, (p) => addItem(p, ''));
+      expectUnchanged(plan, (p) => addItem(p, '   '));
+
+      expect(addItem(plan, '  coffee  ').added).toEqual(['coffee']);
+      expect(plan.added, 'the input plan was modified').toEqual([]);
+    });
+
+    it('leaves a plan that is not accepted unchanged', () => {
+      const complete = oneDayPlan(picked('Chili'), picked('Curry'));
+      expect(addItem(acceptPlan(complete), 'coffee').added, 'accepted plan').toEqual(['coffee']);
+
+      expectUnchanged(complete, (p) => addItem(p, 'coffee'));
+      expectUnchanged(oneDayPlan(picked('Chili'), open('Curry', 'Dal', 'Fajitas')), (p) =>
+        addItem(p, 'coffee'),
+      );
+    });
+
+    it('keeps the items in the order they were added, as typed, a quantity included', () => {
+      const plan = addItem(addItem(acceptedPlan(), 'toilet paper'), '2 l Milk');
+      expect(plan.added).toEqual(['toilet paper', '2 l Milk']);
+    });
+
+    it('adds no second item for the same text in another case while it is still added', () => {
+      const plan = addItem(acceptedPlan(), 'Coffee');
+      expect(plan.added, 'item not added').toEqual(['Coffee']);
+
+      expectUnchanged(plan, (p) => addItem(p, 'coffee'));
+    });
+
+    it('compares the trimmed text when looking for the same item', () => {
+      const plan = addItem(acceptedPlan(), 'Coffee');
+      expect(addItem(plan, ' tea ').added, 'other item not added').toEqual(['Coffee', 'tea']);
+
+      expectUnchanged(plan, (p) => addItem(p, '  COFFEE '));
+    });
+
+    it('adds the same text in another case again once the item was removed', () => {
+      const plan = removeItem(addItem(acceptedPlan(), 'Coffee'), 'Coffee');
+      expect(plan.added, 'item not removed').toEqual([]);
+
+      expect(addItem(plan, 'coffee').added).toEqual(['coffee']);
+    });
+
+    it("doesn't tick an item added again, even if a tick of it was left behind", () => {
+      const plan: Plan = { ...acceptedPlan(), ticked: [addedKey('coffee'), 'onion'] };
+      expect(addItem(plan, ' coffee ').ticked).toEqual(['onion']);
+    });
+  });
+
+  describe('removeItem', () => {
+    it("removes an added item and its tick, keeps the other items and ticks, and doesn't tick it when added again", () => {
+      let plan = addItem(addItem(acceptedPlan(), 'onion'), 'coffee');
+      plan = toggleTicked(plan, addedKey('onion'));
+      plan = toggleTicked(plan, addedKey('coffee'));
+      plan = toggleTicked(plan, 'onion');
+      expect(plan.ticked, 'items not ticked').toHaveLength(3);
+
+      const removed = removeItem(plan, 'onion');
+      expect(removed.added).toEqual(['coffee']);
+      expect([...removed.ticked].sort()).toEqual([addedKey('coffee'), 'onion'].sort());
+      expect(plan.added, 'the input plan was modified').toEqual(['onion', 'coffee']);
+
+      expect(addItem(removed, 'onion').ticked).not.toContain(addedKey('onion'));
+    });
+
+    it('returns the same plan for text that is not on the list, the same text in another case included', () => {
+      const plan = addItem(acceptedPlan(), 'coffee');
+      expect(plan.added, 'item not added').toEqual(['coffee']);
+
+      expectUnchanged(plan, (p) => removeItem(p, 'tea'));
+      expectUnchanged(plan, (p) => removeItem(p, 'COFFEE'));
+    });
+
+    it('leaves a plan that is not accepted unchanged', () => {
+      const complete: Plan = {
+        ...oneDayPlan(picked('Chili'), picked('Curry')),
+        added: ['coffee'],
+        ticked: [addedKey('coffee')],
+      };
+      expect(removeItem({ ...complete, accepted: true }, 'coffee').added, 'accepted plan').toEqual(
+        [],
+      );
+
+      expectUnchanged(complete, (p) => removeItem(p, 'coffee'));
+    });
+  });
+
   describe('parsePlan', () => {
     it('reads back a plan in progress and an accepted plan from their JSON', () => {
       const random = seededRandom(1);
@@ -1073,6 +1181,58 @@ describe('plan', () => {
       for (const plan of [storedPlan(), completeCookExtraPlan(false)]) {
         expect(parsePlan(plan, RECIPES), 'valid base plan').not.toBeNull();
         expect(parsePlan({ ...plan, ticked: ['onion'] }, RECIPES), JSON.stringify(plan)).toBeNull();
+      }
+    });
+
+    it('reads back the added items of an accepted plan in their order, and a plan saved without added items as none', () => {
+      const added: Plan = {
+        ...completeCookExtraPlan(true),
+        added: ['toilet paper', '2 l Milk', 'onion'],
+        ticked: [addedKey('onion')],
+      };
+      expect(parsePlan(JSON.parse(JSON.stringify(added)), RECIPES)).toEqual(added);
+
+      for (const plan of [storedPlan(), completeCookExtraPlan(true)]) {
+        const savedBefore: any = structuredClone(plan);
+        delete savedBefore.added;
+        expect(parsePlan(savedBefore, RECIPES), JSON.stringify(plan)).toEqual({
+          ...plan,
+          added: [],
+        });
+      }
+    });
+
+    it('returns null for a plan that is not accepted with added items', () => {
+      for (const plan of [storedPlan(), completeCookExtraPlan(false)]) {
+        expect(parsePlan({ ...plan, added: [] }, RECIPES), 'valid base plan').not.toBeNull();
+        expect(parsePlan({ ...plan, added: ['coffee'] }, RECIPES), JSON.stringify(plan)).toBeNull();
+      }
+    });
+
+    it('returns null for added items that are not a list of strings', () => {
+      const plan = completeCookExtraPlan(true);
+      expect(parsePlan({ ...plan, added: ['coffee'] }, RECIPES), 'valid base plan').not.toBeNull();
+      for (const added of ['coffee', null, {}, [1], ['coffee', null]]) {
+        expect(parsePlan({ ...plan, added }, RECIPES), JSON.stringify(added)).toBeNull();
+      }
+    });
+
+    it('returns null for added items that are untrimmed, blank or the same text twice ignoring case', () => {
+      const plan = completeCookExtraPlan(true);
+      expect(
+        parsePlan({ ...plan, added: ['coffee', 'tea'] }, RECIPES),
+        'valid base plan',
+      ).not.toBeNull();
+      const broken = [
+        [' coffee'],
+        ['coffee '],
+        [''],
+        ['  '],
+        ['coffee', 'coffee'],
+        ['coffee', 'Coffee'],
+      ];
+      for (const added of broken) {
+        expect(parsePlan({ ...plan, added }, RECIPES), JSON.stringify(added)).toBeNull();
       }
     });
 
@@ -1276,6 +1436,7 @@ describe('plan', () => {
       people: 2,
       accepted: false,
       ticked: [],
+      added: [],
       shown: [
         'Chili',
         'Quiche',
@@ -1300,6 +1461,7 @@ describe('plan', () => {
       people: 2,
       accepted: false,
       ticked: [],
+      added: [],
       shown: ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash'],
     };
   }
@@ -1310,12 +1472,17 @@ describe('plan', () => {
     return { ...plan, accepted };
   }
 
+  function acceptedPlan(): Plan {
+    return { ...oneDayPlan(picked('Chili'), picked('Curry')), accepted: true };
+  }
+
   function oneDayPlan(lunch: Meal, dinner: Meal, shown: string[] = []): Plan {
     return {
       days: [day('2026-10-24', lunch, dinner)],
       people: 2,
       accepted: false,
       ticked: [],
+      added: [],
       shown,
     };
   }

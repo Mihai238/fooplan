@@ -5,6 +5,11 @@
     <a routerLink="/plan">Go to the plan</a>
   </p>
 } @else {
+  <form class="field" (submit)="add($event, itemInput)">
+    <label for="new-item">Add an item</label>
+    <input #itemInput type="text" id="new-item" autocomplete="off" />
+    <button type="submit" class="primary">Add</button>
+  </form>
   @if (view().sections.length > 0) {
     <div class="sections">
       @for (group of view().sections; track group.section) {
@@ -13,7 +18,6 @@
           <ul class="items">
             @for (item of group.items; track key(item)) {
               <li>
-                @let shown = displayAmount(item);
                 <label>
                   <input
                     #checkbox
@@ -21,8 +25,24 @@
                     [attr.data-key]="key(item)"
                     (change)="toggle(item, checkbox)"
                   />
-                  {{ shown.amount }} {{ shown.unit }} {{ item.name }}
+                  @if ('added' in item) {
+                    {{ item.name }}
+                  } @else {
+                    @let shown = displayAmount(item);
+                    {{ shown.amount }} {{ shown.unit }} {{ item.name }}
+                  }
                 </label>
+                @if ('added' in item) {
+                  <button
+                    #removeButton
+                    type="button"
+                    class="link"
+                    [attr.aria-label]="'Remove ' + item.name"
+                    (click)="remove(item, removeButton)"
+                  >
+                    Remove
+                  </button>
+                }
               </li>
             }
           </ul>
@@ -36,7 +56,6 @@
       <ul class="items">
         @for (item of view().inCart; track key(item)) {
           <li>
-            @let shown = displayAmount(item);
             <label>
               <input
                 #checkbox
@@ -45,8 +64,24 @@
                 [attr.data-key]="key(item)"
                 (change)="toggle(item, checkbox)"
               />
-              {{ shown.amount }} {{ shown.unit }} {{ item.name }}
+              @if ('added' in item) {
+                {{ item.name }}
+              } @else {
+                @let shown = displayAmount(item);
+                {{ shown.amount }} {{ shown.unit }} {{ item.name }}
+              }
             </label>
+            @if ('added' in item) {
+              <button
+                #removeButton
+                type="button"
+                class="link"
+                [attr.aria-label]="'Remove ' + item.name"
+                (click)="remove(item, removeButton)"
+              >
+                Remove
+              </button>
+            }
           </li>
         }
       </ul>

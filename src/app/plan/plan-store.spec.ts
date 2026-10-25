@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { groceryList, itemKey } from '../groceries/groceries';
 import { RECIPES } from '../recipes/recipes';
-import { DEFAULT_DAYS, MealRef, Plan } from './plan';
+import { addedKey, DEFAULT_DAYS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
 import { acceptOneDayPlan, DINNER, LUNCH, seededRandom, suggestionsOf } from './testing';
 
@@ -108,6 +108,7 @@ describe('PlanStore', () => {
       people: 2,
       accepted: false,
       ticked: [],
+      added: [],
       shown: [],
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
@@ -163,6 +164,37 @@ describe('PlanStore', () => {
     expect(store.plan().ticked).toEqual([]);
     acceptOneDayPlan(store);
     expect(store.plan().ticked).toEqual([]);
+  });
+
+  it('keeps the added items, in their order, and their ticks after a reload', () => {
+    acceptOneDayPlan(store);
+    store.addItem('toilet paper');
+    store.addItem('coffee');
+    store.addItem('2 l milk');
+    const ticked = [addedKey('coffee'), firstItemKey()];
+    ticked.forEach((key) => store.toggleTicked(key));
+    expect(store.plan().added, 'items not added').toEqual(['toilet paper', 'coffee', '2 l milk']);
+    expect(store.plan().ticked, 'items not ticked').toEqual(ticked);
+
+    store = reload();
+    expect(store.plan().added).toEqual(['toilet paper', 'coffee', '2 l milk']);
+    expect(store.plan().ticked).toEqual(ticked);
+  });
+
+  it('starts "New plan" without the added items, and none after a reload or once the next plan is accepted', () => {
+    acceptOneDayPlan(store);
+    store.addItem('toilet paper');
+    store.addItem('coffee');
+    store.toggleTicked(addedKey('coffee'));
+    expect(store.plan().added, 'items not added').toHaveLength(2);
+
+    store.newPlan();
+    expect(store.plan().added).toEqual([]);
+    expect(store.plan().ticked).toEqual([]);
+    store = reload();
+    expect(store.plan().added).toEqual([]);
+    acceptOneDayPlan(store);
+    expect(store.plan().added).toEqual([]);
   });
 
   function createStore(): PlanStore {

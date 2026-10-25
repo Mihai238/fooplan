@@ -19,6 +19,8 @@ export interface Plan {
   accepted: boolean;
   // Keys of the grocery list items the user has ticked off, see itemKey
   ticked: string[];
+  // Items the user added to the grocery list themselves, in the order added
+  added: string[];
   // Recipe names, least recently shown first; a recipe shown again, or whose pick is cleared or
   // dropped, moves to the end
   shown: string[];
@@ -38,7 +40,14 @@ export const DEFAULT_PEOPLE = 2;
 const SUGGESTIONS = 3;
 
 export function createPlan(startDate: string, recipes: readonly string[], random: Random): Plan {
-  const plan: Plan = { days: [], people: DEFAULT_PEOPLE, accepted: false, ticked: [], shown: [] };
+  const plan: Plan = {
+    days: [],
+    people: DEFAULT_PEOPLE,
+    accepted: false,
+    ticked: [],
+    added: [],
+    shown: [],
+  };
   return openDays(plan, startDate, DEFAULT_DAYS, recipes, random);
 }
 
@@ -170,13 +179,45 @@ export function toggleTicked(plan: Plan, key: string): Plan {
   return { ...plan, ticked };
 }
 
+export function addItem(plan: Plan, text: string): Plan {
+  const item = text.trim();
+  if (!plan.accepted || item === '' || plan.added.some((other) => sameItem(other, item))) {
+    return plan;
+  }
+  // A re-added item starts unticked even if a stale tick of it lingers, e.g. one edited into the
+  // storage
+  const key = addedKey(item);
+  return {
+    ...plan,
+    added: [...plan.added, item],
+    ticked: plan.ticked.filter((other) => other !== key),
+  };
+}
+
+export function removeItem(plan: Plan, text: string): Plan {
+  if (!plan.accepted || !plan.added.includes(text)) {
+    return plan;
+  }
+  const key = addedKey(text);
+  return {
+    ...plan,
+    added: plan.added.filter((other) => other !== text),
+    ticked: plan.ticked.filter((other) => other !== key),
+  };
+}
+
+// A list of one string can't equal a plan item's key, which lists a name and a unit
+export function addedKey(text: string): string {
+  return JSON.stringify([text]);
+}
+
 export function parsePlan(value: unknown, recipes: readonly string[]): Plan | null {
   if (!isRecord(value)) {
     return null;
   }
-  // Plans saved before the grocery list existed have no ticks, and those saved before shown
-  // recipes were recorded have no shown recipes
-  const { days, people, accepted, ticked = [], shown = [] } = value;
+  // Plans saved before the grocery list existed have no ticks, those saved before shown recipes
+  // were recorded have no shown recipes, and those saved before items could be added have none
+  const { days, people, accepted, ticked = [], added = [], shown = [] } = value;
   if (!Array.isArray(days) || days.length < MIN_DAYS || days.length > MAX_DAYS) {
     return null;
   }
@@ -186,7 +227,7 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
   if (typeof accepted !== 'boolean') {
     return null;
   }
-  if (!Array.isArray(ticked) || !ticked.every((key) => typeof key === 'string')) {
+  if (!isStringList(ticked) || !isItemList(added)) {
     return null;
   }
   if (!isRecipeList(shown, recipes)) {
@@ -200,7 +241,8 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
     days: parsedDays as PlanDay[],
     people,
     accepted,
-    ticked: ticked as string[],
+    ticked,
+    added,
     shown,
   };
   // A record missing what a meal shows (an old or hand-edited save) still counts it as shown
@@ -210,7 +252,7 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
     usesRecipesOnce(plan) &&
     hasValidLeftovers(plan) &&
     (!accepted || isComplete(plan)) &&
-    (accepted || ticked.length === 0);
+    (accepted || (ticked.length === 0 && added.length === 0));
   return valid ? plan : null;
 }
 
@@ -226,6 +268,23 @@ export function leftoversOf(plan: Plan, day: number): string | null {
     return null;
   }
   return plan.days[day - 1].dinner.recipe;
+}
+
+function sameItem(a: string, b: string): boolean {
+  return a.toLowerCase() === b.toLowerCase();
+}
+
+// addItem only keeps trimmed, non-blank text, once ignoring case
+function isItemList(value: unknown): value is string[] {
+  return (
+    isStringList(value) &&
+    value.every((item) => item !== '' && item === item.trim()) &&
+    value.every((item, i) => value.findIndex((other) => sameItem(other, item)) === i)
+  );
+}
+
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 function isRecipeList(value: unknown, recipes: readonly string[]): value is string[] {

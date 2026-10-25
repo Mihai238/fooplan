@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
+import { addedKey } from '../../plan/plan';
 import { acceptOneDayPlan, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
@@ -271,6 +272,145 @@ describe('GroceryList', () => {
     expect(listed().map(textOf)).toContain('25 ml white wine');
   });
 
+  it('adds what the user types under "Other" on "Add" and on Enter, and empties the field', async () => {
+    acceptOneDayPlan(store);
+    await open();
+
+    const added = () =>
+      labelsIn(sectionHeaded('Other')).filter((line) => ['coffee', 'toilet paper'].includes(line));
+
+    await type('toilet paper');
+    await click(addButton());
+    expect(added()).toEqual(['toilet paper']);
+    expect(field().value).toBe('');
+
+    await type('coffee');
+    await pressEnter();
+    expect(added()).toEqual(['coffee', 'toilet paper']);
+    expect(field().value).toBe('');
+    expect(store.plan().added).toEqual(['toilet paper', 'coffee']);
+  });
+
+  it('moves the focus back to the field after adding with "Add", and keeps it there on Enter', async () => {
+    acceptOneDayPlan(store);
+    await open();
+
+    await type('toilet paper');
+    await click(addButton());
+    expect(store.plan().added, 'item not added').toEqual(['toilet paper']);
+    expect(document.activeElement).toBe(field());
+
+    field().focus();
+    await type('coffee');
+    await pressEnter();
+    expect(store.plan().added, 'item not added').toEqual(['toilet paper', 'coffee']);
+    expect(document.activeElement).toBe(field());
+  });
+
+  it("shows an added item named like a plan item on its own line as typed, next to the plan's line with its amount", async () => {
+    acceptOneDayPlan(store);
+    const [first] = groceryList(store.plan(), RECIPES);
+    expect(first, 'empty grocery list').toBeDefined();
+    await open();
+
+    await type(first.name);
+    await click(addButton());
+    const lines = labelsIn(sectionHeaded(first.section)).filter(
+      (line) => line === lineOf(first) || line === first.name,
+    );
+    expect(lines).toEqual([lineOf(first), first.name]);
+  });
+
+  it('moves an added item the user ticks into "In the cart", and back when unticking it there', async () => {
+    acceptOneDayPlan(store);
+    store.addItem('toilet paper');
+    await open();
+    const line = () => listed().find((item) => labelOf(item) === 'toilet paper');
+    expect(line(), 'added item not listed').toBeDefined();
+
+    await click(checkboxOf(line()!));
+    expect(line()).toBeUndefined();
+    expect(inCart().map(labelOf)).toEqual(['toilet paper']);
+    expect(checkboxOf(inCart()[0]).checked).toBe(true);
+    expect(store.plan().ticked).toEqual([addedKey('toilet paper')]);
+
+    await click(checkboxOf(inCart()[0]));
+    expect(cart()).toBeNull();
+    expect(line(), 'added item not back').toBeDefined();
+    expect(checkboxOf(line()!).checked).toBe(false);
+  });
+
+  it('removes an added item from its section, and a ticked one from the cart, with its "Remove" button', async () => {
+    acceptOneDayPlan(store);
+    store.addItem('toilet paper');
+    store.addItem('coffee');
+    store.toggleTicked(addedKey('coffee'));
+    await open();
+    const before = listed().map(labelOf);
+    expect(before, 'added item not listed').toContain('toilet paper');
+    expect(inCart().map(labelOf), 'added item not ticked').toEqual(['coffee']);
+
+    await click(removeButtonOf(listed().find((item) => labelOf(item) === 'toilet paper')!));
+    expect(listed().map(labelOf)).toEqual(before.filter((line) => line !== 'toilet paper'));
+
+    await click(removeButtonOf(inCart()[0]));
+    expect(cart()).toBeNull();
+    expect(store.plan().added).toEqual([]);
+    expect(store.plan().ticked).toEqual([]);
+  });
+
+  it('moves the focus to the next line after removing an added item by keyboard, else to the previous line, else to the field', async () => {
+    acceptOneDayPlan(store);
+    for (const text of ['coffee', 'tea', 'toilet paper', 'zzz']) {
+      store.addItem(text);
+    }
+    store.toggleTicked(addedKey('zzz'));
+    await open();
+    const line = (label: string) => listed().find((item) => labelOf(item) === label)!;
+    expect(labelsIn(sectionHeaded('Other')), 'items not added').toEqual(
+      expect.arrayContaining(['coffee', 'tea', 'toilet paper']),
+    );
+
+    await pressRemove(line('tea'));
+    expect(document.activeElement).toBe(checkboxOf(line('toilet paper')));
+
+    await pressRemove(line('toilet paper'));
+    expect(document.activeElement).toBe(checkboxOf(line('coffee')));
+
+    cart()!.open = true;
+    await pressRemove(inCart()[0]);
+    expect(cart()).toBeNull();
+    expect(document.activeElement).toBe(field());
+  });
+
+  it('shows no "Remove" button on the plan\'s items, in their sections or in the cart', async () => {
+    acceptOneDayPlan(store);
+    const [first] = groceryList(store.plan(), RECIPES);
+    store.toggleTicked(itemKey(first));
+    store.addItem('toilet paper');
+    await open();
+    expect(inCart(), 'item not ticked').toHaveLength(1);
+    const addedLine = listed().find((item) => labelOf(item) === 'toilet paper');
+    expect(addedLine, 'added item not listed').toBeDefined();
+    removeButtonOf(addedLine!);
+
+    for (const item of [...listed().filter((line) => line !== addedLine), ...inCart()]) {
+      expect(buttonsIn(item), labelOf(item)).toEqual([]);
+    }
+  });
+
+  it('shows no field to add items while the plan is not accepted', async () => {
+    await open();
+    expect(element.querySelector('p.empty'), 'no message').not.toBeNull();
+    expect(element.querySelector('input')).toBeNull();
+    expect(buttonsIn(element).map(textOf)).not.toContain('Add');
+
+    acceptOneDayPlan(store);
+    await fixture.whenStable();
+    field();
+    addButton();
+  });
+
   async function open() {
     fixture = TestBed.createComponent(GroceryList);
     await fixture.whenStable();
@@ -318,6 +458,74 @@ describe('GroceryList', () => {
       });
       restores.push(() => recipe!.ingredients.splice(0, Infinity, ...original));
     }
+  }
+
+  function addButton(): HTMLButtonElement {
+    const button = buttonsIn(element).find((candidate) => textOf(candidate) === 'Add');
+    expect(button, 'no "Add" button').toBeDefined();
+    return button!;
+  }
+
+  async function type(text: string) {
+    field().value = text;
+    field().dispatchEvent(new Event('input', { bubbles: true }));
+    await fixture.whenStable();
+  }
+
+  // Unless the keydown is handled, a browser submits the field's form on Enter, which jsdom doesn't
+  async function pressEnter() {
+    const enter = { key: 'Enter', bubbles: true, cancelable: true };
+    if (field().dispatchEvent(new KeyboardEvent('keydown', enter))) {
+      field().form?.requestSubmit();
+    }
+    field().dispatchEvent(new KeyboardEvent('keyup', enter));
+    await fixture.whenStable();
+  }
+
+  function field(): HTMLInputElement {
+    const input = element.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
+    expect(input, 'no field to add items').not.toBeNull();
+    return input!;
+  }
+
+  // Space on the button, then the click a browser sends on keyup. jsdom takes any click event for
+  // a pointer, so the line repeats the keyup while the click is on its way to the button, which
+  // makes jsdom see the key as the last input again, as a browser would
+  async function pressRemove(item: HTMLElement) {
+    const button = removeButtonOf(item);
+    const keyup = () => button.dispatchEvent(new KeyboardEvent('keyup', { key: ' ' }));
+    button.focus();
+    button.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    item.addEventListener('click', keyup, { capture: true, once: true });
+    button.click();
+    await fixture.whenStable();
+  }
+
+  function removeButtonOf(item: HTMLElement): HTMLButtonElement {
+    const button = buttonsIn(item).find((candidate) => textOf(candidate) === 'Remove');
+    expect(button, `no "Remove" button on "${labelOf(item)}"`).toBeDefined();
+    return button!;
+  }
+
+  function buttonsIn(node: Element | null): HTMLButtonElement[] {
+    return Array.from(node?.querySelectorAll('button') ?? []);
+  }
+
+  function sectionHeaded(heading: string): HTMLElement {
+    const section = sections().find(
+      (candidate) => textOf(candidate.querySelector('h2')) === heading,
+    );
+    expect(section, `no section "${heading}"`).toBeDefined();
+    return section!;
+  }
+
+  function labelsIn(section: HTMLElement): string[] {
+    return listedIn(section).map(labelOf);
+  }
+
+  // Only the label: an added item's line also holds its "Remove" button
+  function labelOf(item: HTMLElement): string {
+    return textOf(item.querySelector('label'));
   }
 
   function sections(): HTMLElement[] {

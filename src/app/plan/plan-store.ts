@@ -2,6 +2,7 @@ import { inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { RECIPES } from '../recipes/recipes';
 import {
   acceptPlan,
+  addItem,
   clearMeal,
   createPlan,
   MealRef,
@@ -10,6 +11,7 @@ import {
   pickRecipe,
   Plan,
   Random,
+  removeItem,
   setCookExtra,
   setDays,
   setPeople,
@@ -71,6 +73,14 @@ export class PlanStore {
 
   toggleTicked(key: string): void {
     this.update((plan) => toggleTicked(plan, key));
+  }
+
+  addItem(text: string): void {
+    this.update((plan) => addItem(plan, text));
+  }
+
+  removeItem(text: string): void {
+    this.update((plan) => removeItem(plan, text));
   }
 
   newPlan(): void {

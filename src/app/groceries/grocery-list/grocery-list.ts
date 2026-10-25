@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { PlanStore } from '../../plan/plan-store';
 import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
-import { GroceryItem, groceryList, itemKey, shoppingView } from '../groceries';
+import { AddedItem, itemKey, ListItem, listItems, shoppingView } from '../groceries';
 
 @Component({
   imports: [RouterLink],
@@ -19,12 +19,21 @@ export class GroceryList {
   protected readonly key = itemKey;
   protected readonly displayAmount = displayAmount;
   protected readonly view = computed(() =>
-    shoppingView(groceryList(this.plan(), RECIPES), this.plan().ticked),
+    shoppingView(listItems(this.plan(), RECIPES), this.plan().ticked),
   );
+
+  // Without preventDefault the browser would submit the form and reload the page. The focus goes
+  // back to the field after a click on "Add", so several items can be added in a row
+  protected add(event: SubmitEvent, input: HTMLInputElement): void {
+    event.preventDefault();
+    this.store.addItem(input.value);
+    input.value = '';
+    input.focus();
+  }
 
   // Toggling moves the item's row to the other list, which drops the focus to <body> and sends
   // keyboard and screen-reader users back to the top of the page
-  protected toggle(item: GroceryItem, checkbox: HTMLInputElement): void {
+  protected toggle(item: ListItem, checkbox: HTMLInputElement): void {
     const key = itemKey(item);
     this.store.toggleTicked(key);
     // After a click or tap the user isn't lost, and moving the focus would scroll the page,
@@ -50,8 +59,26 @@ export class GroceryList {
     );
   }
 
+  // Like toggle, but the line is gone for good, so without a line next to it the focus goes back to
+  // the field the item came from
+  protected remove(item: AddedItem, button: HTMLButtonElement): void {
+    this.store.removeItem(item.name);
+    if (!button.matches(':focus-visible')) {
+      return;
+    }
+    const line = button.closest('li');
+    const sibling =
+      this.firstCheckboxIn(line?.nextElementSibling) ??
+      this.firstCheckboxIn(line?.previousElementSibling);
+    afterNextRender(() => (sibling ?? this.addField())?.focus(), { injector: this.injector });
+  }
+
   private firstCheckboxIn(element: Element | null | undefined): HTMLInputElement | null {
     return element?.querySelector('input') ?? null;
+  }
+
+  private addField(): HTMLInputElement | null {
+    return this.host.querySelector('#new-item');
   }
 
   private cartSummary(): HTMLElement | null {

@@ -1,4 +1,4 @@
-import { Plan } from '../plan/plan';
+import { addedKey, Plan } from '../plan/plan';
 import { Recipe, Unit } from '../recipes/recipe';
 import { PANTRY_STAPLES, Section, SECTIONS, sectionOf } from './sections';
 
@@ -9,14 +9,26 @@ export interface GroceryItem {
   section: Section;
 }
 
-export interface SectionItems {
+export interface AddedItem {
+  name: string;
   section: Section;
-  items: GroceryItem[];
+  added: true;
+}
+
+export type ListItem = GroceryItem | AddedItem;
+
+export interface SectionItems<T extends ListItem = ListItem> {
+  section: Section;
+  items: T[];
 }
 
 export interface ShoppingView {
   sections: SectionItems[];
-  inCart: GroceryItem[];
+  inCart: ListItem[];
+}
+
+export function listItems(plan: Plan, recipes: readonly Recipe[]): ListItem[] {
+  return [...groceryList(plan, recipes), ...addedItems(plan)];
 }
 
 export function groceryList(plan: Plan, recipes: readonly Recipe[]): GroceryItem[] {
@@ -40,33 +52,44 @@ export function groceryList(plan: Plan, recipes: readonly Recipe[]): GroceryItem
     .sort((a, b) => SECTIONS.indexOf(a.section) - SECTIONS.indexOf(b.section) || byName(a, b));
 }
 
+// Recipes spell ingredient names in lowercase, so this matches the whole text with a name ignoring
+// case, while the item still reads as typed
+export function addedItems(plan: Plan): AddedItem[] {
+  if (!plan.accepted) {
+    return [];
+  }
+  return plan.added.map((name) => ({ name, section: sectionOf(name.toLowerCase()), added: true }));
+}
+
 // Ticks whose key isn't on the list, e.g. after a deploy changed the recipes, are ignored
-export function shoppingView(
-  items: readonly GroceryItem[],
-  ticked: readonly string[],
-): ShoppingView {
+export function shoppingView(items: readonly ListItem[], ticked: readonly string[]): ShoppingView {
   const tickedKeys = new Set(ticked);
-  const toBuy: GroceryItem[] = [];
-  const inCart: GroceryItem[] = [];
+  const toBuy: ListItem[] = [];
+  const inCart: ListItem[] = [];
   for (const item of items) {
     (tickedKeys.has(itemKey(item)) ? inCart : toBuy).push(item);
   }
-  return { sections: bySection(toBuy), inCart: inCart.sort(byName) };
+  return { sections: bySection(toBuy.sort(byName)), inCart: inCart.sort(byName) };
 }
 
-export function bySection(items: readonly GroceryItem[]): SectionItems[] {
+export function bySection<T extends ListItem>(items: readonly T[]): SectionItems<T>[] {
   return SECTIONS.map((section) => ({
     section,
     items: items.filter((item) => item.section === section),
   })).filter((group) => group.items.length > 0);
 }
 
-export function byName(a: GroceryItem, b: GroceryItem): number {
-  return a.name.localeCompare(b.name, 'en') || a.unit.localeCompare(b.unit, 'en');
+// For the same name the plan's lines, which have an amount, come before an added one
+export function byName(a: ListItem, b: ListItem): number {
+  return (
+    a.name.localeCompare(b.name, 'en') ||
+    Number('added' in a) - Number('added' in b) ||
+    unitOf(a).localeCompare(unitOf(b), 'en')
+  );
 }
 
-export function itemKey(item: { name: string; unit: Unit }): string {
-  return JSON.stringify([item.name, item.unit]);
+export function itemKey(item: { name: string; unit: Unit } | AddedItem): string {
+  return 'added' in item ? addedKey(item.name) : JSON.stringify([item.name, item.unit]);
 }
 
 // A lunch covered by leftovers has no recipe: the dinner before it is cooked for twice the people
@@ -90,4 +113,8 @@ function cookedRecipes(
 // which Math.ceil alone would turn into 4
 function roundUp(amount: number): number {
   return Math.ceil(Number(amount.toFixed(6)));
+}
+
+function unitOf(item: ListItem): string {
+  return 'added' in item ? '' : item.unit;
 }
