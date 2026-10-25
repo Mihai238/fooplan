@@ -154,13 +154,17 @@ ul {
   line-height: 1.5;
 }
 
-/* On a 375px-wide phone the steps as written wrap to at most five lines, so reserving five keeps
-   "Previous" and "Next" in place from step to step; on narrower phones a longer step can still move
-   them. Above 40rem the card is capped at 36rem, where the room would be mostly empty space; the
+.amount {
+  color: var(--muted);
+}
+
+/* On a 375px-wide phone the steps with their amounts wrap to at most six lines, so reserving six
+   keeps "Previous" and "Next" in place from step to step; on narrower phones a longer step can still
+   move them. Above 40rem the card is capped at 36rem, where the room would be mostly empty space; the
    buttons may move by a line there, which is accepted */
 @media (max-width: 40rem) {
   .step {
-    min-height: 5lh;
+    min-height: 6lh;
   }
 }
 

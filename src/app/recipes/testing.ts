@@ -1,4 +1,5 @@
-import { Recipe } from './recipe';
+import { Ingredient, Recipe } from './recipe';
+import { stepParts } from './step-amounts';
 
 export const RECIPES_KEY = 'fooplan.recipes';
 export const STEPS_VIEW_KEY = 'fooplan.stepsView';
@@ -33,4 +34,11 @@ export function storeOwnRecipes(...recipes: Recipe[]): void {
     ingredients,
   }));
   localStorage.setItem(RECIPES_KEY, JSON.stringify(stored));
+}
+
+// The space before an amount is the page's: the template puts it outside span.amount
+export function shownStep(step: string, ingredients: readonly Ingredient[]): string {
+  return stepParts(step, ingredients)
+    .map((part) => ('text' in part ? part.text : ` ${part.amount}`))
+    .join('');
 }

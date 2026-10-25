@@ -19,7 +19,14 @@ import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
 import { RecipeStore } from '../recipe-store';
 import { RECIPES } from '../recipes';
-import { ownRecipe, QUICK_DAL, RECIPES_KEY, STEPS_VIEW_KEY, storeOwnRecipes } from '../testing';
+import {
+  ownRecipe,
+  QUICK_DAL,
+  RECIPES_KEY,
+  shownStep,
+  STEPS_VIEW_KEY,
+  storeOwnRecipes,
+} from '../testing';
 
 const LIMIT_NOTE = 'At least 15 recipes stay suggested, so no more can be removed.';
 const PLAN_NOTE = 'This recipe is in your plan. Undo its pick or start a new plan to delete it.';
@@ -188,7 +195,9 @@ describe('RecipePage', () => {
       '200 g bread',
     ]);
     expect(stepCounters()).toEqual(['Step 1 of 4']);
-    elementShowing('Drain and rinse the canned white beans and drain the canned tuna.');
+    elementShowing(
+      'Drain and rinse the canned white beans (400 g) and drain the canned tuna (150 g).',
+    );
 
     await harness.navigateByUrl('/recipes/spinach-and-feta-omelette');
     expect(headings().map(textOf)).toEqual(['Spinach and feta omelette']);
@@ -209,7 +218,7 @@ describe('RecipePage', () => {
       '1 tbsp olive oil',
     ]);
     expect(stepCounters()).toEqual(['Step 1 of 4']);
-    elementShowing('Heat the oven to 220 °C and lay the bread slices on a baking tray.');
+    elementShowing('Heat the oven to 220 °C and lay the bread (200 g) slices on a baking tray.');
 
     await harness.navigateByUrl('/recipes/spaghetti-with-meatballs');
     expect(headings().map(textOf)).toEqual(['Spaghetti with meatballs']);
@@ -783,6 +792,101 @@ describe('RecipePage', () => {
     }
   });
 
+  describe('ingredient amounts in the steps', () => {
+    it('shows "Bring a large pot of salted water to the boil for the spaghetti (200 g)." with one span.amount "(200 g)" in p.step of "Spaghetti pomodoro", and "Peel and thinly slice the garlic cloves (2 pc)." with "Step 2 of 7" in the same live region on "Next"', async () => {
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      const first = stepParagraph();
+      expect(textOf(first)).toBe(
+        'Bring a large pot of salted water to the boil for the spaghetti (200 g).',
+      );
+      expect(amountsIn(first)).toEqual(['(200 g)']);
+      const region = first.closest('[aria-live="polite"]');
+      expect(region, 'no live region around p.step').not.toBeNull();
+      expect(region!.getAttribute('aria-atomic')).toBe('true');
+
+      await click(button('Next'));
+      const second = stepParagraph();
+      expect(textOf(second)).toBe('Peel and thinly slice the garlic cloves (2 pc).');
+      expect(amountsIn(second)).toEqual(['(2 pc)']);
+      expect(stepCounters()).toEqual(['Step 2 of 7']);
+      expect(second.closest('[aria-live="polite"]'), 'live region after "Next"').toBe(region);
+    });
+
+    it('shows "Peel and thinly slice the garlic cloves (2 pc)." with one span.amount in the second li of ol.all of "Spaghetti pomodoro", and no span.amount in the steps of "Beef burgers with oven fries" that name no ingredient', async () => {
+      localStorage.setItem(STEPS_VIEW_KEY, 'all');
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      const second = allStepItems()[1];
+      expect(textOf(second)).toBe('Peel and thinly slice the garlic cloves (2 pc).');
+      expect(amountsIn(second)).toEqual(['(2 pc)']);
+
+      await harness.navigateByUrl('/recipes/beef-burgers-with-oven-fries');
+      const items = allStepItems();
+      expect(textOf(items[0])).toBe(
+        'Heat the oven to 220 °C and line a baking tray with baking paper.',
+      );
+      expect(amountsIn(items[0]), 'step 1').toEqual([]);
+      expect(amountsIn(items[1]), 'step 2').toEqual(['(1000 g)', '(3 tbsp)', '(1 tsp)']);
+      expect(textOf(items[2])).toBe(
+        'Bake the fries for 35 to 40 minutes, turning them halfway, until golden and crisp.',
+      );
+      expect(amountsIn(items[2]), 'step 3').toEqual([]);
+    });
+
+    it("shows no span.amount on the page of an own recipe stored with steps, which shows no steps, or on any card of the Recipes page, while a built-in recipe's page shows them", async () => {
+      const { name, servings, ingredients } = QUICK_DAL;
+      localStorage.setItem(
+        RECIPES_KEY,
+        JSON.stringify([
+          { name, servings, ingredients, steps: ['Chop the onion.', 'Cook the canned chickpeas.'] },
+        ]),
+      );
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      expect(amountsIn(page()), 'built-in recipe').not.toEqual([]);
+
+      await harness.navigateByUrl('/recipes/quick-dal');
+      expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
+      expect(amountsIn(page()), 'own recipe').toEqual([]);
+      expect(page().querySelector('p.step, ol.all'), 'steps of the own recipe').toBeNull();
+
+      await harness.navigateByUrl('/recipes');
+      expect(page().querySelectorAll('article'), 'cards').toHaveLength(RECIPES.length + 1);
+      expect(amountsIn(page()), 'Recipes page').toEqual([]);
+    });
+
+    describe('edge cases', () => {
+      it('keeps the space before an amount outside span.amount, so the textContent of p.step and of an li of ol.all is exactly the step with " (2 pc)" inserted', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+        await click(button('Next'));
+        const step = stepParagraph();
+        expect(step.textContent).toBe('Peel and thinly slice the garlic cloves (2 pc).');
+        expect(
+          Array.from(step.querySelectorAll('span.amount')).map((amount) => amount.textContent),
+        ).toEqual(['(2 pc)']);
+
+        await click(button('All steps'));
+        const item = allStepItems()[1];
+        expect(item.textContent).toBe('Peel and thinly slice the garlic cloves (2 pc).');
+        expect(
+          Array.from(item.querySelectorAll('span.amount')).map((amount) => amount.textContent),
+        ).toEqual(['(2 pc)']);
+      });
+    });
+
+    function stepParagraph(): HTMLElement {
+      const steps = page().querySelectorAll<HTMLElement>('p.step');
+      expect(steps, 'p.step').toHaveLength(1);
+      return steps[0];
+    }
+
+    function allStepItems(): HTMLElement[] {
+      return Array.from(page().querySelectorAll<HTMLElement>('ol.all > li'));
+    }
+
+    function amountsIn(element: HTMLElement): string[] {
+      return Array.from(element.querySelectorAll('span.amount')).map(textOf);
+    }
+  });
+
   describe('own recipes', () => {
     it('shows a stored own recipe saved with an extra `steps` key as "Back", its name, servings, "Your recipe" in a p.own, its p.suggest and its ingredients, with no steps, "Previous", "Next" or "Done"', async () => {
       const { name, servings, ingredients } = QUICK_DAL;
@@ -1260,9 +1364,9 @@ describe('RecipePage', () => {
   }
 
   function stepsOf(name: string): string[] {
-    const steps = recipeNamed(name).steps;
+    const { steps, ingredients } = recipeNamed(name);
     expect(steps?.length ?? 0, `steps of "${name}"`).toBeGreaterThanOrEqual(3);
-    return steps!;
+    return steps!.map((step) => shownStep(step, ingredients));
   }
 
   function recipeNamed(name: string): Recipe {

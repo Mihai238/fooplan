@@ -6,7 +6,7 @@ import { routes } from './app.routes';
 import { PlanStore } from './plan/plan-store';
 import { RecipeStore } from './recipes/recipe-store';
 import { RECIPES } from './recipes/recipes';
-import { ownRecipe, QUICK_DAL, storeOwnRecipes } from './recipes/testing';
+import { ownRecipe, QUICK_DAL, shownStep, storeOwnRecipes } from './recipes/testing';
 
 describe('routes', () => {
   beforeEach(() => {
@@ -64,13 +64,16 @@ describe('routes', () => {
       const harness = await RouterTestingHarness.create(url);
       expect(TestBed.inject(Router).url).toBe(url);
       expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim(), url).toBe(name);
-      const steps = RECIPES.find((recipe) => recipe.name === name)?.steps ?? [];
+      const recipe = RECIPES.find((candidate) => candidate.name === name);
+      const steps = recipe?.steps ?? [];
       expect(steps.length, `${url} steps`).toBeGreaterThan(0);
       const page = harness.routeNativeElement!;
       expect(page.querySelector('.counter')?.textContent?.trim(), url).toBe(
         `Step 1 of ${steps.length}`,
       );
-      expect(page.querySelector('.step')?.textContent?.trim(), url).toBe(steps[0]);
+      expect(page.querySelector('.step')?.textContent?.trim(), url).toBe(
+        shownStep(steps[0], recipe!.ingredients),
+      );
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
     }

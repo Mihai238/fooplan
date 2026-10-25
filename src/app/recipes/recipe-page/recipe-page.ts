@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   afterNextRender,
   Component,
@@ -17,12 +18,13 @@ import { displayAmount } from '../amount';
 import { servingsText } from '../recipe';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
+import { stepParts } from '../step-amounts';
 import { StepsView, StepsViewStore } from '../steps-view-store';
 
 const FORM_URL = /^\/(add-recipe|recipes\/[^/]+\/edit)$/;
 
 @Component({
-  imports: [RouterLink],
+  imports: [NgTemplateOutlet, RouterLink],
   selector: 'app-recipe-page',
   styleUrl: './recipe-page.css',
   templateUrl: './recipe-page.html',
@@ -43,11 +45,13 @@ export class RecipePage {
     ),
     { requireSync: true },
   );
+  protected readonly steps = computed(() => {
+    const { steps, ingredients } = this.page().recipe;
+    return steps?.map((step) => stepParts(step, ingredients));
+  });
   protected readonly view = this.stepsView.view;
   protected readonly step = linkedSignal({ source: this.page, computation: () => 0 });
-  protected readonly last = computed(
-    () => this.step() === (this.page().recipe.steps?.length ?? 0) - 1,
-  );
+  protected readonly last = computed(() => this.step() === (this.steps()?.length ?? 0) - 1);
   protected readonly displayAmount = displayAmount;
   protected readonly servingsText = servingsText;
   protected readonly minSuggested = MIN_SUGGESTED;

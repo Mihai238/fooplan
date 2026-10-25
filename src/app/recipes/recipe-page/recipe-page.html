@@ -66,7 +66,7 @@
       }
     </div>
   }
-  @if (recipe.steps; as steps) {
+  @if (steps(); as steps) {
     <div class="steps">
       <div class="view" role="group" aria-label="Show steps">
         <button type="button" [attr.aria-pressed]="view() === 'steps'" (click)="showView('steps')">
@@ -81,7 +81,9 @@
              added along with its text, so this one stays across the steps -->
         <div aria-live="polite" aria-atomic="true">
           <p class="counter">Step {{ step() + 1 }} of {{ steps.length }}</p>
-          <p class="step">{{ steps[step()] }}</p>
+          <p class="step">
+            <ng-container *ngTemplateOutlet="stepText; context: { $implicit: steps[step()] }" />
+          </p>
         </div>
         <div class="actions">
           <button
@@ -103,12 +105,25 @@
         </div>
       } @else {
         <ol class="all">
-          @for (text of steps; track $index) {
-            <li>{{ text }}</li>
+          @for (parts of steps; track $index) {
+            <li>
+              <ng-container *ngTemplateOutlet="stepText; context: { $implicit: parts }" />
+            </li>
           }
         </ol>
       }
     </div>
+    <!-- Angular keeps the line breaks around a bare interpolation as spaces, which would pad the
+         text parts, so they sit in an ng-container; &ngsp; is a space it doesn't drop -->
+    <ng-template #stepText let-parts>
+      @for (part of parts; track $index) {
+        @if ('text' in part) {
+          <ng-container>{{ part.text }}</ng-container>
+        } @else {
+          &ngsp;<span class="amount">{{ part.amount }}</span>
+        }
+      }
+    </ng-template>
   }
 </article>
 @if (recipe.own) {

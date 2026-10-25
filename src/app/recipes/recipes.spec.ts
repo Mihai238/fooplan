@@ -2,6 +2,7 @@ import { MIN_SUGGESTED } from '../plan/plan';
 import { isKidFriendly } from './kid-friendly';
 import { Recipe, UNITS, Unit } from './recipe';
 import { RECIPES } from './recipes';
+import { containsWord, wordPattern } from './step-amounts';
 
 const SPEC_NAMES = [
   'Spaghetti pomodoro',
@@ -807,19 +808,5 @@ describe('RECIPES', () => {
       text = text.replace(wordPattern(name, 'gu'), ' ');
     }
     return unlisted;
-  }
-
-  function containsWord(text: string, name: string): boolean {
-    return wordPattern(name, 'u').test(text);
-  }
-
-  // \b only knows ASCII letters, and names like "gruyère" have others. The plural endings let
-  // "onions", "tomatoes", "anchovies" and "leaves" name their ingredient. f→ves only after a, l or r,
-  // since "beef" has no "beeves"
-  function wordPattern(name: string, flags: string): RegExp {
-    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const irregular = escaped.replace(/(?<=[^aeiou])y$/, 'ies').replace(/(?<=[alr])f$/, 'ves');
-    const plurals = irregular === escaped ? '(?:e?s)?' : `(?:e?s)?|${irregular}`;
-    return new RegExp(`(?<![\\p{L}\\p{N}])(?:${escaped}${plurals})(?![\\p{L}\\p{N}])`, flags);
   }
 });
