@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { groceryList, itemKey } from '../groceries/groceries';
 import { RECIPES } from '../recipes/recipes';
 import { DEFAULT_DAYS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
-import { DINNER, LUNCH, seededRandom } from './testing';
+import { acceptOneDayPlan, DINNER, LUNCH, seededRandom } from './testing';
 
 const STORAGE_KEY = 'fooplan.plan';
 
@@ -38,12 +39,8 @@ describe('PlanStore', () => {
   });
 
   it('shows an accepted plan as accepted after a reload', () => {
-    store.setDays(1);
-    pickFirstSuggestion(LUNCH);
-    pickFirstSuggestion(DINNER);
-    store.accept();
+    acceptOneDayPlan(store);
     const before = store.plan();
-    expect(before.accepted, 'plan not accepted').toBe(true);
 
     expect(reload().plan()).toEqual(before);
   });
@@ -88,17 +85,14 @@ describe('PlanStore', () => {
       ],
       people: 2,
       accepted: false,
+      ticked: [],
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
     expectFreshPlan(reload().plan(), '2026-10-24');
   });
 
   it('starts a fresh plan for today on "New plan" and saves it', () => {
-    store.setDays(1);
-    pickFirstSuggestion(LUNCH);
-    pickFirstSuggestion(DINNER);
-    store.accept();
-    expect(store.plan().accepted, 'plan not accepted').toBe(true);
+    acceptOneDayPlan(store);
     today = '2026-10-26';
 
     store.newPlan();
@@ -108,15 +102,34 @@ describe('PlanStore', () => {
 
   it('keeps the people on "New plan"', () => {
     store.setPeople(4);
-    store.setDays(1);
-    pickFirstSuggestion(LUNCH);
-    pickFirstSuggestion(DINNER);
-    store.accept();
-    expect(store.plan().accepted, 'plan not accepted').toBe(true);
+    acceptOneDayPlan(store);
 
     store.newPlan();
     expect(store.plan().accepted).toBe(false);
     expect(store.plan().people).toBe(4);
+  });
+
+  it('keeps a ticked grocery item ticked after a reload', () => {
+    acceptOneDayPlan(store);
+    const key = firstItemKey();
+    store.toggleTicked(key);
+    expect(store.plan().ticked, 'item not ticked').toEqual([key]);
+
+    expect(reload().plan().ticked).toEqual([key]);
+  });
+
+  it('starts "New plan" not accepted with nothing ticked, and nothing ticked after a reload or once the next plan is accepted', () => {
+    acceptOneDayPlan(store);
+    store.toggleTicked(firstItemKey());
+    expect(store.plan().ticked, 'item not ticked').toHaveLength(1);
+
+    store.newPlan();
+    expect(store.plan().ticked).toEqual([]);
+    expect(store.plan().accepted).toBe(false);
+    store = reload();
+    expect(store.plan().ticked).toEqual([]);
+    acceptOneDayPlan(store);
+    expect(store.plan().ticked).toEqual([]);
   });
 
   function createStore(): PlanStore {
@@ -134,6 +147,12 @@ describe('PlanStore', () => {
   function reload(): PlanStore {
     TestBed.resetTestingModule();
     return createStore();
+  }
+
+  function firstItemKey(): string {
+    const [item] = groceryList(store.plan(), RECIPES);
+    expect(item, 'empty grocery list').toBeDefined();
+    return itemKey(item);
   }
 
   function pickFirstSuggestion(meal: MealRef) {

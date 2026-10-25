@@ -28,4 +28,12 @@ describe('routes', () => {
     expect(TestBed.inject(Router).url).toBe('/recipes');
     expect(harness.routeNativeElement!.querySelectorAll('article').length).toBeGreaterThan(0);
   });
+
+  it('shows the grocery list at /groceries', async () => {
+    const harness = await RouterTestingHarness.create('/groceries');
+    expect(TestBed.inject(Router).url).toBe('/groceries');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+      'Grocery list',
+    );
+  });
 });

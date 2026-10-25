@@ -17,6 +17,8 @@ export interface Plan {
   days: PlanDay[];
   people: number;
   accepted: boolean;
+  // Keys of the grocery list items the user has ticked off, see itemKey
+  ticked: string[];
 }
 
 export interface MealRef {
@@ -33,7 +35,7 @@ export const DEFAULT_PEOPLE = 2;
 const SUGGESTIONS = 3;
 
 export function createPlan(startDate: string, recipes: readonly string[], random: Random): Plan {
-  const plan: Plan = { days: [], people: DEFAULT_PEOPLE, accepted: false };
+  const plan: Plan = { days: [], people: DEFAULT_PEOPLE, accepted: false, ticked: [] };
   return { ...plan, days: openDays(plan, startDate, DEFAULT_DAYS, recipes, random) };
 }
 
@@ -160,11 +162,22 @@ export function acceptPlan(plan: Plan): Plan {
   return { ...plan, accepted: true };
 }
 
+export function toggleTicked(plan: Plan, key: string): Plan {
+  if (!plan.accepted) {
+    return plan;
+  }
+  const ticked = plan.ticked.includes(key)
+    ? plan.ticked.filter((other) => other !== key)
+    : [...plan.ticked, key];
+  return { ...plan, ticked };
+}
+
 export function parsePlan(value: unknown, recipes: readonly string[]): Plan | null {
   if (!isRecord(value)) {
     return null;
   }
-  const { days, people, accepted } = value;
+  // Plans saved before the grocery list existed have no ticks
+  const { days, people, accepted, ticked = [] } = value;
   if (!Array.isArray(days) || days.length < MIN_DAYS || days.length > MAX_DAYS) {
     return null;
   }
@@ -174,16 +187,25 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
   if (typeof accepted !== 'boolean') {
     return null;
   }
+  if (!Array.isArray(ticked) || !ticked.every((key) => typeof key === 'string')) {
+    return null;
+  }
   const parsedDays = days.map((day) => parseDay(day, recipes));
   if (parsedDays.some((day) => day === null)) {
     return null;
   }
-  const plan: Plan = { days: parsedDays as PlanDay[], people, accepted };
+  const plan: Plan = {
+    days: parsedDays as PlanDay[],
+    people,
+    accepted,
+    ticked: ticked as string[],
+  };
   const valid =
     hasConsecutiveDates(plan) &&
     usesRecipesOnce(plan) &&
     hasValidLeftovers(plan) &&
-    (!accepted || isComplete(plan));
+    (!accepted || isComplete(plan)) &&
+    (accepted || ticked.length === 0);
   return valid ? plan : null;
 }
 

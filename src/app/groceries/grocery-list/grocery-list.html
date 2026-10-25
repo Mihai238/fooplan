@@ -1,0 +1,53 @@
+<h1>Grocery list</h1>
+@if (!plan().accepted) {
+  <p class="empty">
+    Accept a plan to see what to buy.
+    <a routerLink="/plan">Go to the plan</a>
+  </p>
+} @else {
+  @if (view().sections.length > 0) {
+    <div class="sections">
+      @for (group of view().sections; track group.section) {
+        <section>
+          <h2>{{ group.section }}</h2>
+          <ul class="items">
+            @for (item of group.items; track key(item)) {
+              <li>
+                <label>
+                  <input
+                    #checkbox
+                    type="checkbox"
+                    [attr.data-key]="key(item)"
+                    (change)="toggle(item, checkbox)"
+                  />
+                  {{ item.amount }} {{ item.unit }} {{ item.name }}
+                </label>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    </div>
+  }
+  @if (view().inCart.length > 0) {
+    <details class="cart">
+      <summary>In the cart ({{ view().inCart.length }})</summary>
+      <ul class="items">
+        @for (item of view().inCart; track key(item)) {
+          <li>
+            <label>
+              <input
+                #checkbox
+                type="checkbox"
+                checked
+                [attr.data-key]="key(item)"
+                (change)="toggle(item, checkbox)"
+              />
+              {{ item.amount }} {{ item.unit }} {{ item.name }}
+            </label>
+          </li>
+        }
+      </ul>
+    </details>
+  }
+}

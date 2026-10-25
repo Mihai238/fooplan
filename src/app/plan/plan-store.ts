@@ -13,6 +13,7 @@ import {
   setCookExtra,
   setDays,
   setPeople,
+  toggleTicked,
 } from './plan';
 
 export const RANDOM = new InjectionToken<Random>('RANDOM', {
@@ -66,6 +67,10 @@ export class PlanStore {
 
   accept(): void {
     this.update(acceptPlan);
+  }
+
+  toggleTicked(key: string): void {
+    this.update((plan) => toggleTicked(plan, key));
   }
 
   newPlan(): void {
