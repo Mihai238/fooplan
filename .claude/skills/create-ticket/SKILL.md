@@ -14,7 +14,11 @@ file the issue, then report what you decided.
 
 ## 1. Read the code
 
-The code the ticket touches, and the README's description of it. The spec states how the app behaves
+First bring the checkout up to date, so the ticket describes the latest `main`: `git fetch origin main`
+and `git merge --ff-only origin/main`. If that fails, because the branch has commits `main` doesn't or
+local changes are in the way, stop and ask: the ticket would describe code that isn't on `main`.
+
+Then read the code the ticket touches, and the README's description of it. The spec states how the app behaves
 today from the code and the running app (step 2), not from what it's likely to do, and names the files,
 functions and constants involved where that helps a developer (`pickRecipe` in
 `src/app/plan/plan.ts:89`, `MAX_DAYS`). Read `.claude/rules/` for rules on the data the ticket touches.
