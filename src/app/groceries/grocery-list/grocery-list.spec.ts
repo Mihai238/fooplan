@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
 import { addedKey } from '../../plan/plan';
-import { acceptOneDayPlan, day, picked, planOf, seededRandom } from '../../plan/testing';
+import { acceptOneDayPlan, day, eatingOut, picked, planOf, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
 import { Recipe, Unit } from '../../recipes/recipe';
@@ -406,6 +406,34 @@ describe('GroceryList', () => {
     await fixture.whenStable();
     field();
     addButton();
+  });
+
+  it('shows the "Add an item" form and the status line, no section and no "Accept a plan to see what to buy." for an accepted plan whose both meals are eating out', async () => {
+    const saved = planOf(
+      [
+        day(
+          '2026-10-24',
+          eatingOut(['Fish tacos', 'Potato goulash', 'Penne arrabbiata']),
+          eatingOut(['Spaghetti aglio e olio', 'Mac and cheese', 'Bean burritos']),
+        ),
+      ],
+      { accepted: true },
+    );
+    localStorage.setItem('fooplan.plan', JSON.stringify(saved));
+    // A fresh app on this localStorage, as a reload makes
+    TestBed.resetTestingModule();
+    configure();
+    store = TestBed.inject(PlanStore);
+    expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+    await open();
+
+    expect(textOf(element.querySelector('form label'))).toBe('Add an item');
+    field();
+    addButton();
+    expect(element.querySelector('p.status')).not.toBeNull();
+    expect(element.querySelectorAll('section')).toHaveLength(0);
+    expect(element.querySelector('p.empty')).toBeNull();
+    expect(textOf(element)).not.toContain('Accept a plan to see what to buy.');
   });
 
   it('lists the scaled ingredients of the own recipes "Quick Dal" and "Plain Rice" of an accepted plan for 2 under their sections, and "mystery spice" under "Other"', async () => {

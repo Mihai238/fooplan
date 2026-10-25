@@ -97,32 +97,36 @@
         @let leftoverRecipe = leftovers(meal.kind, dayIndex);
         <article class="meal">
           <h3>{{ meal.label }}</h3>
-          @if (current.recipe) {
-            <p class="recipe">
-              <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
-                {{ current.recipe }}
-              </a>
-            </p>
-            @if (minutes(current.recipe); as recipeMinutes) {
-              <p class="minutes">{{ recipeMinutes }} minutes</p>
-            }
-            @if (meal.kind === 'dinner') {
-              @if (plan().accepted) {
-                @if (day.cookExtra) {
-                  <p class="note">Cooking extra for tomorrow's lunch</p>
-                }
-              } @else if (!lastDay) {
-                <label class="cook-extra">
-                  <input
-                    #cookExtraInput
-                    type="checkbox"
-                    [id]="'cook-extra-' + dayIndex"
-                    [checked]="day.cookExtra"
-                    (change)="store.setCookExtra(dayIndex, cookExtraInput.checked)"
-                  />
-                  Cook extra for tomorrow's lunch
-                </label>
+          @if (current.recipe || current.eatOut) {
+            @if (current.recipe) {
+              <p class="recipe">
+                <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
+                  {{ current.recipe }}
+                </a>
+              </p>
+              @if (minutes(current.recipe); as recipeMinutes) {
+                <p class="minutes">{{ recipeMinutes }} minutes</p>
               }
+              @if (meal.kind === 'dinner') {
+                @if (plan().accepted) {
+                  @if (day.cookExtra) {
+                    <p class="note">Cooking extra for tomorrow's lunch</p>
+                  }
+                } @else if (!lastDay) {
+                  <label class="cook-extra">
+                    <input
+                      #cookExtraInput
+                      type="checkbox"
+                      [id]="'cook-extra-' + dayIndex"
+                      [checked]="day.cookExtra"
+                      (change)="store.setCookExtra(dayIndex, cookExtraInput.checked)"
+                    />
+                    Cook extra for tomorrow's lunch
+                  </label>
+                }
+              }
+            } @else {
+              <p class="recipe">Eating out</p>
             }
             @if (!plan().accepted) {
               <button type="button" class="link" (click)="store.clear(ref)">Undo</button>
@@ -173,6 +177,7 @@
             <button type="button" class="link" (click)="store.otherSuggestions(ref)">
               Other suggestions
             </button>
+            <button type="button" class="link" (click)="store.eatOut(ref)">Eat out</button>
           }
         </article>
       }

@@ -1,6 +1,7 @@
 import { acceptPlan, addedKey, Plan, PlanDay } from '../plan/plan';
-import { covered, day, picked } from '../plan/testing';
+import { covered, day, eatingOut, picked } from '../plan/testing';
 import { Recipe } from '../recipes/recipe';
+import { RECIPES as BUILT_IN_RECIPES } from '../recipes/recipes';
 import {
   AddedItem,
   addedItems,
@@ -255,6 +256,35 @@ describe('groceries', () => {
       expect(linesOf(groceryList(plan, RECIPES), 'bell pepper')).toEqual([
         item('bell pepper', 2, 'pc', 'Fruit & vegetables'),
       ]);
+    });
+
+    it('lists exactly the non-staple ingredients of "Spaghetti aglio e olio" for 2 people when the lunch is eating out, and nothing when both meals are', () => {
+      const plan = acceptedPlanFor(
+        2,
+        day(
+          '2026-10-24',
+          eatingOut(['Fish tacos', 'Potato goulash', 'Penne arrabbiata']),
+          picked('Spaghetti aglio e olio'),
+        ),
+      );
+      expect(sorted(groceryList(plan, BUILT_IN_RECIPES))).toEqual(
+        sorted([
+          item('spaghetti', 200, 'g'),
+          item('garlic clove', 4, 'pc'),
+          item('chili flakes', 1, 'tsp'),
+          item('parsley', 10, 'g'),
+        ]),
+      );
+
+      const eatingOutOnly = acceptedPlanFor(
+        2,
+        day(
+          '2026-10-24',
+          eatingOut(['Fish tacos', 'Potato goulash', 'Penne arrabbiata']),
+          eatingOut(['Spaghetti aglio e olio', 'Mac and cheese', 'Bean burritos']),
+        ),
+      );
+      expect(groceryList(eatingOutOnly, BUILT_IN_RECIPES)).toEqual([]);
     });
   });
 

@@ -7,6 +7,7 @@ import {
   DEFAULT_DAYS,
   DEFAULT_PEOPLE,
   dropSuggestion,
+  eatOut,
   filledMeals,
   forgetRecipe,
   isComplete,
@@ -29,6 +30,7 @@ import {
   covered,
   day,
   DINNER,
+  eatingOut,
   empty,
   LUNCH,
   open,
@@ -288,6 +290,38 @@ describe('plan', () => {
       const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
       expect(shrunk.days).toEqual(plan.days.slice(0, 2));
       expect(leftoversOf(shrunk, 1)).toBe('Curry');
+    });
+
+    it('drops a dinner eating out on the last day with its day when shrinking from 3 to 2 days, leaving shown unchanged', () => {
+      const plan = planOf([
+        day('2026-10-24', picked('Chili'), picked('Curry')),
+        day('2026-10-25', open('Dal', 'Fajitas', 'Goulash'), picked('Lasagne')),
+        day(
+          '2026-10-26',
+          open('Minestrone', 'Pesto', 'Quiche'),
+          eatingOut(['Risotto', 'Shakshuka', 'Tacos']),
+        ),
+      ]);
+      const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
+      expect(shrunk.days).toEqual(plan.days.slice(0, 2));
+      expect(shrunk.shown).toEqual(plan.shown);
+    });
+
+    it('keeps a meal eating out when growing and adds an open day with three suggestions per meal', () => {
+      const plan = planOf([
+        day('2026-10-24', eatingOut(['Chili', 'Curry', 'Dal']), picked('Fajitas')),
+        day('2026-10-25', picked('Goulash'), eatingOut(['Lasagne', 'Minestrone', 'Pesto'])),
+      ]);
+      for (const seed of SEEDS) {
+        const grown = setDays(plan, 3, FOURTEEN_RECIPES, seededRandom(seed));
+        expect(grown.days.slice(0, 2), `seed ${seed}`).toEqual(plan.days);
+        expect(grown.days[2].date).toBe('2026-10-26');
+        for (const meal of [grown.days[2].lunch, grown.days[2].dinner]) {
+          expect(meal.recipe, `seed ${seed}`).toBeNull();
+          expect(meal.eatOut, `seed ${seed}`).toBeUndefined();
+          expectValidSuggestions(meal, grown, FOURTEEN_RECIPES, seed);
+        }
+      }
     });
   });
 
@@ -550,6 +584,79 @@ describe('plan', () => {
     });
   });
 
+  describe('eatOut', () => {
+    it('makes an open lunch eating out with the three suggestions it showed kept as offered, in a new plan with shown and every other meal unchanged', () => {
+      const plan = planOf([
+        day('2026-10-24', open('Chili', 'Curry', 'Dal'), open('Fajitas', 'Goulash', 'Lasagne')),
+        day(
+          '2026-10-25',
+          open('Minestrone', 'Pesto', 'Quiche'),
+          picked('Risotto', ['Risotto', 'Shakshuka', 'Tacos']),
+        ),
+      ]);
+      const before = structuredClone(plan);
+      const result = eatOut(plan, LUNCH);
+      expect(result.days[0].lunch).toStrictEqual(eatingOut(['Chili', 'Curry', 'Dal']));
+      expect(result.shown).toEqual(plan.shown);
+      expect(result.days[0].dinner).toEqual(plan.days[0].dinner);
+      expect(result.days[1]).toEqual(plan.days[1]);
+      expect({ ...result, days: [] }).toEqual({ ...plan, days: [] });
+      expect(result).not.toBe(plan);
+      expect(plan, 'the input plan was modified').toEqual(before);
+    });
+
+    it('returns the same plan for an accepted plan, a day outside the plan, a lunch covered by leftovers, a picked meal and a meal already eating out', () => {
+      expect(
+        eatOut(storedPlan(), { day: 1, kind: 'lunch' }).days[1].lunch.eatOut,
+        'open lunch of the base plan not eating out',
+      ).toBe(true);
+      // Can't be reached in the app, but with an open meal only the accepted check stops it
+      const accepted: Plan = {
+        ...oneDayPlan(picked('Chili'), open('Curry', 'Dal', 'Fajitas')),
+        accepted: true,
+      };
+      expectUnchanged(accepted, (p) => eatOut(p, DINNER));
+      expectUnchanged(storedPlan(), (p) => eatOut(p, { day: 2, kind: 'lunch' }));
+      expectUnchanged(storedPlan(), (p) => eatOut(p, { day: -1, kind: 'dinner' }));
+      expectUnchanged(cookExtraPlan(), (p) => eatOut(p, { day: 1, kind: 'lunch' }));
+      expectUnchanged(storedPlan(), (p) => eatOut(p, LUNCH));
+      for (const lunch of [eatingOut(['Chili', 'Curry', 'Dal']), eatingOut()]) {
+        const plan = oneDayPlan(lunch, open('Fajitas', 'Goulash', 'Lasagne'));
+        expectUnchanged(plan, (p) => eatOut(p, LUNCH));
+      }
+    });
+
+    describe('edge cases', () => {
+      it('makes the open dinner of the last day eating out, as any open meal', () => {
+        const plan = planOf([
+          day('2026-10-24', picked('Chili'), picked('Curry')),
+          day(
+            '2026-10-25',
+            open('Dal', 'Fajitas', 'Goulash'),
+            open('Lasagne', 'Minestrone', 'Pesto'),
+          ),
+        ]);
+        const result = eatOut(plan, { day: 1, kind: 'dinner' });
+        expect(result.days[1]).toEqual({
+          ...plan.days[1],
+          dinner: eatingOut(['Lasagne', 'Minestrone', 'Pesto']),
+        });
+        expect(result.days[0]).toEqual(plan.days[0]);
+        expect(result.shown).toEqual(plan.shown);
+      });
+
+      it('leaves another open meal showing one of the same suggestions as it is, since eating out uses no recipe', () => {
+        const plan = planOf([
+          day('2026-10-24', open('Chili', 'Curry', 'Dal'), open('Dal', 'Fajitas', 'Goulash')),
+        ]);
+        const result = eatOut(plan, LUNCH);
+        expect(result.days[0].lunch).toStrictEqual(eatingOut(['Chili', 'Curry', 'Dal']));
+        expect(result.days[0].dinner).toEqual(open('Dal', 'Fajitas', 'Goulash'));
+        expect(result.shown).toEqual(plan.shown);
+      });
+    });
+  });
+
   describe('otherSuggestions', () => {
     it('replaces the three suggestions with three different unpicked recipes, none of them one it was showing', () => {
       for (const seed of SEEDS) {
@@ -568,6 +675,13 @@ describe('plan', () => {
     it('rejects a meal that already has a recipe', () => {
       const plan = oneDayPlan(open('Chili', 'Curry', 'Dal'), picked('Fajitas'));
       expectUnchanged(plan, (p) => otherSuggestions(p, DINNER, RECIPES, seededRandom(1)));
+    });
+
+    it('rejects a meal eating out, with or without the suggestions it showed', () => {
+      for (const lunch of [eatingOut(['Chili', 'Curry', 'Dal']), eatingOut()]) {
+        const plan = oneDayPlan(lunch, open('Fajitas', 'Goulash', 'Lasagne'));
+        expectUnchanged(plan, (p) => otherSuggestions(p, LUNCH, RECIPES, seededRandom(1)));
+      }
     });
 
     it('replaces the suggestions a meal got back by undoing its pick with three unpicked recipes not shown yet, as for any open meal', () => {
@@ -1364,6 +1478,123 @@ describe('plan', () => {
         ]);
       }
     });
+
+    it('opens a meal eating out again with the suggestions it showed, in their order, without eatOut or offered and with shown unchanged, replaces one picked for another meal since by an unpicked recipe not shown yet, and draws three new suggestions when offered is absent', () => {
+      const plan = oneDayPlan(
+        eatingOut(['Chili', 'Curry', 'Dal']),
+        open('Fajitas', 'Goulash', 'Lasagne'),
+        ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne'],
+      );
+      const result = clearMeal(plan, LUNCH, RECIPES, seededRandom(1));
+      expect(result.days[0].lunch).toStrictEqual(open('Chili', 'Curry', 'Dal'));
+      expect(result.shown).toEqual(plan.shown);
+      expect(result.days[0].dinner).toEqual(plan.days[0].dinner);
+
+      const shown = ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash'];
+      for (const seed of SEEDS) {
+        const curryPicked = oneDayPlan(
+          eatingOut(['Chili', 'Curry', 'Dal']),
+          picked('Curry', ['Fajitas', 'Curry', 'Goulash']),
+          [...shown],
+        );
+        const lunch = clearMeal(curryPicked, LUNCH, RECIPES, seededRandom(seed)).days[0].lunch;
+        expect(lunch.recipe, `seed ${seed}`).toBeNull();
+        expect(lunch.eatOut, `seed ${seed}`).toBeUndefined();
+        expect(lunch.suggestions[0], `seed ${seed}: ${lunch.suggestions.join(', ')}`).toBe('Chili');
+        expect(lunch.suggestions[2], `seed ${seed}: ${lunch.suggestions.join(', ')}`).toBe('Dal');
+        expectValidSuggestions(lunch, curryPicked, RECIPES, seed);
+        expectNoneOf([lunch.suggestions[1]], shown, `seed ${seed}, replacement:`);
+      }
+
+      for (const seed of SEEDS) {
+        const unknown = oneDayPlan(eatingOut(), picked('Fajitas'), ['Fajitas']);
+        const reopened = clearMeal(unknown, LUNCH, RECIPES, seededRandom(seed));
+        const lunch = reopened.days[0].lunch;
+        expect(lunch.recipe, `seed ${seed}`).toBeNull();
+        expect('eatOut' in lunch, `seed ${seed}: ${JSON.stringify(lunch)}`).toBe(false);
+        expectValidSuggestions(lunch, reopened, RECIPES, seed);
+        expect(reopened.days[0].dinner).toEqual(picked('Fajitas'));
+      }
+    });
+
+    describe('edge cases', () => {
+      it('counts nothing as shown just now when opening a meal eating out again, so shown keeps its order, unlike undoing a pick', () => {
+        const shown = ['Chili', 'Fajitas', 'Curry', 'Goulash', 'Dal', 'Lasagne'];
+        const plan = oneDayPlan(
+          eatingOut(['Chili', 'Curry', 'Dal']),
+          open('Fajitas', 'Goulash', 'Lasagne'),
+          [...shown],
+        );
+        const result = clearMeal(plan, LUNCH, RECIPES, seededRandom(1));
+        expect(result.days[0].lunch, 'meal not opened again').toStrictEqual(
+          open('Chili', 'Curry', 'Dal'),
+        );
+        expect(result.shown).toEqual(shown);
+      });
+
+      it('replaces a suggestion it showed that "Don\'t suggest" removed since by another of the recipes, keeping the other two in their places', () => {
+        const suggested = RECIPES.filter((name) => name !== 'Curry');
+        for (const seed of SEEDS) {
+          const random = seededRandom(seed);
+          const plan = oneDayPlan(
+            eatingOut(['Chili', 'Curry', 'Dal']),
+            open('Fajitas', 'Goulash', 'Lasagne'),
+            ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne'],
+          );
+          const dropped = dropSuggestion(plan, 'Curry', suggested, random);
+          expect(dropped.days[0].lunch, `seed ${seed}, meal eating out changed`).toEqual(
+            plan.days[0].lunch,
+          );
+          const lunch = clearMeal(dropped, LUNCH, suggested, random).days[0].lunch;
+          expect(lunch.suggestions[0], `seed ${seed}: ${lunch.suggestions.join(', ')}`).toBe(
+            'Chili',
+          );
+          expect(lunch.suggestions[2], `seed ${seed}: ${lunch.suggestions.join(', ')}`).toBe('Dal');
+          expectValidSuggestions(lunch, dropped, suggested, seed);
+        }
+      });
+
+      it('draws three new suggestions, none of them the deleted recipe, when opening a meal eating out again whose offered named an own recipe deleted since', () => {
+        for (const seed of SEEDS) {
+          const random = seededRandom(seed);
+          const plan = planOf([
+            day('2026-10-24', eatingOut(['Chili', 'Quick Dal', 'Curry']), picked('Dal')),
+          ]);
+          const forgotten = forgetRecipe(plan, 'Quick Dal', RECIPES, random);
+          expect(forgotten.days[0].lunch, `seed ${seed}`).toStrictEqual(eatingOut());
+          const result = clearMeal(forgotten, LUNCH, RECIPES, random);
+          const lunch = result.days[0].lunch;
+          expect(lunch.recipe, `seed ${seed}`).toBeNull();
+          expect('eatOut' in lunch, `seed ${seed}: ${JSON.stringify(lunch)}`).toBe(false);
+          expectValidSuggestions(lunch, result, RECIPES, seed);
+          expectNoneOf(lunch.suggestions, ['Chili', 'Quick Dal', 'Curry', 'Dal'], `seed ${seed}:`);
+        }
+      });
+
+      it('opens the next lunch with three suggestions, not eating out again, when undoing a "Cook extra" dinner whose next lunch was eating out before', () => {
+        for (const seed of SEEDS) {
+          const random = seededRandom(seed);
+          const plan = planOf([
+            day('2026-10-24', picked('Chili'), picked('Curry')),
+            day(
+              '2026-10-25',
+              eatingOut(['Dal', 'Fajitas', 'Goulash']),
+              open('Lasagne', 'Minestrone', 'Pesto'),
+            ),
+          ]);
+          const cookExtra = setCookExtra(plan, 0, true, RECIPES, random);
+          expect(cookExtra.days[1].lunch, `seed ${seed}, lunch not covered`).toStrictEqual(
+            covered(),
+          );
+          const result = clearMeal(cookExtra, DINNER, RECIPES, random);
+          const lunch = result.days[1].lunch;
+          expect(result.days[0].cookExtra, `seed ${seed}`).toBe(false);
+          expect(lunch.recipe, `seed ${seed}`).toBeNull();
+          expect('eatOut' in lunch, `seed ${seed}: ${JSON.stringify(lunch)}`).toBe(false);
+          expectValidSuggestions(lunch, result, RECIPES, seed);
+        }
+      });
+    });
   });
 
   describe('setCookExtra', () => {
@@ -1487,6 +1718,36 @@ describe('plan', () => {
         setCookExtra(p, 0, false, RECIPES, seededRandom(1)),
       );
     });
+
+    it('replaces a next lunch eating out with the leftovers of the dinner, opens it with three suggestions and without eatOut when turned off, and rejects a dinner eating out', () => {
+      const plan = planOf([
+        day('2026-10-24', picked('Chili'), picked('Curry')),
+        day(
+          '2026-10-25',
+          eatingOut(['Dal', 'Fajitas', 'Goulash']),
+          open('Lasagne', 'Minestrone', 'Pesto'),
+        ),
+      ]);
+      for (const seed of SEEDS) {
+        const random = seededRandom(seed);
+        const on = setCookExtra(plan, 0, true, RECIPES, random);
+        expect(on.days[1].lunch, `seed ${seed}`).toStrictEqual(covered());
+        expect(leftoversOf(on, 1), `seed ${seed}`).toBe('Curry');
+        expect(on.shown, `seed ${seed}`).toEqual(plan.shown);
+
+        const off = setCookExtra(on, 0, false, RECIPES, random);
+        const lunch = off.days[1].lunch;
+        expect(lunch.recipe, `seed ${seed}`).toBeNull();
+        expect('eatOut' in lunch, `seed ${seed}: ${JSON.stringify(lunch)}`).toBe(false);
+        expectValidSuggestions(lunch, off, RECIPES, seed);
+      }
+
+      const dinnerEatingOut = planOf([
+        day('2026-10-24', picked('Chili'), eatingOut(['Curry', 'Dal', 'Fajitas'])),
+        day('2026-10-25', open('Goulash', 'Lasagne', 'Minestrone'), picked('Pesto')),
+      ]);
+      expectUnchanged(dinnerEatingOut, (p) => setCookExtra(p, 0, true, RECIPES, seededRandom(1)));
+    });
   });
 
   describe('a lunch covered by leftovers', () => {
@@ -1530,6 +1791,32 @@ describe('plan', () => {
     it('counts a lunch covered by leftovers as filled, but not an open dinner next to it', () => {
       expect(isComplete(completeCookExtraPlan(false))).toBe(true);
       expect(isComplete(cookExtraPlan())).toBe(false);
+    });
+
+    it('counts a meal eating out as filled: a one-day plan with the lunch eating out and the dinner picked is complete with 2 filled meals and can be accepted, and with the dinner open is incomplete with 1', () => {
+      const complete = oneDayPlan(eatingOut(['Chili', 'Curry', 'Dal']), picked('Fajitas'));
+      expect(isComplete(complete)).toBe(true);
+      expect(filledMeals(complete)).toBe(2);
+      expect(acceptPlan(complete).accepted).toBe(true);
+
+      const dinnerOpen = oneDayPlan(
+        eatingOut(['Chili', 'Curry', 'Dal']),
+        open('Fajitas', 'Goulash', 'Lasagne'),
+      );
+      expect(isComplete(dinnerOpen)).toBe(false);
+      expect(filledMeals(dinnerOpen)).toBe(1);
+    });
+
+    describe('edge cases', () => {
+      it('counts a one-day plan with both meals eating out as complete with 2 filled meals, which can be accepted', () => {
+        const plan = oneDayPlan(
+          eatingOut(['Chili', 'Curry', 'Dal']),
+          eatingOut(['Fajitas', 'Goulash', 'Lasagne']),
+        );
+        expect(isComplete(plan)).toBe(true);
+        expect(filledMeals(plan)).toBe(2);
+        expect(acceptPlan(plan)).toEqual({ ...plan, accepted: true });
+      });
     });
   });
 
@@ -2054,6 +2341,95 @@ describe('plan', () => {
         coveredLunch.days[1].lunch.offered = offered;
         expect(parsePlan(coveredLunch, RECIPES), `covered, ${JSON.stringify(offered)}`).toBeNull();
       }
+    });
+
+    it('reads back a lunch eating out as it is with the suggestions it showed counted as shown, returns null for eatOut with a recipe, with suggestions, with two offered recipes, false or "yes", or on a covered lunch, and reads back a plan saved without eatOut as before', () => {
+      const offered = ['Lasagne', 'Minestrone', 'Pesto'];
+      const plan = storedPlan();
+      plan.days[1].lunch = eatingOut(offered);
+      const saved = JSON.parse(JSON.stringify(plan));
+      saved.shown = plan.shown.filter((name) => !offered.includes(name));
+      const parsed = parsePlan(saved, RECIPES);
+      expect(parsed?.days, 'meal eating out not read back').toEqual(plan.days);
+      expect(parsed!.shown).toEqual(expect.arrayContaining(offered));
+
+      const broken: unknown[] = [
+        { recipe: 'Lasagne', suggestions: [], offered, eatOut: true },
+        { recipe: null, suggestions: offered, eatOut: true },
+        { recipe: null, suggestions: [], offered: ['Lasagne', 'Minestrone'], eatOut: true },
+        { recipe: null, suggestions: [], offered, eatOut: false },
+        { recipe: null, suggestions: [], offered, eatOut: 'yes' },
+      ];
+      for (const meal of broken) {
+        const brokenPlan: any = storedPlan();
+        brokenPlan.days[1].lunch = meal;
+        expect(parsePlan(brokenPlan, RECIPES), JSON.stringify(meal)).toBeNull();
+      }
+      for (const lunch of [eatingOut(['Dal', 'Fajitas', 'Goulash']), eatingOut()]) {
+        const coveredLunch = cookExtraPlan();
+        coveredLunch.days[1].lunch = lunch;
+        expect(parsePlan(coveredLunch, RECIPES), `covered, ${JSON.stringify(lunch)}`).toBeNull();
+      }
+
+      for (const savedBefore of [storedPlan(), cookExtraPlan(), completeCookExtraPlan(true)]) {
+        const read = parsePlan(JSON.parse(JSON.stringify(savedBefore)), RECIPES);
+        expect(read).toEqual(savedBefore);
+        expect(meals(read!).filter((meal) => 'eatOut' in meal)).toEqual([]);
+      }
+    });
+
+    describe('edge cases', () => {
+      it('reads back a meal eating out without offered, a dinner eating out, one whose offered names a recipe picked or suggested for another meal, and an accepted plan with meals eating out', () => {
+        const withoutOffered = storedPlan();
+        withoutOffered.days[1].lunch = eatingOut();
+        const dinner = storedPlan();
+        dinner.days[0].dinner = eatingOut(['Dal', 'Fajitas', 'Goulash']);
+        // Chili and Curry are picked, Lasagne is suggested for day 1's lunch
+        const offeredElsewhere = storedPlan();
+        offeredElsewhere.days[0].dinner = eatingOut(['Chili', 'Lasagne', 'Curry']);
+        const accepted = planOf(
+          [
+            day('2026-10-24', eatingOut(['Dal', 'Fajitas', 'Goulash']), picked('Chili')),
+            day('2026-10-25', picked('Curry'), eatingOut()),
+          ],
+          { accepted: true },
+        );
+        for (const plan of [withoutOffered, dinner, offeredElsewhere, accepted]) {
+          expect(
+            parsePlan(JSON.parse(JSON.stringify(plan)), RECIPES),
+            JSON.stringify(plan),
+          ).toEqual(plan);
+        }
+      });
+
+      it('returns null for a meal eating out whose offered is not three different recipe names or whose eatOut is null, and for a dinner eating out with "Cook extra"', () => {
+        const valid = storedPlan();
+        valid.days[1].lunch = eatingOut(['Lasagne', 'Minestrone', 'Pesto']);
+        expect(parsePlan(structuredClone(valid), RECIPES), 'valid base plan').toEqual(valid);
+
+        const brokenOffered = [
+          'Lasagne, Minestrone, Pesto',
+          [42, 'Minestrone', 'Pesto'],
+          ['Pizza', 'Minestrone', 'Pesto'],
+          ['Lasagne', 'Minestrone', 'Lasagne'],
+          ['Lasagne', 'Minestrone', 'Pesto', 'Quiche'],
+          [],
+        ];
+        for (const offered of brokenOffered) {
+          const plan: any = structuredClone(valid);
+          plan.days[1].lunch.offered = offered;
+          expect(parsePlan(plan, RECIPES), JSON.stringify(offered)).toBeNull();
+        }
+        const nullEatOut: any = structuredClone(valid);
+        nullEatOut.days[1].lunch.eatOut = null;
+        expect(parsePlan(nullEatOut, RECIPES), 'eatOut null').toBeNull();
+
+        const cookExtra = storedPlan();
+        cookExtra.days[0].dinner = eatingOut(['Dal', 'Fajitas', 'Goulash']);
+        cookExtra.days[0].cookExtra = true;
+        cookExtra.days[1].lunch = covered();
+        expect(parsePlan(cookExtra, RECIPES), 'dinner eating out with "Cook extra"').toBeNull();
+      });
     });
   });
 

@@ -5,9 +5,12 @@ export type MealKind = 'lunch' | 'dinner';
 export interface Meal {
   recipe: string | null;
   suggestions: string[];
-  // The suggestions a picked meal showed when picked, its recipe among them, in their order; absent
-  // on an open meal and when not known (a pick saved before they were kept)
+  // The suggestions a meal showed when it was picked or eaten out, in their order, its recipe among
+  // them only for a pick; absent on an open meal and when not known (saved before they were kept,
+  // or naming an own recipe deleted since)
   offered?: string[];
+  // Present only on a meal eaten out, which has no recipe and no suggestions
+  eatOut?: true;
 }
 
 export interface PlanDay {
@@ -113,6 +116,19 @@ export function pickRecipe(
   );
 }
 
+export function eatOut(plan: Plan, meal: MealRef): Plan {
+  const current = mealAt(plan, meal);
+  if (plan.accepted || isCovered(plan, meal) || current === undefined || isFilled(current)) {
+    return plan;
+  }
+  return withMeal(plan, meal, {
+    recipe: null,
+    suggestions: [],
+    offered: current.suggestions,
+    eatOut: true,
+  });
+}
+
 export function clearMeal(
   plan: Plan,
   meal: MealRef,
@@ -120,7 +136,7 @@ export function clearMeal(
   random: Random,
 ): Plan {
   const current = mealAt(plan, meal);
-  if (plan.accepted || isCovered(plan, meal) || current === undefined || current.recipe === null) {
+  if (plan.accepted || isCovered(plan, meal) || current === undefined || !isFilled(current)) {
     return plan;
   }
   const cleared = markUnpicked(withMeal(plan, meal, { recipe: null, suggestions: [] }), [
@@ -142,7 +158,7 @@ export function otherSuggestions(
   random: Random,
 ): Plan {
   const current = mealAt(plan, meal);
-  if (plan.accepted || isCovered(plan, meal) || current?.recipe !== null) {
+  if (plan.accepted || isCovered(plan, meal) || current === undefined || isFilled(current)) {
     return plan;
   }
   return openMeal(plan, meal, recipes, random, current.suggestions);
@@ -197,8 +213,8 @@ export function forgetRecipe(
   if (isPicked(plan, name) || !holdsRecipe(plan, name)) {
     return plan;
   }
-  // A meal that loses its remembered suggestions draws fresh ones when its pick is undone, as one
-  // picked before they were kept
+  // A meal that loses its remembered suggestions draws fresh ones when it is undone (a pick or
+  // eating out), as one picked before they were kept
   const forgotten = withMeals(dropSuggestion(plan, name, recipes, random), (meal) => {
     if (!meal.offered?.includes(name)) {
       return meal;
@@ -323,15 +339,14 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
 
 export function isComplete(plan: Plan): boolean {
   return plan.days.every(
-    (day, i) =>
-      day.dinner.recipe !== null && (day.lunch.recipe !== null || isLunchCovered(plan, i)),
+    (day, i) => isFilled(day.dinner) && (isFilled(day.lunch) || isLunchCovered(plan, i)),
   );
 }
 
 export function filledMeals(plan: Plan): number {
-  return mealRefsOf(plan).filter(
-    (ref) => mealAt(plan, ref)?.recipe !== null || isCovered(plan, ref),
-  ).length;
+  return plan.days
+    .flatMap((day, i) => [isFilled(day.lunch) || isLunchCovered(plan, i), isFilled(day.dinner)])
+    .filter(Boolean).length;
 }
 
 export function leftoversOf(plan: Plan, day: number): string | null {
@@ -395,10 +410,20 @@ function parseMeal(value: unknown, recipes: readonly string[]): Meal | null {
   if (!isRecord(value) || !Array.isArray(value['suggestions'])) {
     return null;
   }
-  const { recipe, offered } = value;
+  const { recipe, offered, eatOut } = value;
   const suggestions: unknown[] = value['suggestions'];
   if (!suggestions.every((name) => typeof name === 'string' && recipes.includes(name))) {
     return null;
+  }
+  // Plans saved before meals could be eaten out have no such field
+  if (eatOut !== undefined) {
+    if (eatOut !== true || recipe !== null || suggestions.length > 0) {
+      return null;
+    }
+    if (offered === undefined) {
+      return { recipe, suggestions: [], eatOut };
+    }
+    return isOfferedSet(offered, recipes) ? { recipe, suggestions: [], offered, eatOut } : null;
   }
   if (recipe === null) {
     // An empty meal must be a covered lunch, which parseDay and hasValidLeftovers check
@@ -415,9 +440,13 @@ function parseMeal(value: unknown, recipes: readonly string[]): Meal | null {
   if (offered === undefined) {
     return { recipe, suggestions: [] };
   }
-  const isOfferedSet =
-    isRecipeList(offered, recipes) && offered.length === SUGGESTIONS && offered.includes(recipe);
-  return isOfferedSet ? { recipe, suggestions: [], offered } : null;
+  return isOfferedSet(offered, recipes) && offered.includes(recipe)
+    ? { recipe, suggestions: [], offered }
+    : null;
+}
+
+function isOfferedSet(value: unknown, recipes: readonly string[]): value is string[] {
+  return isRecipeList(value, recipes) && value.length === SUGGESTIONS;
 }
 
 // Comparing each date with the one computed from the first also rejects dates like 2026-02-31
@@ -442,7 +471,11 @@ function hasValidLeftovers(plan: Plan): boolean {
 }
 
 function isEmpty(meal: Meal): boolean {
-  return meal.recipe === null && meal.suggestions.length === 0;
+  return meal.recipe === null && meal.suggestions.length === 0 && !meal.eatOut;
+}
+
+function isFilled(meal: Meal): boolean {
+  return meal.recipe !== null || meal.eatOut === true;
 }
 
 function openDays(

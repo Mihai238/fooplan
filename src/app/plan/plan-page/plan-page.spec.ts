@@ -11,6 +11,7 @@ import { PlanStore, RANDOM, TODAY } from '../plan-store';
 import {
   covered,
   day as planDay,
+  eatingOut,
   leaveSuggested,
   open,
   picked,
@@ -1382,6 +1383,154 @@ describe('PlanPage', () => {
     }
   });
 
+  describe('"Eat out"', () => {
+    const SHAKSHUKA_ROW = ['Shakshuka with bread', 'Niçoise salad', 'Chickpea and spinach curry'];
+    const OPEN_MEAL = [
+      'h3',
+      'div.option',
+      'div.option',
+      'div.option',
+      'button.link "Other suggestions"',
+      'button.link "Eat out"',
+    ];
+    const EATING_OUT = ['h3', 'p.recipe', 'button.link "Undo"'];
+
+    it('ends the article of an open meal with "Other suggestions" and then "Eat out", in this order after its three div.option rows, and shows no "Eat out" on a picked meal, a leftovers lunch or any meal of an accepted plan', async () => {
+      await openWith(
+        planOf([
+          planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'), true),
+          planDay('2026-10-25', covered(), open(...SHAKSHUKA_ROW)),
+        ]),
+      );
+      expect(shapesOf(meal(3))).toEqual(OPEN_MEAL);
+      expect(button(meal(3), 'Eat out').getAttribute('type')).toBe('button');
+      for (const index of [0, 1, 2]) {
+        expect(buttonTexts(meal(index)), `meal ${index}`).not.toContain('Eat out');
+      }
+
+      await openWith(
+        planOf([planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'))], {
+          accepted: true,
+        }),
+      );
+      expect(buttonTexts()).not.toContain('Eat out');
+    });
+
+    it('shows, in this order, a p.recipe "Eating out" without a link and "Undo", and nothing else, and stores the lunch eating out with its three suggestions as offered, when the user clicks "Eat out" on an open lunch', async () => {
+      await openWith(
+        planOf([planDay('2026-10-24', open(...SHAKSHUKA_ROW), picked('Spaghetti carbonara'))]),
+      );
+      await click(button(meal(0), 'Eat out'));
+      expect(shapesOf(meal(0))).toEqual(EATING_OUT);
+      const recipe = meal(0).querySelector('p.recipe');
+      expect(textOf(recipe)).toBe('Eating out');
+      expect(recipe!.querySelector('a')).toBeNull();
+      expect(meal(0).querySelector('p.minutes')).toBeNull();
+      expect(meal(0).querySelector('label.cook-extra')).toBeNull();
+      expect(store.plan().days[0].lunch).toStrictEqual(eatingOut(SHAKSHUKA_ROW));
+    });
+
+    it('shows "Eating out" and "Undo" and no "Cook extra for tomorrow\'s lunch" when the user clicks "Eat out" on the open dinner of day 1 of a two-day plan', async () => {
+      await openWith(
+        planOf([
+          planDay('2026-10-24', picked('Spaghetti carbonara'), open(...SHAKSHUKA_ROW)),
+          planDay(
+            '2026-10-25',
+            open('Fish tacos', 'Potato goulash', 'Penne arrabbiata'),
+            open('Mac and cheese', 'Bean burritos', 'Chicken quesadillas'),
+          ),
+        ]),
+      );
+      await click(button(meal(1), 'Eat out'));
+      expect(shapesOf(meal(1))).toEqual(EATING_OUT);
+      expect(textOf(meal(1).querySelector('p.recipe'))).toBe('Eating out');
+      expect(meal(1).querySelector('label.cook-extra')).toBeNull();
+      expect(textOf(meal(1))).not.toContain("Cook extra for tomorrow's lunch");
+    });
+
+    it('shows the three suggestions the lunch showed before "Eat out", in their order, "Other suggestions" and "Eat out" when the user clicks "Undo" on it', async () => {
+      await openWith(
+        planOf([planDay('2026-10-24', open(...SHAKSHUKA_ROW), picked('Spaghetti carbonara'))]),
+      );
+      await click(button(meal(0), 'Eat out'));
+      await click(button(meal(0), 'Undo'));
+      expect(shapesOf(meal(0))).toEqual(OPEN_MEAL);
+      expect(suggestionsOf(meal(0)).map(recipeOf)).toEqual(SHAKSHUKA_ROW);
+    });
+
+    it('enables "Accept plan" for a one-day plan with the lunch eating out once the dinner is picked, not before, and shows "1 day for 2 people" and the lunch as "Eating out" alone once the user accepts it', async () => {
+      await openWith(
+        planOf([
+          planDay(
+            '2026-10-24',
+            open(...SHAKSHUKA_ROW),
+            open('Fish tacos', 'Potato goulash', 'Penne arrabbiata'),
+          ),
+        ]),
+      );
+      await click(button(meal(0), 'Eat out'));
+      expect(button(element, 'Accept plan').disabled, 'dinner open').toBe(true);
+      await click(suggestionsOf(meal(1))[0]);
+      expect(button(element, 'Accept plan').disabled, 'dinner picked').toBe(false);
+
+      await click(button(element, 'Accept plan'));
+      expect(textOf(element.querySelector('p.summary'))).toBe('1 day for 2 people');
+      expect(shapesOf(meal(0))).toEqual(['h3', 'p.recipe']);
+      expect(textOf(meal(0).querySelector('p.recipe'))).toBe('Eating out');
+    });
+
+    it('shows "Leftovers: Potato goulash" without "Undo" or "Eat out" for a lunch eating out when the user ticks "Cook extra" on the dinner before it, and three suggestion rows, "Other suggestions" and "Eat out" when the user unticks it', async () => {
+      await openWith(
+        planOf([
+          planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash')),
+          planDay(
+            '2026-10-25',
+            open(...SHAKSHUKA_ROW),
+            open('Fish tacos', 'Penne arrabbiata', 'Mac and cheese'),
+          ),
+        ]),
+      );
+      await click(button(meal(2), 'Eat out'));
+      await setCookExtra(0, true);
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Leftovers: Potato goulash');
+      expect(buttonTexts(meal(2))).toEqual([]);
+
+      await setCookExtra(0, false);
+      expect(shapesOf(meal(2))).toEqual(OPEN_MEAL);
+      expect(store.plan().days[1].lunch.eatOut).toBeUndefined();
+    });
+
+    describe('edge cases', () => {
+      it('still shows the lunch eating out with "Undo" after a reload', async () => {
+        await openWith(
+          planOf([planDay('2026-10-24', open(...SHAKSHUKA_ROW), picked('Spaghetti carbonara'))]),
+        );
+        await click(button(meal(0), 'Eat out'));
+        await reload();
+        expect(shapesOf(meal(0))).toEqual(EATING_OUT);
+        expect(textOf(meal(0).querySelector('p.recipe'))).toBe('Eating out');
+        expect(store.plan().days[0].lunch).toStrictEqual(eatingOut(SHAKSHUKA_ROW));
+      });
+
+      it('shows the three suggestions a saved lunch eating out showed, in their order, when the user clicks "Undo" after a reload', async () => {
+        await openWith(
+          planOf([planDay('2026-10-24', eatingOut(SHAKSHUKA_ROW), picked('Spaghetti carbonara'))]),
+        );
+        await click(button(meal(0), 'Undo'));
+        expect(shapesOf(meal(0))).toEqual(OPEN_MEAL);
+        expect(suggestionsOf(meal(0)).map(recipeOf)).toEqual(SHAKSHUKA_ROW);
+      });
+    });
+
+    // The tag, the classes and, for a button, its text of each child, in their order
+    function shapesOf(article: HTMLElement): string[] {
+      return Array.from(article.children).map((child) => {
+        const shape = [child.tagName.toLowerCase(), ...Array.from(child.classList)].join('.');
+        return child.tagName === 'BUTTON' ? `${shape} "${textOf(child)}"` : shape;
+      });
+    }
+  });
+
   describe('"New plan" dialog', () => {
     beforeEach(() => {
       const dialog = element.querySelector('dialog[aria-labelledby="new-plan-title"]');
@@ -1588,6 +1737,31 @@ describe('PlanPage', () => {
       expect(confirm).not.toHaveBeenCalled();
       expectEmptyPlanFrom26Oct();
       expect(textOf(stepper('People'))).toBe('4');
+    });
+
+    it('says "5 of 10 meals picked" for a 5-day plan with 2 picked meals and 3 eating out, and starts a plan with every meal open with three suggestions when the user clicks "Start new plan"', async () => {
+      await pickFirstSuggestion(0);
+      await pickFirstSuggestion(1);
+      for (const index of [2, 3, 4]) {
+        await click(button(meal(index), 'Eat out'));
+      }
+      await click(button(element, 'New plan'));
+      expect(lostParagraph()).toContain('5 of 10 meals picked');
+
+      today = '2026-10-26';
+      await click(button(openDialog(), 'Start new plan'));
+      expectEmptyPlanFrom26Oct();
+      expect(textOf(element.querySelector('.days'))).not.toContain('Eating out');
+      const meals = store.plan().days.flatMap((planned) => [planned.lunch, planned.dinner]);
+      expect(meals.filter((planned) => planned.eatOut !== undefined)).toEqual([]);
+    });
+
+    describe('edge cases', () => {
+      it('opens the dialog with "1 of 10 meals picked" for an unaccepted plan whose only filled meal is eating out', async () => {
+        await click(button(meal(0), 'Eat out'));
+        await click(button(element, 'New plan'));
+        expect(lostParagraph()).toContain('1 of 10 meals picked');
+      });
     });
 
     it('keeps the focus on the two buttons when the user presses Tab or Shift+Tab repeatedly', async () => {

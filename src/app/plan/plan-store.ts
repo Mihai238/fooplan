@@ -7,6 +7,7 @@ import {
   clearMeal,
   createPlan,
   dropSuggestion,
+  eatOut,
   forgetRecipe,
   isPicked,
   MealRef,
@@ -70,6 +71,10 @@ export class PlanStore {
 
   pick(meal: MealRef, recipe: string): void {
     this.update((plan) => pickRecipe(plan, meal, recipe, this.suggested(), this.random));
+  }
+
+  eatOut(meal: MealRef): void {
+    this.update((plan) => eatOut(plan, meal));
   }
 
   clear(meal: MealRef): void {
