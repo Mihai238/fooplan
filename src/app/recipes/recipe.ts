@@ -1,3 +1,5 @@
+import type { MessageId } from '../i18n';
+
 export const UNITS = ['g', 'ml', 'pc', 'tbsp', 'tsp'] as const;
 
 export type Unit = (typeof UNITS)[number];
@@ -18,6 +20,9 @@ export interface Recipe {
   own?: true;
 }
 
-export function servingsText(servings: number): string {
-  return servings === 1 ? '1 serving' : `${servings} servings`;
+export function servingsMessage(servings: number): {
+  id: MessageId;
+  params: { servings: number };
+} {
+  return { id: servings === 1 ? 'servings.one' : 'servings.other', params: { servings } };
 }

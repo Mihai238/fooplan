@@ -12,10 +12,10 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, UrlTree } from '@angular/router';
 import { map } from 'rxjs';
+import { LanguageStore } from '../../language-store';
 import { MIN_SUGGESTED } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
-import { displayAmount } from '../amount';
-import { servingsText } from '../recipe';
+import { servingsMessage } from '../recipe';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
 import { stepParts } from '../step-amounts';
@@ -35,6 +35,7 @@ export class RecipePage {
   private readonly injector = inject(Injector);
   private readonly recipes = inject(RecipeStore);
   private readonly stepsView = inject(StepsViewStore);
+  protected readonly language = inject(LanguageStore);
   // The router reuses this page for another slug, and the route's guard lets only a known one in
   protected readonly page = toSignal(
     inject(ActivatedRoute).paramMap.pipe(
@@ -47,13 +48,13 @@ export class RecipePage {
   );
   protected readonly steps = computed(() => {
     const { steps, ingredients } = this.page().recipe;
-    return steps?.map((step) => stepParts(step, ingredients));
+    return steps?.map((step) =>
+      stepParts(step, ingredients, (amount) => this.language.amount(amount)),
+    );
   });
   protected readonly view = this.stepsView.view;
   protected readonly step = linkedSignal({ source: this.page, computation: () => 0 });
   protected readonly last = computed(() => this.step() === (this.steps()?.length ?? 0) - 1);
-  protected readonly displayAmount = displayAmount;
-  protected readonly servingsText = servingsText;
   protected readonly minSuggested = MIN_SUGGESTED;
   protected readonly recipeSlug = recipeSlug;
   private readonly nextButton = viewChild<ElementRef<HTMLButtonElement>>('nextButton');
@@ -65,6 +66,11 @@ export class RecipePage {
   private readonly deleteButton = viewChild<ElementRef<HTMLButtonElement>>('deleteButton');
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   private pressedOnBackdrop = false;
+
+  protected servingsText(servings: number): string {
+    const { id, params } = servingsMessage(servings);
+    return this.language.t(id, params);
+  }
 
   protected showView(view: StepsView): void {
     if (view !== this.view()) {

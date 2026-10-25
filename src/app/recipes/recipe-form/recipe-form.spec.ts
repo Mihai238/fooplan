@@ -3,10 +3,12 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
+import { LanguageStore } from '../../language-store';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
 import { day, open, picked, planOf, seededRandom } from '../../plan/testing';
 import { Recipe, Unit } from '../recipe';
 import { RecipeStore } from '../recipe-store';
+import { LANGUAGE_KEY } from '../../testing';
 import { ownRecipe, PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../testing';
 
 const AMOUNT = 'Enter an amount above 0.';
@@ -736,6 +738,129 @@ describe('RecipeForm', () => {
     }
   });
 
+  describe('in German (#35)', () => {
+    beforeEach(() => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+    });
+
+    it('heads the add form "Rezept hinzufügen" with "Name", "Portionen", "Zutaten", the column headings "Menge", "Einheit" and "Zutat", the rows "Menge 1", "Einheit 1" with the options g, ml, Stk., EL and TL of the values g, ml, pc, tbsp and tsp, "Zutat 1" and "Zutat 1 entfernen", and "Zutat hinzufügen", "Rezept speichern" and "Abbrechen"; says "Gib einen Namen ein." for an empty name; and heads the edit form "Rezept bearbeiten" with "Änderungen speichern"', async () => {
+      await openForm();
+      expect(Array.from(page().querySelectorAll('h1')).map(textOf)).toEqual(['Rezept hinzufügen']);
+      expect(input('Name').value).toBe('');
+      expect(input('Portionen').value).toBe('2');
+      expect(textOf(page().querySelector('legend'))).toBe('Zutaten');
+      expect(Array.from(page().querySelectorAll('.row.head span')).map(textOf)).toEqual([
+        'Menge',
+        'Einheit',
+        'Zutat',
+      ]);
+      await click(control('Zutat hinzufügen'));
+      expect(input('Menge 1').value).toBe('');
+      const unit = control<HTMLSelectElement>('Einheit 1');
+      expect(Array.from(unit.options).map((option) => option.value)).toEqual(UNIT_OPTIONS);
+      expect(Array.from(unit.options).map(textOf)).toEqual(['g', 'ml', 'Stk.', 'EL', 'TL']);
+      expect(input('Zutat 1').value).toBe('');
+      expect(textOf(control('Zutat 1 entfernen'))).toBe('Entfernen');
+      expect(control<HTMLButtonElement>('Zutat hinzufügen').type).toBe('button');
+      expect(control<HTMLButtonElement>('Rezept speichern').type).toBe('submit');
+      expect(control('Abbrechen').tagName).toBe('A');
+
+      await click(control('Rezept speichern'));
+      expectProblem(input('Name'), 'Gib einen Namen ein.');
+
+      TestBed.resetTestingModule();
+      configure();
+      storeOwnRecipes(QUICK_DAL);
+      harness = await RouterTestingHarness.create('/recipes/quick-dal/edit');
+      expect(Array.from(page().querySelectorAll('h1')).map(textOf)).toEqual(['Rezept bearbeiten']);
+      expect(control<HTMLButtonElement>('Änderungen speichern').type).toBe('submit');
+    });
+
+    describe('edge cases', () => {
+      it('says "Gib eine ganze Zahl von 1 bis 12 ein.", "Füge mindestens eine Zutat hinzu.", "Höchstens 60 Zeichen.", "Mindestens ein Buchstabe oder eine Ziffer." and "Ein Rezept mit diesem Namen gibt es schon." in German', async () => {
+        await openForm();
+        await type('Name', 'a'.repeat(61));
+        await type('Portionen', '13');
+        await click(control('Rezept speichern'));
+        expectProblem(input('Name'), 'Höchstens 60 Zeichen.');
+        expectProblem(input('Portionen'), 'Gib eine ganze Zahl von 1 bis 12 ein.');
+        expect(errors()).toContain('Füge mindestens eine Zutat hinzu.');
+
+        await type('Name', '!!!');
+        await click(control('Rezept speichern'));
+        expectProblem(input('Name'), 'Mindestens ein Buchstabe oder eine Ziffer.');
+        await type('Name', 'Spaghetti carbonara');
+        await click(control('Rezept speichern'));
+        expectProblem(input('Name'), 'Ein Rezept mit diesem Namen gibt es schon.');
+      });
+
+      it('says "Gib eine Menge über 0 ein.", "Gib eine Zutat ein.", "Höchstens 40 Zeichen." and "Diese Zutat steht schon in der Liste." below the rows in German', async () => {
+        await openForm();
+        await type('Name', "Grandma's Soup");
+        await fillRowsInGerman(
+          ['abc', 'g', ''],
+          ['1', 'g', 'a'.repeat(41)],
+          ['1', 'g', 'onion'],
+          ['2', 'pc', 'Onion'],
+        );
+        await click(control('Rezept speichern'));
+        expectProblem(input('Menge 1'), 'Gib eine Menge über 0 ein.');
+        expect(errors()).toEqual([
+          'Gib eine Menge über 0 ein.',
+          'Gib eine Zutat ein.',
+          'Höchstens 40 Zeichen.',
+          'Diese Zutat steht schon in der Liste.',
+        ]);
+      });
+
+      it('saves an ingredient whose unit option "Stk." the user chose with the unit pc, and shows it as "1,5 Stk. onion" on the new recipe\'s page', async () => {
+        await openForm();
+        await type('Name', 'Quick Dal');
+        await fillRowsInGerman(['1,5', 'pc', 'onion']);
+        expect(textOf(control<HTMLSelectElement>('Einheit 1').selectedOptions[0])).toBe('Stk.');
+        await click(control('Rezept speichern'));
+        expect(router().url).toBe('/recipes/quick-dal');
+        expect(recipeStore().own()).toEqual([
+          {
+            name: 'Quick Dal',
+            servings: 2,
+            ingredients: [{ name: 'onion', amount: 1.5, unit: 'pc' }],
+            own: true,
+          },
+        ]);
+        expect(Array.from(page().querySelectorAll('ul > li')).map(textOf)).toEqual([
+          '1,5 Stk. onion',
+        ]);
+      });
+
+      it('shows the messages of the last save in the new language when the language changes, without another save: "Enter a name." becomes "Gib einen Namen ein."', async () => {
+        localStorage.removeItem(LANGUAGE_KEY);
+        await openForm();
+        await click(control('Save recipe'));
+        expectProblem(input('Name'), 'Enter a name.');
+        TestBed.inject(LanguageStore).set('de');
+        await harness.fixture.whenStable();
+        expectProblem(input('Name'), 'Gib einen Namen ein.');
+        expectNothingSaved();
+      });
+    });
+
+    // fillRows with the German names of the controls
+    async function fillRowsInGerman(...rows: [string, Unit, string][]) {
+      for (const [i, [amount, unit, name]] of rows.entries()) {
+        if (rowCount() < i + 1) {
+          await click(control('Zutat hinzufügen'));
+        }
+        await type(`Menge ${i + 1}`, amount);
+        const select = control<HTMLSelectElement>(`Einheit ${i + 1}`);
+        select.value = unit;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        await harness.fixture.whenStable();
+        await type(`Zutat ${i + 1}`, name);
+      }
+    }
+  });
+
   function configure() {
     TestBed.configureTestingModule({
       providers: [
@@ -803,7 +928,7 @@ describe('RecipeForm', () => {
     const messages = messagesOf(field);
     expect(messages.map(textOf), `messages describing "${name}"`).toEqual([message]);
     expect(messages[0].matches('p.error'), `message of "${name}" is a p.error`).toBe(true);
-    if (!/^(Amount|Ingredient) \d+$/.test(name)) {
+    if (!/^(Amount|Ingredient|Menge|Zutat) \d+$/.test(name)) {
       expect(previousNonError(messages[0]), `element above the message of "${name}"`).toBe(field);
     }
   }
@@ -840,7 +965,7 @@ describe('RecipeForm', () => {
   }
 
   function rowCount(): number {
-    return controls().filter((candidate) => /^Amount \d+$/.test(nameOf(candidate))).length;
+    return controls().filter((candidate) => /^(Amount|Menge) \d+$/.test(nameOf(candidate))).length;
   }
 
   function input(name: string): HTMLInputElement {

@@ -6,6 +6,7 @@ import { leaveSuggested, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../amount';
 import { RecipeStore } from '../recipe-store';
 import { RECIPES } from '../recipes';
+import { LANGUAGE_KEY } from '../../testing';
 import { ownRecipe, PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../testing';
 import { RecipeList } from './recipe-list';
 
@@ -676,6 +677,85 @@ describe('RecipeList', () => {
     }
   });
 
+  describe('in German (#35)', () => {
+    beforeEach(async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await reload();
+    });
+
+    it('heads the page "Rezepte" with the link "Rezept hinzufügen" and the field "Rezepte suchen"; says 44 Rezepte passen zu „s“. for "s", 1 Rezept passt zu „carbonara“. and Kein Rezept passt zu „kase“.; shows "2 Portionen" and "200 g spaghetti" on the card of "Spaghetti pomodoro", whose "Nicht vorschlagen" is named "Spaghetti pomodoro nicht vorschlagen" and turns into "Nicht vorgeschlagen" and "Wieder vorschlagen" on a click', async () => {
+      expect(textOf(element.querySelector('h1')!)).toBe('Rezepte');
+      const add = element.querySelector<HTMLAnchorElement>('a.add');
+      expect(textOf(add!)).toBe('Rezept hinzufügen');
+      expect(add!.getAttribute('href')).toBe('/add-recipe');
+      searchField('Rezepte suchen');
+
+      await search('s', 'Rezepte suchen');
+      expect(statusText()).toBe('44 Rezepte passen zu „s“.');
+      await search('carbonara', 'Rezepte suchen');
+      expect(statusText()).toBe('1 Rezept passt zu „carbonara“.');
+      await search('kase', 'Rezepte suchen');
+      expect(statusText()).toBe('Kein Rezept passt zu „kase“.');
+      await search('', 'Rezepte suchen');
+
+      const card = cardOf('Spaghetti pomodoro');
+      expect(textOf(card.querySelector('p.servings')!)).toBe('2 Portionen');
+      expect(ingredientLinesOf('Spaghetti pomodoro')).toContain('200 g spaghetti');
+      const dontSuggest = card.querySelector<HTMLButtonElement>('p.suggest button')!;
+      expect(textOf(dontSuggest)).toBe('Nicht vorschlagen');
+      expect(dontSuggest.getAttribute('aria-label')).toBe('Spaghetti pomodoro nicht vorschlagen');
+      await click(dontSuggest);
+      const suggest = cardOf('Spaghetti pomodoro').querySelector('p.suggest')!;
+      expect(textOf(suggest.querySelector('span')!)).toBe('Nicht vorgeschlagen');
+      const again = suggest.querySelector('button')!;
+      expect(textOf(again)).toBe('Wieder vorschlagen');
+      expect(again.getAttribute('aria-label')).toBe('Wieder vorschlagen: Spaghetti pomodoro');
+    });
+
+    describe('edge cases', () => {
+      it('shows "1 Portion" on the card of an own recipe for 1, "4 Portionen" on one for 4, and "Dein Rezept" on both', async () => {
+        storeOwnRecipes(ownRecipe('Solo Soup', 1), ownRecipe('Family Soup', 4));
+        await reload();
+        expect(textOf(cardOf('Solo Soup').querySelector('p.servings')!)).toBe('1 Portion');
+        expect(textOf(cardOf('Family Soup').querySelector('p.servings')!)).toBe('4 Portionen');
+        for (const name of ['Solo Soup', 'Family Soup']) {
+          expect(textOf(cardOf(name).querySelector('p.own')!), name).toBe('Dein Rezept');
+        }
+      });
+
+      it('shows decimal amounts with a comma and the units pc, tbsp and tsp as "Stk.", "EL" and "TL" on the cards: "0,5 Stk. red onion", "0,5 TL chili flakes", "0,25 TL nutmeg", "1 EL vegetable oil" and "400 g canned white beans"', async () => {
+        expect(ingredientLinesOf('Tuna and white bean salad with bread')).toEqual(
+          expect.arrayContaining(['0,5 Stk. red onion', '400 g canned white beans']),
+        );
+        expect(ingredientLinesOf('Spaghetti aglio e olio')).toContain('0,5 TL chili flakes');
+        expect(ingredientLinesOf('Bratwurst with sauerkraut and mashed potatoes')).toContain(
+          '0,25 TL nutmeg',
+        );
+        expect(ingredientLinesOf('Teriyaki chicken with rice')).toContain('1 EL vegetable oil');
+        const lines = articles().flatMap((article) =>
+          Array.from(article.querySelectorAll('li')).map(textOf),
+        );
+        expect(lines.filter((line) => /\b(pc|tbsp|tsp)\b|\d\.\d/.test(line))).toEqual([]);
+      });
+
+      it('says "Mindestens 15 Rezepte bleiben vorgeschlagen, mehr können nicht entfernt werden." while exactly 15 recipes are suggested', async () => {
+        leaveSuggested(TestBed.inject(PlanStore), 15);
+        await fixture.whenStable();
+        expect(textOf(element.querySelector('p.note')!)).toBe(
+          'Mindestens 15 Rezepte bleiben vorgeschlagen, mehr können nicht entfernt werden.',
+        );
+      });
+    });
+
+    function cardOf(name: string): HTMLElement {
+      const article = articles().find(
+        (candidate) => textOf(candidate.querySelector('h2')!) === name,
+      );
+      expect(article, `"${name}" not shown`).toBeDefined();
+      return article!;
+    }
+  });
+
   function configure() {
     TestBed.configureTestingModule({
       providers: [
@@ -715,22 +795,22 @@ describe('RecipeList', () => {
     await fixture.whenStable();
   }
 
-  async function search(text: string) {
-    const field = searchField();
+  async function search(text: string, label = 'Search recipes') {
+    const field = searchField(label);
     field.value = text;
     field.dispatchEvent(new Event('input'));
     await fixture.whenStable();
   }
 
-  function searchField(): HTMLInputElement {
+  function searchField(name = 'Search recipes'): HTMLInputElement {
     const field = Array.from(
       element.querySelectorAll<HTMLInputElement>('input[type="search"]'),
     ).find(
       (input) =>
-        input.getAttribute('aria-label') === 'Search recipes' ||
-        Array.from(input.labels ?? []).some((label) => textOf(label) === 'Search recipes'),
+        input.getAttribute('aria-label') === name ||
+        Array.from(input.labels ?? []).some((label) => textOf(label) === name),
     );
-    expect(field, 'no search field labelled "Search recipes"').toBeDefined();
+    expect(field, `no search field labelled "${name}"`).toBeDefined();
     return field!;
   }
 

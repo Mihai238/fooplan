@@ -3,6 +3,7 @@ import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
 import { QUICK_DAL, storeOwnRecipes } from './recipes/testing';
+import { LANGUAGE_KEY, TABBABLE } from './testing';
 
 describe('App', () => {
   beforeEach(async () => {
@@ -116,5 +117,112 @@ describe('App', () => {
         a.textContent?.trim(),
       ),
     ).toEqual(['Recipes']);
+  });
+
+  describe('language switch (#35)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      document.documentElement.lang = 'en';
+    });
+
+    it('puts a group named "Language" right after the nav, last in the header, with the buttons "English" (text "EN") and "Deutsch" (text "DE"), in this order; tabs through "Plan", "Grocery list", "Recipes", "EN", "DE" and then the page, never the brand; and writes nothing to localStorage when the user clicks the pressed "EN"', async () => {
+      const fixture = TestBed.createComponent(App);
+      await TestBed.inject(Router).navigateByUrl('/plan');
+      await fixture.whenStable();
+      const compiled = fixture.nativeElement as HTMLElement;
+      const group = languageGroup(compiled);
+      const header = compiled.querySelector('header')!;
+      expect(group.getAttribute('aria-label')).toBe('Language');
+      expect(group.previousElementSibling, 'before the group').toBe(header.querySelector('nav'));
+      expect(header.lastElementChild, 'last in the header').toBe(group);
+      expect(
+        Array.from(group.children).map((button) => [
+          button.tagName,
+          button.getAttribute('type'),
+          button.getAttribute('aria-label'),
+          button.textContent?.trim(),
+          button.getAttribute('aria-pressed'),
+        ]),
+      ).toEqual([
+        ['BUTTON', 'button', 'English', 'EN', 'true'],
+        ['BUTTON', 'button', 'Deutsch', 'DE', 'false'],
+      ]);
+
+      const tabbable = Array.from(compiled.querySelectorAll<HTMLElement>(TABBABLE)).filter(
+        (candidate) => !candidate.closest('dialog'),
+      );
+      expect(tabbable.slice(0, 5).map((candidate) => candidate.textContent?.trim())).toEqual([
+        'Plan',
+        'Grocery list',
+        'Recipes',
+        'EN',
+        'DE',
+      ]);
+      expect(tabbable[5]?.closest('main'), 'the page after "DE"').not.toBeNull();
+      expect(compiled.querySelector('.brand')?.matches(TABBABLE), 'brand focusable').toBe(false);
+
+      const setItem = vi.spyOn(Storage.prototype, 'setItem');
+      (group.children[0] as HTMLButtonElement).click();
+      await fixture.whenStable();
+      expect(setItem.mock.calls.filter(([key]) => key === LANGUAGE_KEY)).toEqual([]);
+      expect(localStorage.getItem(LANGUAGE_KEY)).toBeNull();
+      expect(group.children[0].getAttribute('aria-pressed'), '"EN" pressed').toBe('true');
+    });
+
+    describe('edge cases', () => {
+      it('names the group "Sprache" and the links "Plan", "Einkaufsliste" and "Rezepte" in German, keeping the buttons "English" ("EN") and "Deutsch" ("DE"), with "DE" pressed', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        const fixture = TestBed.createComponent(App);
+        await fixture.whenStable();
+        const compiled = fixture.nativeElement as HTMLElement;
+        const group = languageGroup(compiled);
+        expect(group.getAttribute('aria-label')).toBe('Sprache');
+        expect(
+          Array.from(compiled.querySelectorAll('nav a')).map((a) => a.textContent?.trim()),
+        ).toEqual(['Plan', 'Einkaufsliste', 'Rezepte']);
+        expect(
+          Array.from(group.children).map((button) => [
+            button.getAttribute('aria-label'),
+            button.textContent?.trim(),
+            button.getAttribute('aria-pressed'),
+          ]),
+        ).toEqual([
+          ['English', 'EN', 'false'],
+          ['Deutsch', 'DE', 'true'],
+        ]);
+      });
+
+      it('writes nothing to localStorage when the user clicks the pressed "DE" in German, and saves en with "EN" pressed and the links in English when the user clicks "EN"', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        const fixture = TestBed.createComponent(App);
+        await fixture.whenStable();
+        const compiled = fixture.nativeElement as HTMLElement;
+        const group = languageGroup(compiled);
+        const [english, deutsch] = Array.from(group.querySelectorAll('button'));
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+        deutsch.click();
+        await fixture.whenStable();
+        expect(setItem.mock.calls.filter(([key]) => key === LANGUAGE_KEY)).toEqual([]);
+        expect(deutsch.getAttribute('aria-pressed'), '"DE" pressed').toBe('true');
+
+        english.click();
+        await fixture.whenStable();
+        expect(setItem.mock.calls.filter(([key]) => key === LANGUAGE_KEY)).toEqual([
+          [LANGUAGE_KEY, 'en'],
+        ]);
+        expect(english.getAttribute('aria-pressed'), '"EN" pressed').toBe('true');
+        expect(deutsch.getAttribute('aria-pressed'), '"DE" pressed').toBe('false');
+        expect(
+          Array.from(compiled.querySelectorAll('nav a')).map((a) => a.textContent?.trim()),
+        ).toEqual(['Plan', 'Grocery list', 'Recipes']);
+      });
+    });
+
+    function languageGroup(compiled: HTMLElement): HTMLElement {
+      const found = compiled.querySelector<HTMLElement>('header div.language[role="group"]');
+      expect(found, 'no div.language group in the header').not.toBeNull();
+      return found!;
+    }
   });
 });

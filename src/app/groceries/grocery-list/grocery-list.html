@@ -1,23 +1,23 @@
-<h1>Grocery list</h1>
+<h1>{{ language.t('groceries.title') }}</h1>
 @if (!plan().accepted) {
   <p class="empty">
-    Accept a plan to see what to buy.
-    <a routerLink="/plan">Go to the plan</a>
+    {{ language.t('groceries.acceptFirst') }}
+    <a routerLink="/plan">{{ language.t('groceries.goToPlan') }}</a>
   </p>
 } @else {
   <form class="field" (submit)="add($event, itemInput)">
-    <label for="new-item">Add an item</label>
+    <label for="new-item">{{ language.t('groceries.addItem') }}</label>
     <input #itemInput type="text" id="new-item" autocomplete="off" />
-    <button type="submit" class="primary">Add</button>
+    <button type="submit" class="primary">{{ language.t('groceries.add') }}</button>
   </form>
   <!-- Screen readers announce changes inside a live region already on the page, not a region
        added along with its text, so this one stays, empty until the first "Add" -->
-  <p class="status" role="status">{{ feedback() }}</p>
+  <p class="status" role="status">{{ feedbackText() }}</p>
   @if (view().sections.length > 0) {
     <div class="sections">
       @for (group of view().sections; track group.section) {
         <section>
-          <h2>{{ group.section }}</h2>
+          <h2>{{ language.section(group.section) }}</h2>
           <ul class="items">
             @for (item of group.items; track key(item)) {
               <li>
@@ -35,10 +35,10 @@
                     #removeButton
                     type="button"
                     class="link"
-                    [attr.aria-label]="'Remove ' + item.name"
+                    [attr.aria-label]="language.t('groceries.removeItem', { item: item.name })"
                     (click)="remove(item, removeButton)"
                   >
-                    Remove
+                    {{ language.t('groceries.remove') }}
                   </button>
                 }
               </li>
@@ -50,7 +50,7 @@
   }
   @if (view().inCart.length > 0) {
     <details class="cart">
-      <summary>In the cart ({{ view().inCart.length }})</summary>
+      <summary>{{ language.t('groceries.inCart', { count: view().inCart.length }) }}</summary>
       <ul class="items">
         @for (item of view().inCart; track key(item)) {
           <li>
@@ -69,10 +69,10 @@
                 #removeButton
                 type="button"
                 class="link"
-                [attr.aria-label]="'Remove ' + item.name"
+                [attr.aria-label]="language.t('groceries.removeItem', { item: item.name })"
                 (click)="remove(item, removeButton)"
               >
-                Remove
+                {{ language.t('groceries.remove') }}
               </button>
             }
           </li>
@@ -94,8 +94,10 @@
       (focusin)="undoFocused.set(true)"
       (focusout)="undoFocused.set(false)"
     >
-      <span>"{{ line.label }}" is in the cart.</span>
-      <button #undoButton type="button" class="link" (click)="undo(undoButton)">Undo</button>
+      <span>{{ language.t('groceries.inCartUndo', { item: labelOf(line.item) }) }}</span>
+      <button #undoButton type="button" class="link" (click)="undo(undoButton)">
+        {{ language.t('groceries.undo') }}
+      </button>
     </div>
   }
 }

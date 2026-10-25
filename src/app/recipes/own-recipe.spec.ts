@@ -1,18 +1,19 @@
+import { MessageId } from '../i18n';
 import { checkRecipe, IngredientDraft, RecipeDraft, RecipeProblems } from './own-recipe';
 import { Recipe, Unit } from './recipe';
 import { RECIPES } from './recipes';
 import { QUICK_DAL } from './testing';
 
-const NAME_EMPTY = 'Enter a name.';
-const NAME_LONG = 'Use at most 60 characters.';
-const NAME_NO_LETTER = 'Use at least one letter or digit.';
-const NAME_TAKEN = 'A recipe with this name already exists.';
-const SERVINGS = 'Enter a whole number from 1 to 12.';
-const AMOUNT = 'Enter an amount above 0.';
-const INGREDIENT_EMPTY = 'Enter an ingredient.';
-const INGREDIENT_LONG = 'Use at most 40 characters.';
-const INGREDIENT_TWICE = 'This ingredient is already in the list.';
-const NO_INGREDIENT = 'Add at least one ingredient.';
+const NAME_EMPTY: MessageId = 'form.enterName';
+const NAME_LONG: MessageId = 'form.nameTooLong';
+const NAME_NO_LETTER: MessageId = 'form.nameNeedsLetter';
+const NAME_TAKEN: MessageId = 'form.nameExists';
+const SERVINGS: MessageId = 'form.servingsRange';
+const AMOUNT: MessageId = 'form.amountAboveZero';
+const INGREDIENT_EMPTY: MessageId = 'form.enterIngredient';
+const INGREDIENT_LONG: MessageId = 'form.ingredientTooLong';
+const INGREDIENT_TWICE: MessageId = 'form.ingredientExists';
+const NO_INGREDIENT: MessageId = 'form.atLeastOneIngredient';
 
 describe('checkRecipe', () => {
   it('saves "  Grandma\'s   Soup " for " 4 " servings as "Grandma\'s Soup" for 4, with the rows (1,5 pc " Onion ") and (200 g "canned chickpeas") as onion 1.5 pc and canned chickpeas 200 g in that order, ignoring an empty row', () => {

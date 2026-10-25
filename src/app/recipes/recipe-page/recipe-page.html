@@ -1,23 +1,23 @@
 @let recipe = page().recipe;
-<a class="back" [routerLink]="page().back">Back</a>
+<a class="back" [routerLink]="page().back">{{ language.t('recipe.back') }}</a>
 <article>
   <h1>{{ recipe.name }}</h1>
   <p class="servings">{{ servingsText(recipe.servings) }}</p>
   @if (recipe.own) {
-    <p class="own">Your recipe</p>
+    <p class="own">{{ language.t('recipes.own') }}</p>
   }
   @let removed = store.removed().includes(recipe.name);
   @if (removed || store.canRemove()) {
     <p class="suggest">
       @if (removed) {
-        <span>Not suggested</span>
+        <span>{{ language.t('recipes.notSuggested') }}</span>
         <button
           #suggestAgainButton
           type="button"
           class="link"
           (click)="suggestAgain(recipe.name, suggestAgainButton)"
         >
-          Suggest again
+          {{ language.t('recipes.suggestAgain') }}
         </button>
       } @else {
         <button
@@ -26,41 +26,36 @@
           class="link"
           (click)="dontSuggest(recipe.name, dontSuggestButton)"
         >
-          Don't suggest
+          {{ language.t('recipes.dontSuggest') }}
         </button>
       }
     </p>
   } @else {
-    <p class="note">
-      At least {{ minSuggested }} recipes stay suggested, so no more can be removed.
-    </p>
+    <p class="note">{{ language.t('recipes.limit', { min: minSuggested }) }}</p>
   }
   <ul>
     @for (ingredient of recipe.ingredients; track ingredient.name) {
-      @let shown = displayAmount(ingredient);
-      <li>{{ shown.amount }} {{ shown.unit }} {{ ingredient.name }}</li>
+      <li>{{ language.amount(ingredient) }} {{ ingredient.name }}</li>
     }
   </ul>
   @if (recipe.own) {
     <div class="manage">
-      <a class="secondary" [routerLink]="['/recipes', recipeSlug(recipe.name), 'edit']">Edit</a>
+      <a class="secondary" [routerLink]="['/recipes', recipeSlug(recipe.name), 'edit']">{{
+        language.t('recipe.edit')
+      }}</a>
       @switch (store.deleteBlock(recipe.name)) {
         @case ('picked') {
-          <p class="note">
-            This recipe is in your plan. Undo its pick or start a new plan to delete it.
-          </p>
+          <p class="note">{{ language.t('recipe.inPlan') }}</p>
         }
         @case ('accepted') {
-          <p class="note">This recipe is in your accepted plan. Start a new plan to delete it.</p>
+          <p class="note">{{ language.t('recipe.inAcceptedPlan') }}</p>
         }
         @case ('limit') {
-          <p class="note">
-            At least {{ minSuggested }} recipes stay suggested, so this recipe can't be deleted.
-          </p>
+          <p class="note">{{ language.t('recipe.deleteLimit', { min: minSuggested }) }}</p>
         }
         @default {
           <button #deleteButton type="button" class="secondary delete" (click)="openDeleteDialog()">
-            Delete
+            {{ language.t('recipe.delete') }}
           </button>
         }
       }
@@ -68,19 +63,21 @@
   }
   @if (steps(); as steps) {
     <div class="steps">
-      <div class="view" role="group" aria-label="Show steps">
+      <div class="view" role="group" [attr.aria-label]="language.t('recipe.showSteps')">
         <button type="button" [attr.aria-pressed]="view() === 'steps'" (click)="showView('steps')">
-          Step by step
+          {{ language.t('recipe.stepByStep') }}
         </button>
         <button type="button" [attr.aria-pressed]="view() === 'all'" (click)="showView('all')">
-          All steps
+          {{ language.t('recipe.allSteps') }}
         </button>
       </div>
       @if (view() === 'steps') {
         <!-- Screen readers announce changes inside a live region already on the page, not a region
              added along with its text, so this one stays across the steps -->
         <div aria-live="polite" aria-atomic="true">
-          <p class="counter">Step {{ step() + 1 }} of {{ steps.length }}</p>
+          <p class="counter">
+            {{ language.t('recipe.stepOf', { step: step() + 1, total: steps.length }) }}
+          </p>
           <p class="step">
             <ng-container *ngTemplateOutlet="stepText; context: { $implicit: steps[step()] }" />
           </p>
@@ -93,13 +90,15 @@
             [disabled]="step() === 0"
             (click)="showPrevious(previousButton)"
           >
-            Previous
+            {{ language.t('recipe.previous') }}
           </button>
           @if (last()) {
-            <a #doneLink class="primary" [routerLink]="page().back">Done</a>
+            <a #doneLink class="primary" [routerLink]="page().back">{{
+              language.t('recipe.done')
+            }}</a>
           } @else {
             <button #nextButton type="button" class="primary" (click)="showNext(nextButton)">
-              Next
+              {{ language.t('recipe.next') }}
             </button>
           }
         </div>
@@ -141,13 +140,11 @@
     (keydown)="trapFocus($event, keepButton, deleteRecipeButton)"
     (close)="focusDelete()"
   >
-    <h2 id="delete-title">Delete {{ recipe.name }}?</h2>
-    <p id="delete-text">
-      It disappears from the Recipes page and won't be suggested again. This can't be undone.
-    </p>
+    <h2 id="delete-title">{{ language.t('delete.title', { recipe: recipe.name }) }}</h2>
+    <p id="delete-text">{{ language.t('delete.text') }}</p>
     <div class="actions">
       <button #keepButton type="button" class="secondary" autofocus (click)="dialog.close()">
-        Keep recipe
+        {{ language.t('delete.keep') }}
       </button>
       <button
         #deleteRecipeButton
@@ -155,7 +152,7 @@
         class="primary danger"
         (click)="deleteRecipe(recipe.name)"
       >
-        Delete recipe
+        {{ language.t('delete.confirm') }}
       </button>
     </div>
   </dialog>

@@ -1,21 +1,17 @@
 <div class="toolbar">
-  <h1>Plan</h1>
+  <h1>{{ language.t('plan.title') }}</h1>
   @if (plan().accepted) {
-    <p class="summary">
-      {{ plan().days.length }} {{ plan().days.length === 1 ? 'day' : 'days' }} for
-      {{ plan().people }} {{ plan().people === 1 ? 'person' : 'people'
-      }}{{ plan().kidFriendly ? ', kid-friendly' : '' }}
-    </p>
+    <p class="summary">{{ summary() }}</p>
   } @else {
     <!-- The arrow keys step the value also at a limit, where nothing changes, so that they never
          scroll the page from it -->
     <span class="stepper">
-      <span id="days-label" class="stepper-label">Days</span>
+      <span id="days-label" class="stepper-label">{{ language.t('plan.days') }}</span>
       <button
         #fewerDays
         type="button"
         class="step"
-        aria-label="One day fewer"
+        [attr.aria-label]="language.t('plan.oneDayFewer')"
         [disabled]="fewestDays()"
         (click)="stepDays(-1); keepFocus(fewerDays, fewestDays(), daysValue)"
       >
@@ -39,7 +35,7 @@
         #moreDays
         type="button"
         class="step"
-        aria-label="One more day"
+        [attr.aria-label]="language.t('plan.oneMoreDay')"
         [disabled]="mostDays()"
         (click)="stepDays(1); keepFocus(moreDays, mostDays(), daysValue)"
       >
@@ -47,12 +43,12 @@
       </button>
     </span>
     <span class="stepper">
-      <span id="people-label" class="stepper-label">People</span>
+      <span id="people-label" class="stepper-label">{{ language.t('plan.people') }}</span>
       <button
         #fewerPeople
         type="button"
         class="step"
-        aria-label="One person fewer"
+        [attr.aria-label]="language.t('plan.onePersonFewer')"
         [disabled]="fewestPeople()"
         (click)="stepPeople(-1); keepFocus(fewerPeople, fewestPeople(), peopleValue)"
       >
@@ -71,7 +67,12 @@
       >
         {{ plan().people }}
       </span>
-      <button type="button" class="step" aria-label="One more person" (click)="stepPeople(1)">
+      <button
+        type="button"
+        class="step"
+        [attr.aria-label]="language.t('plan.oneMorePerson')"
+        (click)="stepPeople(1)"
+      >
         <span aria-hidden="true">▲</span>
       </button>
     </span>
@@ -85,7 +86,7 @@
         [attr.aria-describedby]="kidFriendlyDisabled() ? 'kid-friendly-note' : null"
         (change)="store.setKidFriendly(kidFriendlyInput.checked)"
       />
-      Kid-friendly
+      {{ language.t('plan.kidFriendly') }}
     </label>
   }
   <button
@@ -94,14 +95,13 @@
     [class]="plan().accepted ? 'primary' : 'link'"
     (click)="newPlan(newPlanDialog)"
   >
-    New plan
+    {{ language.t('plan.newPlan') }}
   </button>
 </div>
 
 @if (!plan().accepted && kidFriendlyDisabled()) {
   <p id="kid-friendly-note" class="note">
-    Fewer than {{ minSuggested }} kid-friendly recipes are suggested, so the plan can't be
-    kid-friendly.
+    {{ language.t('plan.kidFriendlyNote', { min: minSuggested }) }}
   </p>
 }
 
@@ -110,13 +110,15 @@
     @let isToday = day.date === today();
     @let isPast = day.date < today();
     <section class="day" [class.today]="isToday" [class.past]="isPast">
-      <h2 [attr.aria-current]="isToday ? 'date' : null">{{ day.date | date: 'EEE d MMM' }}</h2>
+      <h2 [attr.aria-current]="isToday ? 'date' : null">
+        {{ day.date | date: dateFormat() : undefined : language.locale() }}
+      </h2>
       @for (meal of meals; track meal.kind) {
         @let current = day[meal.kind];
         @let ref = { day: dayIndex, kind: meal.kind };
         @let leftoverRecipe = leftovers(meal.kind, dayIndex);
         <article class="meal">
-          <h3>{{ meal.label }}</h3>
+          <h3>{{ language.t(meal.label) }}</h3>
           @if (current.recipe || current.eatOut) {
             @if (current.recipe) {
               <p class="recipe">
@@ -125,12 +127,12 @@
                 </a>
               </p>
               @if (minutes(current.recipe); as recipeMinutes) {
-                <p class="minutes">{{ recipeMinutes }} minutes</p>
+                <p class="minutes">{{ language.t('plan.minutes', { minutes: recipeMinutes }) }}</p>
               }
               @if (meal.kind === 'dinner') {
                 @if (plan().accepted) {
                   @if (day.cookExtra) {
-                    <p class="note">Cooking extra for tomorrow's lunch</p>
+                    <p class="note">{{ language.t('plan.cookingExtra') }}</p>
                   }
                 } @else if (!lastDay) {
                   <label class="cook-extra">
@@ -141,19 +143,21 @@
                       [checked]="day.cookExtra"
                       (change)="store.setCookExtra(dayIndex, cookExtraInput.checked)"
                     />
-                    Cook extra for tomorrow's lunch
+                    {{ language.t('plan.cookExtra') }}
                   </label>
                 }
               }
             } @else {
-              <p class="recipe">Eating out</p>
+              <p class="recipe">{{ language.t('plan.eatingOut') }}</p>
             }
             @if (!plan().accepted) {
-              <button type="button" class="link" (click)="store.clear(ref)">Undo</button>
+              <button type="button" class="link" (click)="store.clear(ref)">
+                {{ language.t('plan.undo') }}
+              </button>
             }
           } @else if (leftoverRecipe) {
             <p class="recipe">
-              Leftovers:
+              {{ language.t('plan.leftovers') }}
               <a class="name" [routerLink]="['/recipes', recipeSlug(leftoverRecipe)]">
                 {{ leftoverRecipe }}
               </a>
@@ -171,22 +175,22 @@
                   <!-- On a line of its own, as Prettier would put it, the space would follow the line
                        break, which Angular keeps as a second space -->
                   <!-- prettier-ignore -->
-                  @if (minutes(recipe); as recipeMinutes) {{{ ' ' }}<span class="minutes">{{ recipeMinutes }} minutes</span>}
+                  @if (minutes(recipe); as recipeMinutes) {{{ ' ' }}<span class="minutes">{{ language.t('plan.minutes', { minutes: recipeMinutes }) }}</span>}
                 </button>
                 <a
                   class="recipe-link"
                   [routerLink]="['/recipes', recipeSlug(recipe)]"
-                  [attr.aria-label]="'Recipe for ' + recipe"
+                  [attr.aria-label]="language.t('plan.recipeFor', { recipe })"
                 >
-                  Recipe
+                  {{ language.t('plan.recipe') }}
                 </a>
                 @if (store.canRemove()) {
                   <button
                     #dontSuggest
                     type="button"
                     class="dont-suggest"
-                    title="Don't suggest"
-                    [attr.aria-label]="'Don\'t suggest ' + recipe"
+                    [title]="language.t('plan.dontSuggestTitle')"
+                    [attr.aria-label]="language.t('plan.dontSuggestRecipe', { recipe })"
                     (click)="askDontSuggest(recipe, { dontSuggest, suggestion }, dontSuggestDialog)"
                   >
                     <span aria-hidden="true">×</span>
@@ -195,9 +199,11 @@
               </div>
             }
             <button type="button" class="link" (click)="store.otherSuggestions(ref)">
-              Other suggestions
+              {{ language.t('plan.otherSuggestions') }}
             </button>
-            <button type="button" class="link" (click)="store.eatOut(ref)">Eat out</button>
+            <button type="button" class="link" (click)="store.eatOut(ref)">
+              {{ language.t('plan.eatOut') }}
+            </button>
           }
         </article>
       }
@@ -207,7 +213,7 @@
 
 @if (!plan().accepted) {
   <button type="button" class="primary accept" [disabled]="!complete()" (click)="store.accept()">
-    Accept plan
+    {{ language.t('plan.accept') }}
   </button>
 }
 
@@ -226,33 +232,34 @@
   (close)="newPlanButton.focus()"
 >
   @let days = plan().days;
-  @let firstDate = days[0].date | date: 'EEE d MMM';
-  @let lastDate = days[days.length - 1].date | date: 'EEE d MMM';
-  <h2 id="new-plan-title">Start a new plan?</h2>
+  @let firstDate = days[0].date | date: dateFormat() : undefined : language.locale();
+  @let lastDate = days[days.length - 1].date | date: dateFormat() : undefined : language.locale();
+  <h2 id="new-plan-title">{{ language.t('newPlan.title') }}</h2>
   <p id="new-plan-lost">
-    The plan for {{ days.length === 1 ? firstDate : firstDate + ' – ' + lastDate }}, with
-    {{ filled() }} of {{ days.length * 2 }} meals picked, will be discarded.
+    {{
+      language.t('newPlan.lost', {
+        dates: days.length === 1 ? firstDate! : firstDate + ' – ' + lastDate,
+        filled: filled(),
+        total: days.length * 2,
+      })
+    }}
     @if (plan().accepted) {
-      This plan is accepted.
+      {{ language.t('newPlan.accepted') }}
     }
     @if (plan().ticked.length > 0) {
-      Your grocery list ticks will be cleared.
+      {{ language.t('newPlan.ticks') }}
     }
     @if (plan().added.length > 0) {
-      Your added grocery items will be removed.
+      {{ language.t('newPlan.added') }}
     }
   </p>
-  <p id="new-plan-next">
-    The new plan starts today, for {{ defaultDays }} days and {{ plan().people }}
-    {{ plan().people === 1 ? 'person' : 'people'
-    }}{{ store.kidFriendly() ? ', kid-friendly' : '' }}.
-  </p>
+  <p id="new-plan-next">{{ nextPlan() }}</p>
   <div class="actions">
     <button #keepButton type="button" class="secondary" autofocus (click)="newPlanDialog.close()">
-      Keep this plan
+      {{ language.t('newPlan.keep') }}
     </button>
     <button #startButton type="button" class="primary danger" (click)="startNewPlan(newPlanDialog)">
-      Start new plan
+      {{ language.t('newPlan.start') }}
     </button>
   </div>
 </dialog>
@@ -269,11 +276,8 @@
   (keydown)="trapFocus($event, keepSuggestingButton, dontSuggestButton)"
   (close)="focusRow()"
 >
-  <h2 id="dont-suggest-title">Don't suggest {{ removing() }}?</h2>
-  <p id="dont-suggest-text">
-    Another recipe takes its place, and it won't be suggested again. "Suggest again" on the Recipes
-    page brings it back.
-  </p>
+  <h2 id="dont-suggest-title">{{ language.t('dontSuggest.title', { recipe: removing() }) }}</h2>
+  <p id="dont-suggest-text">{{ language.t('dontSuggest.text') }}</p>
   <div class="actions">
     <button
       #keepSuggestingButton
@@ -282,7 +286,7 @@
       autofocus
       (click)="dontSuggestDialog.close()"
     >
-      Keep suggesting
+      {{ language.t('dontSuggest.keep') }}
     </button>
     <button
       #dontSuggestButton
@@ -290,7 +294,7 @@
       class="primary"
       (click)="confirmDontSuggest(dontSuggestDialog)"
     >
-      Don't suggest
+      {{ language.t('dontSuggest.confirm') }}
     </button>
   </div>
 </dialog>

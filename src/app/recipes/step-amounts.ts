@@ -1,4 +1,4 @@
-import { displayAmount } from './amount';
+import { Amount, displayAmount } from './amount';
 import { Ingredient } from './recipe';
 
 export type StepPart = { text: string } | { amount: string };
@@ -9,15 +9,19 @@ interface Mention {
   amount: string;
 }
 
-// Longest names first, so "red onions" goes to red onion before onion could claim its "onions"
-export function stepParts(text: string, ingredients: readonly Ingredient[]): StepPart[] {
+// Longest names first, so "red onions" goes to red onion before onion could claim its "onions".
+// showAmount writes an amount in the page's language; without it, it reads as stored ("2 pc")
+export function stepParts(
+  text: string,
+  ingredients: readonly Ingredient[],
+  showAmount: (item: Amount) => string = storedAmount,
+): StepPart[] {
   const mentions: Mention[] = [];
   const longestFirst = [...ingredients].sort((a, b) => b.name.length - a.name.length);
   for (const ingredient of longestFirst) {
     const mention = firstFreeMention(text, ingredient.name, mentions);
     if (mention) {
-      const shown = displayAmount(ingredient);
-      mentions.push({ ...mention, amount: `(${shown.amount} ${shown.unit})` });
+      mentions.push({ ...mention, amount: `(${showAmount(ingredient)})` });
     }
   }
   mentions.sort((a, b) => a.start - b.start);
@@ -31,6 +35,11 @@ export function stepParts(text: string, ingredients: readonly Ingredient[]): Ste
     parts.push({ text: text.slice(from) });
   }
   return parts;
+}
+
+function storedAmount(item: Amount): string {
+  const shown = displayAmount(item);
+  return `${shown.amount} ${shown.unit}`;
 }
 
 function firstFreeMention(

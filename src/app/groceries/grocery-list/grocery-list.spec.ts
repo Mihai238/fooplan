@@ -8,6 +8,7 @@ import { RECIPES } from '../../recipes/recipes';
 import { Recipe, Unit } from '../../recipes/recipe';
 import { RecipeStore } from '../../recipes/recipe-store';
 import { PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
+import { LANGUAGE_KEY } from '../../testing';
 import { byName, bySection, GroceryItem, groceryList, itemKey } from '../groceries';
 import { Section, SECTIONS } from '../sections';
 import { GroceryList } from './grocery-list';
@@ -1470,6 +1471,29 @@ describe('GroceryList', () => {
       expect(bar()).toBeNull();
     });
 
+    it('says „1 Stk. onion“ ist im Wagen. with a "Rückgängig" button in German, and „1 EL soy sauce“ ist im Wagen. for the 15 ml soy sauce, which "Rückgängig" moves back', async () => {
+      storeOwnRecipes(ONION_STIR_FRY, PLAIN_RICE);
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      localStorage.setItem(
+        'fooplan.plan',
+        JSON.stringify(
+          planOf([day('2026-10-24', picked('Onion Stir-Fry'), picked('Plain Rice'))], {
+            accepted: true,
+          }),
+        ),
+      );
+      await reload();
+
+      await tick('1 Stk. onion');
+      expect(barText()).toBe('„1 Stk. onion“ ist im Wagen.');
+      expect(buttonsIn(shownBar()).map(textOf)).toEqual(['Rückgängig']);
+      await tick('1 EL soy sauce');
+      expect(barText()).toBe('„1 EL soy sauce“ ist im Wagen.');
+      await click(buttonsIn(shownBar())[0]);
+      expect(bar()).toBeNull();
+      expect(listed().map(labelOf)).toContain('1 EL soy sauce');
+    });
+
     // Own recipes saved before a fresh app starts, as a reload makes, so the list holds the lines
     // the spec names
     async function openStirFryPlan({ added = [] as string[], ticked = [] as string[] } = {}) {
@@ -1561,6 +1585,115 @@ describe('GroceryList', () => {
 
     function bar(): HTMLElement | null {
       return element.querySelector('div.undo-bar');
+    }
+  });
+
+  describe('in German (#35)', () => {
+    it('heads the list "Einkaufsliste" with the field "Eintrag hinzufügen" and the button "Hinzufügen", names the sections in German, as "Obst & Gemüse" for onion, shows "1 Stk. onion", says „Klopapier“ zu Sonstiges hinzugefügt. after adding "Klopapier", heads the cart "Im Wagen (1)" after a tick, and says "Nimm einen Plan an, um zu sehen, was einzukaufen ist." with the link "Zum Plan" without an accepted plan', async () => {
+      storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await openAccepted('Quick Dal', 'Plain Rice');
+      expect(textOf(element.querySelector('h1'))).toBe('Einkaufsliste');
+      expect(textOf(element.querySelector('label[for="new-item"]'))).toBe('Eintrag hinzufügen');
+      expect(Array.from(field().labels ?? []).map(textOf)).toEqual(['Eintrag hinzufügen']);
+      expect(buttonsIn(element.querySelector('form')).map(textOf)).toEqual(['Hinzufügen']);
+      expect(sections().map((section) => textOf(section.querySelector('h2')))).toEqual([
+        'Obst & Gemüse',
+        'Nudeln, Reis & Getreide',
+        'Konserven & Gläser',
+        'Sonstiges',
+      ]);
+      expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual(['1 Stk. onion']);
+      expect(labelsIn(sectionHeaded('Nudeln, Reis & Getreide'))).toEqual(['150 g rice']);
+      expect(labelsIn(sectionHeaded('Sonstiges'))).toEqual(['1 Stk. mystery spice']);
+
+      await addInGerman('Klopapier');
+      expect(statusText()).toBe('„Klopapier“ zu Sonstiges hinzugefügt.');
+      expect(labelsIn(sectionHeaded('Sonstiges'))).toEqual(['Klopapier', '1 Stk. mystery spice']);
+      const added = listed().find((item) => labelOf(item) === 'Klopapier')!;
+      expect(
+        buttonsIn(added).map((button) => [textOf(button), button.getAttribute('aria-label')]),
+      ).toEqual([['Entfernen', 'Klopapier entfernen']]);
+
+      await click(checkboxOf(listed().find((item) => labelOf(item) === '1 Stk. onion')!));
+      expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('Im Wagen (1)');
+      expect(inCart().map(labelOf)).toEqual(['1 Stk. onion']);
+
+      localStorage.removeItem('fooplan.plan');
+      TestBed.resetTestingModule();
+      configure();
+      store = TestBed.inject(PlanStore);
+      await open();
+      const message = element.querySelector('p.empty');
+      expect(textOf(message)).toBe(
+        'Nimm einen Plan an, um zu sehen, was einzukaufen ist. Zum Plan',
+      );
+      const link = message?.querySelector('a');
+      expect(textOf(link ?? null)).toBe('Zum Plan');
+      expect(link?.getAttribute('href')).toBe('/plan');
+    });
+
+    describe('edge cases', () => {
+      it('shows the units pc, tbsp and tsp as "Stk.", "EL" and "TL" in German, keeps g and ml, and writes 2000 g without a thousands separator: "2000 g flour", "1 EL soy sauce", "2 TL lemon juice", "50 ml milk", "3 Stk. egg"; and "2000 g flour", "1 tbsp soy sauce" and "3 pc egg" in English', async () => {
+        const BAKE: Recipe = {
+          name: 'Big Bake',
+          servings: 2,
+          ingredients: [
+            { name: 'flour', amount: 2000, unit: 'g' },
+            { name: 'soy sauce', amount: 15, unit: 'ml' },
+            { name: 'lemon juice', amount: 10, unit: 'ml' },
+            { name: 'milk', amount: 50, unit: 'ml' },
+            { name: 'egg', amount: 3, unit: 'pc' },
+          ],
+          own: true,
+        };
+        storeOwnRecipes(BAKE, PLAIN_RICE);
+        await openAccepted('Big Bake', 'Plain Rice');
+        const english = listed().map(labelOf);
+        expect(english, 'English lines').toEqual(
+          expect.arrayContaining([
+            '2000 g flour',
+            '1 tbsp soy sauce',
+            '2 tsp lemon juice',
+            '3 pc egg',
+          ]),
+        );
+
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await openAccepted('Big Bake', 'Plain Rice');
+        const german = listed().map(labelOf);
+        expect(german, 'German lines').toEqual(
+          expect.arrayContaining([
+            '2000 g flour',
+            '1 EL soy sauce',
+            '2 TL lemon juice',
+            '50 ml milk',
+            '3 Stk. egg',
+            '150 g rice',
+          ]),
+        );
+        expect(german, 'lines').toHaveLength(english.length);
+        expect(german.filter((line) => /\b(pc|tbsp|tsp)\b|\d\.\d/.test(line))).toEqual([]);
+      });
+
+      it('says „Klopapier“ steht schon auf der Liste. for "klopapier" after "Klopapier", and „Klopapier“ ist schon im Wagen. once it is ticked, in German', async () => {
+        storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await openAccepted('Quick Dal', 'Plain Rice');
+        await addInGerman('Klopapier');
+        await addInGerman('klopapier');
+        expect(statusText()).toBe('„Klopapier“ steht schon auf der Liste.');
+        await click(checkboxOf(listed().find((item) => labelOf(item) === 'Klopapier')!));
+        await addInGerman('Klopapier');
+        expect(statusText()).toBe('„Klopapier“ ist schon im Wagen.');
+      });
+    });
+
+    async function addInGerman(text: string) {
+      await type(text);
+      const button = buttonsIn(element).find((candidate) => textOf(candidate) === 'Hinzufügen');
+      expect(button, 'no "Hinzufügen" button').toBeDefined();
+      await click(button!);
     }
   });
 

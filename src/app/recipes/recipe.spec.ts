@@ -1,9 +1,9 @@
-import { servingsText } from './recipe';
+import { servingsMessage } from './recipe';
 
-describe('servingsText', () => {
-  it('reads "1 serving" for 1 and "<N> servings" for any other number', () => {
-    expect(servingsText(1)).toBe('1 serving');
-    expect(servingsText(2)).toBe('2 servings');
-    expect(servingsText(12)).toBe('12 servings');
+describe('servingsMessage', () => {
+  it('reads servings.one for 1 and servings.other with the number for any other number', () => {
+    expect(servingsMessage(1)).toEqual({ id: 'servings.one', params: { servings: 1 } });
+    expect(servingsMessage(2)).toEqual({ id: 'servings.other', params: { servings: 2 } });
+    expect(servingsMessage(12)).toEqual({ id: 'servings.other', params: { servings: 12 } });
   });
 });

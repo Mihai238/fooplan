@@ -5,7 +5,8 @@ import { groceryList, itemKey } from '../../groceries/groceries';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RECIPES } from '../../recipes/recipes';
 import { QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
-import { installDialog, modalDialogs, TABBABLE } from '../../testing';
+import { App } from '../../app';
+import { installDialog, LANGUAGE_KEY, modalDialogs, TABBABLE } from '../../testing';
 import { Plan } from '../plan';
 import { PlanStore, RANDOM, TODAY } from '../plan-store';
 import {
@@ -2699,6 +2700,295 @@ describe('PlanPage', () => {
       const found = days().find((card) => textOf(card.querySelector('h2')) === heading);
       expect(found, `no "${heading}" card`).toBeDefined();
       return found!;
+    }
+  });
+
+  describe('in German (#35)', () => {
+    const SHAKSHUKA_ROW = ['Shakshuka with bread', 'Niçoise salad', 'Chickpea and spinach curry'];
+    // Day 1's dinner cooked extra for day 2's lunch, and day 2's dinner open
+    const COOKED_EXTRA = planOf([
+      planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'), true),
+      planDay('2026-10-25', covered(), open(...SHAKSHUKA_ROW)),
+    ]);
+
+    it('shows the Plan page in German at once, at the same URL and with the same suggestions, when the user clicks "DE" in the header, saving de and setting lang="de" with "DE" pressed: "Plan", the steppers "Tage" and "Personen", the arrows "Ein Tag weniger", "Ein Tag mehr", "Eine Person weniger" and "Eine Person mehr", the meals "Mittagessen" and "Abendessen", times like "15 Minuten", "Andere Vorschläge", "Neuer Plan" and "Plan annehmen"; and every text in English again on "EN"', async () => {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter([{ path: '**', component: PlanPage }]),
+          { provide: RANDOM, useValue: seededRandom(1) },
+          { provide: TODAY, useValue: () => today },
+        ],
+      });
+      const app = TestBed.createComponent(App);
+      await TestBed.inject(Router).navigateByUrl('/plan');
+      await app.whenStable();
+      element = app.nativeElement as HTMLElement;
+      store = TestBed.inject(PlanStore);
+      const plan = store.plan();
+      const english = shownTexts();
+      expect(english.text, 'English times').toContain('15 minutes');
+
+      await clickIn(app, headerButton('Deutsch'));
+      expect(localStorage.getItem(LANGUAGE_KEY), 'saved language').toBe('de');
+      expect(document.documentElement.lang).toBe('de');
+      expect(headerButton('Deutsch').getAttribute('aria-pressed'), '"DE" pressed').toBe('true');
+      expect(headerButton('English').getAttribute('aria-pressed'), '"EN" pressed').toBe('false');
+      expect(router().url).toBe('/plan');
+      expect(textOf(element.querySelector('main h1'))).toBe('Plan');
+      expect(
+        Array.from(element.querySelectorAll('[role="spinbutton"]')).map(labelOf),
+        'stepper labels',
+      ).toEqual(['Tage', 'Personen']);
+      expect(
+        Array.from(element.querySelectorAll('button.step')).map((step) => nameOf(step)),
+        'arrows',
+      ).toEqual(['Ein Tag weniger', 'Ein Tag mehr', 'Eine Person weniger', 'Eine Person mehr']);
+      for (const day of days()) {
+        expect(
+          Array.from(day.querySelectorAll('article.meal h3')).map(textOf),
+          textOf(day.querySelector('h2')),
+        ).toEqual(['Mittagessen', 'Abendessen']);
+      }
+      const times = Array.from(element.querySelectorAll('span.minutes')).map(textOf);
+      expect(
+        times.filter((time) => !/^\d+ Minuten$/.test(time)),
+        'times',
+      ).toEqual([]);
+      expect(times).toContain('15 Minuten');
+      expect(buttonTexts().filter((text) => text === 'Andere Vorschläge')).toHaveLength(10);
+      expect(button(element, 'Neuer Plan').closest('div.toolbar'), '"Neuer Plan"').not.toBeNull();
+      expect(button(element, 'Plan annehmen').disabled).toBe(true);
+      expect(store.plan(), 'plan').toEqual(plan);
+      expect(
+        Array.from(element.querySelectorAll<HTMLButtonElement>('button.suggestion')).map(recipeOf),
+      ).toEqual(plan.days.flatMap((day) => [...day.lunch.suggestions, ...day.dinner.suggestions]));
+      const german = textOf(element);
+      for (const english of ['Lunch', 'Dinner', 'minutes', 'Other suggestions', 'New plan']) {
+        expect(german, 'English left').not.toContain(english);
+      }
+
+      await clickIn(app, headerButton('English'));
+      expect(localStorage.getItem(LANGUAGE_KEY), 'saved language').toBe('en');
+      expect(document.documentElement.lang).toBe('en');
+      expect(router().url).toBe('/plan');
+      expect(shownTexts()).toEqual(english);
+      expect(store.plan(), 'plan after "EN"').toEqual(plan);
+    });
+
+    it('heads the 5 days of a German plan from 2026-10-25 "So., 25. Okt." to "Do., 29. Okt."; with a meal picked, heads the "Neuer Plan" dialog "Neuen Plan starten?", says "Der Plan für So., 25. Okt. – Do., 29. Okt. mit 1 von 10 gewählten Mahlzeiten wird verworfen." and "Der neue Plan beginnt heute, für 5 Tage und 2 Personen." with "Plan behalten" and "Neuen Plan starten"; and sums up an accepted plan as "1 Tag für 1 Person" and "2 Tage für 2 Personen"', async () => {
+      today = '2026-10-25';
+      localStorage.removeItem('fooplan.plan');
+      await openInGerman();
+      expect(days().map((day) => textOf(day.querySelector('h2')))).toEqual([
+        'So., 25. Okt.',
+        'Mo., 26. Okt.',
+        'Di., 27. Okt.',
+        'Mi., 28. Okt.',
+        'Do., 29. Okt.',
+      ]);
+
+      await pickFirstSuggestion(0);
+      await click(button(element, 'Neuer Plan'));
+      const dialog = openDialog();
+      expect(textOf(dialog.querySelector('h2'))).toBe('Neuen Plan starten?');
+      expect(labelOf(dialog), 'dialog name').toBe('Neuen Plan starten?');
+      expect(textOf(dialog.querySelector('#new-plan-lost'))).toBe(
+        'Der Plan für So., 25. Okt. – Do., 29. Okt. mit 1 von 10 gewählten Mahlzeiten wird verworfen.',
+      );
+      expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
+        'Der neue Plan beginnt heute, für 5 Tage und 2 Personen.',
+      );
+      expect(buttonTexts(dialog)).toEqual(['Plan behalten', 'Neuen Plan starten']);
+      await click(button(dialog, 'Plan behalten'));
+
+      await openWith(
+        planOf([planDay('2026-10-25', picked('Spaghetti carbonara'), picked('Potato goulash'))], {
+          people: 1,
+          accepted: true,
+        }),
+      );
+      expect(textOf(element.querySelector('.summary'))).toBe('1 Tag für 1 Person');
+      await openWith(
+        planOf(
+          [
+            planDay('2026-10-25', picked('Spaghetti carbonara'), picked('Potato goulash')),
+            planDay('2026-10-26', picked('Fish tacos'), picked('Shakshuka with bread')),
+          ],
+          { accepted: true },
+        ),
+      );
+      expect(textOf(element.querySelector('.summary'))).toBe('2 Tage für 2 Personen');
+    });
+
+    describe('edge cases', () => {
+      it('shows the unticked checkbox "Kinderfreundlich", and while 14 kid-friendly recipes are suggested the note "Weniger als 15 kinderfreundliche Rezepte werden vorgeschlagen, deshalb kann der Plan nicht kinderfreundlich sein."', async () => {
+        await openInGerman();
+        const checkbox = element.querySelector<HTMLInputElement>('input#kid-friendly');
+        expect(checkbox, 'no #kid-friendly checkbox').not.toBeNull();
+        expect(textOf(checkbox!.closest('label'))).toBe('Kinderfreundlich');
+
+        leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+        await fixture.whenStable();
+        expect(textOf(element.querySelector('p.note#kid-friendly-note'))).toBe(
+          'Weniger als 15 kinderfreundliche Rezepte werden vorgeschlagen, deshalb kann der Plan nicht kinderfreundlich sein.',
+        );
+      });
+
+      it('sums up an accepted kid-friendly plan as "1 Tag für 2 Personen, kinderfreundlich", and says "Der neue Plan beginnt heute, für 5 Tage und 2 Personen, kinderfreundlich." in its "Neuer Plan" dialog, with "Dieser Plan ist angenommen.", "Die Häkchen auf der Einkaufsliste werden gelöscht." and "Die selbst hinzugefügten Einkäufe werden entfernt."', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        const saved = planOf(
+          [planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'))],
+          { accepted: true, kidFriendly: true },
+        );
+        await openWith(saved);
+        expect(textOf(element.querySelector('.summary'))).toBe(
+          '1 Tag für 2 Personen, kinderfreundlich',
+        );
+        store.toggleTicked(itemKey(groceryList(store.plan(), RECIPES)[0]));
+        store.addItem('Klopapier');
+        await fixture.whenStable();
+        await click(button(element, 'Neuer Plan'));
+        const dialog = openDialog();
+        expect(textOf(dialog.querySelector('#new-plan-lost'))).toBe(
+          'Der Plan für Sa., 24. Okt. mit 2 von 2 gewählten Mahlzeiten wird verworfen. Dieser Plan ist angenommen. Die Häkchen auf der Einkaufsliste werden gelöscht. Die selbst hinzugefügten Einkäufe werden entfernt.',
+        );
+        expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
+          'Der neue Plan beginnt heute, für 5 Tage und 2 Personen, kinderfreundlich.',
+        );
+      });
+
+      it('says the single date "Sa., 24. Okt." without a range for a German 1-day plan with "1 von 2 gewählten Mahlzeiten", and "1 Person" for a plan for 1, never "Personen"', async () => {
+        await openInGerman();
+        await setDays(1);
+        await setPeople(1);
+        expect(days().map((day) => textOf(day.querySelector('h2')))).toEqual(['Sa., 24. Okt.']);
+        await pickFirstSuggestion(0);
+        await click(button(element, 'Neuer Plan'));
+        const dialog = openDialog();
+        expect(textOf(dialog.querySelector('#new-plan-lost'))).toBe(
+          'Der Plan für Sa., 24. Okt. mit 1 von 2 gewählten Mahlzeiten wird verworfen.',
+        );
+        expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
+          'Der neue Plan beginnt heute, für 5 Tage und 1 Person.',
+        );
+      });
+
+      it('sums up accepted German plans as "1 Tag für 2 Personen" and "2 Tage für 1 Person", choosing each word by its own number', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await openWith(
+          planOf([planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'))], {
+            accepted: true,
+          }),
+        );
+        expect(textOf(element.querySelector('.summary'))).toBe('1 Tag für 2 Personen');
+        await openWith(
+          planOf(
+            [
+              planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash')),
+              planDay('2026-10-25', picked('Fish tacos'), picked('Shakshuka with bread')),
+            ],
+            { people: 1, accepted: true },
+          ),
+        );
+        expect(textOf(element.querySelector('.summary'))).toBe('2 Tage für 1 Person');
+      });
+
+      it('shows "Auswärts essen" on an open German meal, and "Außer Haus" with "Rückgängig" once the user clicks it', async () => {
+        await openInGerman();
+        const lunch = meal(0);
+        expect(buttonTexts(lunch).slice(-2)).toEqual(['Andere Vorschläge', 'Auswärts essen']);
+        await click(button(lunch, 'Auswärts essen'));
+        expect(textOf(meal(0).querySelector('p.recipe'))).toBe('Außer Haus');
+        expect(buttonTexts(meal(0))).toEqual(['Rückgängig']);
+      });
+
+      it('shows a German plan\'s "Mehr kochen für das Mittagessen morgen", "Reste: Potato goulash", the times "N Minuten", the "Rezept" links named "Rezept für <recipe>", the "×" named "<recipe> nicht vorschlagen" with the title "Nicht vorschlagen", and its dialog "Shakshuka with bread nicht mehr vorschlagen?" with its text, "Weiter vorschlagen" and "Nicht vorschlagen"; and "Es wird mehr gekocht für das Mittagessen morgen" once accepted', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await openWith(COOKED_EXTRA);
+        expect(textOf(meal(1).querySelector('label.cook-extra'))).toBe(
+          'Mehr kochen für das Mittagessen morgen',
+        );
+        expect(textOf(meal(1).querySelector('p.minutes'))).toBe(
+          `${minutesOf('Potato goulash')} Minuten`,
+        );
+        expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Reste: Potato goulash');
+        const rows = Array.from(meal(3).querySelectorAll<HTMLElement>('div.option'));
+        expect(rows.map((row) => Array.from(row.children).map((child) => nameOf(child)))).toEqual(
+          SHAKSHUKA_ROW.map((recipe) => [
+            `${recipe} ${minutesOf(recipe)} Minuten`,
+            `Rezept für ${recipe}`,
+            `${recipe} nicht vorschlagen`,
+          ]),
+        );
+        expect(rows.map((row) => textOf(row.querySelector('a.recipe-link')))).toEqual([
+          'Rezept',
+          'Rezept',
+          'Rezept',
+        ]);
+        const cross = rows[0].children[2] as HTMLButtonElement;
+        expect(cross.getAttribute('title')).toBe('Nicht vorschlagen');
+        expect(buttonTexts(meal(0))).toEqual(['Rückgängig']);
+
+        await click(cross);
+        const dialog = openDialog();
+        expect(textOf(dialog.querySelector('h2'))).toBe(
+          'Shakshuka with bread nicht mehr vorschlagen?',
+        );
+        expect(textOf(dialog.querySelector('p'))).toBe(
+          'Ein anderes Rezept nimmt seinen Platz ein, und es wird nicht mehr vorgeschlagen. „Wieder vorschlagen“ auf der Seite Rezepte holt es zurück.',
+        );
+        expect(buttonTexts(dialog)).toEqual(['Weiter vorschlagen', 'Nicht vorschlagen']);
+        await click(button(dialog, 'Weiter vorschlagen'));
+
+        await openWith(
+          planOf(
+            [
+              planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'), true),
+              planDay('2026-10-25', covered(), picked('Shakshuka with bread')),
+            ],
+            { accepted: true },
+          ),
+        );
+        expect(Array.from(element.querySelectorAll('p.note')).map(textOf)).toEqual([
+          'Es wird mehr gekocht für das Mittagessen morgen',
+        ]);
+        expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Reste: Potato goulash');
+      });
+    });
+
+    async function openInGerman() {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await reload();
+    }
+
+    function minutesOf(recipe: string): number {
+      const minutes = RECIPES.find((candidate) => candidate.name === recipe)?.minutes;
+      expect(minutes, `no time for "${recipe}"`).toBeDefined();
+      return minutes!;
+    }
+
+    function headerButton(name: 'English' | 'Deutsch'): HTMLButtonElement {
+      const found = Array.from(element.querySelectorAll('header button')).find(
+        (candidate) => candidate.getAttribute('aria-label') === name,
+      );
+      expect(found, `no "${name}" button in the header`).toBeDefined();
+      return found as HTMLButtonElement;
+    }
+
+    async function clickIn(app: ComponentFixture<App>, target: HTMLElement) {
+      target.click();
+      await app.whenStable();
+    }
+
+    // The texts, accessible names and titles the page shows, in their order
+    function shownTexts() {
+      const all = Array.from(element.querySelectorAll('*'));
+      return {
+        text: textOf(element),
+        labels: all.map((node) => node.getAttribute('aria-label')).filter(Boolean),
+        titles: all.map((node) => node.getAttribute('title')).filter(Boolean),
+      };
     }
   });
 

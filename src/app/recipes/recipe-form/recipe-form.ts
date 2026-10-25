@@ -9,6 +9,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { map } from 'rxjs';
+import { LanguageStore } from '../../language-store';
 import { PlanStore } from '../../plan/plan-store';
 import {
   checkRecipe,
@@ -42,6 +43,7 @@ export class RecipeForm {
   private readonly recipes = inject(RecipeStore);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
+  protected readonly language = inject(LanguageStore);
   private nextId = 0;
   private saved = false;
   protected readonly units = UNITS;

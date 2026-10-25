@@ -1,18 +1,38 @@
 <header>
   <span class="brand">Fooplan</span>
   <nav>
-    <a routerLink="/plan" routerLinkActive="active" ariaCurrentWhenActive="page">Plan</a>
+    <a routerLink="/plan" routerLinkActive="active" ariaCurrentWhenActive="page">
+      {{ language.t('nav.plan') }}
+    </a>
     <a routerLink="/groceries" routerLinkActive="active" ariaCurrentWhenActive="page">
-      Grocery list
+      {{ language.t('nav.groceries') }}
     </a>
     <a
       routerLink="/recipes"
       [class.active]="inRecipes()"
       [attr.aria-current]="onRecipesPage() ? 'page' : inRecipes() ? true : null"
     >
-      Recipes
+      {{ language.t('nav.recipes') }}
     </a>
   </nav>
+  <div class="language" role="group" [attr.aria-label]="language.t('language.group')">
+    <button
+      type="button"
+      [attr.aria-label]="language.t('language.en')"
+      [attr.aria-pressed]="language.language() === 'en'"
+      (click)="showLanguage('en')"
+    >
+      EN
+    </button>
+    <button
+      type="button"
+      [attr.aria-label]="language.t('language.de')"
+      [attr.aria-pressed]="language.language() === 'de'"
+      (click)="showLanguage('de')"
+    >
+      DE
+    </button>
+  </div>
 </header>
 <main>
   <router-outlet />

@@ -83,6 +83,24 @@ describe('stepParts', () => {
     }
   });
 
+  it('writes each amount with the given showAmount, in parentheses, passing it the ingredient as stored', () => {
+    const shown: unknown[] = [];
+    const showAmount = (item: { amount: number; unit: Unit }) => {
+      shown.push(item);
+      return `${item.amount} ${item.unit}!`;
+    };
+    expect(
+      stepParts('Fry the onion in the oil.', [I('onion', 2, 'pc'), I('oil', 15, 'ml')], showAmount),
+    ).toEqual([
+      { text: 'Fry the onion' },
+      { amount: '(2 pc!)' },
+      { text: ' in the oil' },
+      { amount: '(15 ml!)' },
+      { text: '.' },
+    ]);
+    expect(shown).toEqual([I('onion', 2, 'pc'), I('oil', 15, 'ml')]);
+  });
+
   it('joins the text parts of every step of the 44 built-in recipes back to the step text, and gives every ingredient of a recipe its amount after a mention in at least one of its steps', () => {
     expect(RECIPES.length, 'no recipes loaded').toBeGreaterThan(0);
     const changed: string[] = [];

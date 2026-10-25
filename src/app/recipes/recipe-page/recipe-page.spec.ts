@@ -14,7 +14,7 @@ import {
   planOf,
   seededRandom,
 } from '../../plan/testing';
-import { installDialog, modalDialogs } from '../../testing';
+import { installDialog, LANGUAGE_KEY, modalDialogs } from '../../testing';
 import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
 import { RecipeStore } from '../recipe-store';
@@ -1309,6 +1309,145 @@ describe('RecipePage', () => {
     }
   });
 
+  describe('in German (#35)', () => {
+    const SPAGHETTI_MIT_EI = ownRecipe('Spaghetti mit Ei');
+    let uninstallDialog: () => void;
+
+    beforeAll(() => {
+      uninstallDialog = installDialog();
+    });
+
+    afterAll(() => {
+      uninstallDialog();
+    });
+
+    beforeEach(() => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+    });
+
+    it('shows "Zurück", "2 Portionen", the switch "Schritt für Schritt" / "Alle Schritte" in a group named "Schritte anzeigen", "Schritt 1 von 7", "Zurück" disabled and "Weiter" at /recipes/spaghetti-pomodoro, and "Fertig" on the last step; and "Dein Rezept", "Bearbeiten", "Löschen" and the dialog "Spaghetti mit Ei löschen?" with "Rezept behalten" and "Rezept löschen" on the page of an own recipe', async () => {
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      const back = page().querySelector('a.back');
+      expect(textOf(back)).toBe('Zurück');
+      expect(back?.getAttribute('href')).toBe('/recipes');
+      expect(textOf(page().querySelector('p.servings'))).toBe('2 Portionen');
+      const group = page().querySelector('div.steps [role="group"]');
+      expect(group?.getAttribute('aria-label')).toBe('Schritte anzeigen');
+      expect(
+        Array.from(group?.querySelectorAll('button') ?? []).map((viewButton) => [
+          textOf(viewButton),
+          viewButton.getAttribute('aria-pressed'),
+        ]),
+      ).toEqual([
+        ['Schritt für Schritt', 'true'],
+        ['Alle Schritte', 'false'],
+      ]);
+      expect(textOf(page().querySelector('p.counter'))).toBe('Schritt 1 von 7');
+      expect(button('Zurück').disabled).toBe(true);
+      await stepToLast(
+        stepsOf('Spaghetti pomodoro').map(() => ''),
+        'Weiter',
+      );
+      expect(textOf(page().querySelector('p.counter'))).toBe('Schritt 7 von 7');
+      const done = controlsLabelled('Fertig');
+      expect(done.map((control) => control.tagName)).toEqual(['A']);
+
+      TestBed.resetTestingModule();
+      configure();
+      storeOwnRecipes(SPAGHETTI_MIT_EI);
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-mit-ei');
+      expect(textOf(page().querySelector('p.own'))).toBe('Dein Rezept');
+      const edit = page().querySelector('div.manage a');
+      expect(textOf(edit)).toBe('Bearbeiten');
+      expect(edit?.getAttribute('href')).toBe('/recipes/spaghetti-mit-ei/edit');
+      await click(button('Löschen'));
+      const dialog = page().querySelector('dialog[open]');
+      expect(dialog, 'no open dialog').not.toBeNull();
+      expect(textOf(dialog!.querySelector('h2'))).toBe('Spaghetti mit Ei löschen?');
+      expect(textOf(dialog!.querySelector('p'))).toBe(
+        'Es verschwindet von der Seite Rezepte und wird nicht mehr vorgeschlagen. Das lässt sich nicht rückgängig machen.',
+      );
+      expect(Array.from(dialog!.querySelectorAll('button')).map(textOf)).toEqual([
+        'Rezept behalten',
+        'Rezept löschen',
+      ]);
+    });
+
+    describe('edge cases', () => {
+      it('shows the units of the step amounts in German, "Peel and thinly slice the garlic cloves (2 Stk.)." and "(2 EL)" for the olive oil, keeping "(200 g)" and the English step text, in the step view and in "Alle Schritte"', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+        expect(amountsIn(stepParagraph())).toEqual(['(200 g)']);
+        await click(button('Weiter'));
+        expect(textOf(stepParagraph())).toBe('Peel and thinly slice the garlic cloves (2 Stk.).');
+        expect(amountsIn(stepParagraph())).toEqual(['(2 Stk.)']);
+        await click(button('Weiter'));
+        expect(amountsIn(stepParagraph())).toContain('(2 EL)');
+
+        const allSteps = Array.from(page().querySelectorAll('div.view button')).find(
+          (viewButton) => textOf(viewButton) === 'Alle Schritte',
+        ) as HTMLButtonElement | undefined;
+        expect(allSteps, 'no "Alle Schritte" button').toBeDefined();
+        await click(allSteps!);
+        const items = Array.from(page().querySelectorAll<HTMLElement>('ol.all > li'));
+        expect(textOf(items[1])).toBe('Peel and thinly slice the garlic cloves (2 Stk.).');
+        const amounts = items.flatMap(amountsIn);
+        expect(amounts.filter((amount) => /\b(pc|tbsp|tsp)\b/.test(amount))).toEqual([]);
+      });
+
+      it('shows the ingredients with German units and decimal commas, "0,5 Stk. red onion" on the page of "Greek salad with feta and bread" and "2 EL olive oil" on "Spaghetti pomodoro"', async () => {
+        harness = await RouterTestingHarness.create('/recipes/greek-salad-with-feta-and-bread');
+        expect(ingredientLines()).toContain('0,5 Stk. red onion');
+        expect(ingredientLines().filter((line) => /\b(pc|tbsp|tsp)\b|\d\.\d/.test(line))).toEqual(
+          [],
+        );
+        await harness.navigateByUrl('/recipes/spaghetti-pomodoro');
+        expect(ingredientLines()).toContain('2 EL olive oil');
+      });
+
+      it('shows "Nicht vorschlagen", then "Nicht vorgeschlagen" and "Wieder vorschlagen", "1 Portion" for an own recipe for 1, and "Dieses Rezept ist in deinem Plan. Mach die Wahl rückgängig oder starte einen neuen Plan, um es zu löschen." while it is picked', async () => {
+        storeOwnRecipes(ownRecipe('Solo Dal', 1));
+        localStorage.setItem(
+          'fooplan.plan',
+          JSON.stringify(
+            planOf([
+              day(
+                '2026-10-24',
+                picked('Solo Dal', [
+                  'Shakshuka with bread',
+                  'Solo Dal',
+                  'Chickpea and spinach curry',
+                ]),
+                open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
+              ),
+            ]),
+          ),
+        );
+        harness = await RouterTestingHarness.create('/recipes/solo-dal');
+        expect(TestBed.inject(PlanStore).plan().days[0].lunch.recipe, 'plan not loaded').toBe(
+          'Solo Dal',
+        );
+        expect(textOf(page().querySelector('p.servings'))).toBe('1 Portion');
+        expect(textOf(page().querySelector('div.manage p.note'))).toBe(
+          'Dieses Rezept ist in deinem Plan. Mach die Wahl rückgängig oder starte einen neuen Plan, um es zu löschen.',
+        );
+        await click(button('Nicht vorschlagen'));
+        expect(textOf(page().querySelector('p.suggest'))).toBe(
+          'Nicht vorgeschlagen Wieder vorschlagen',
+        );
+      });
+    });
+
+    function stepParagraph(): HTMLElement {
+      const steps = page().querySelectorAll<HTMLElement>('p.step');
+      expect(steps, 'p.step').toHaveLength(1);
+      return steps[0];
+    }
+
+    function amountsIn(element: HTMLElement): string[] {
+      return Array.from(element.querySelectorAll('span.amount')).map(textOf);
+    }
+  });
+
   function configure() {
     TestBed.configureTestingModule({
       providers: [
@@ -1319,8 +1458,8 @@ describe('RecipePage', () => {
     });
   }
 
-  async function stepToLast(steps: string[]) {
-    for (let step = 1; step < steps.length; step++) await click(button('Next'));
+  async function stepToLast(steps: string[], next = 'Next') {
+    for (let step = 1; step < steps.length; step++) await click(button(next));
   }
 
   async function click(target: HTMLElement) {

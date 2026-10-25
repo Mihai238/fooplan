@@ -27,6 +27,10 @@ export interface ShoppingView {
   inCart: ListItem[];
 }
 
+export type AddFeedback =
+  | { id: 'groceries.added'; params: { item: string; section: Section } }
+  | { id: 'groceries.alreadyInCart' | 'groceries.alreadyOnList'; params: { item: string } };
+
 export function listItems(plan: Plan, recipes: readonly Recipe[]): ListItem[] {
   return [...groceryList(plan, recipes), ...addedItems(plan)];
 }
@@ -60,18 +64,18 @@ export function addedItems(plan: Plan): AddedItem[] {
 }
 
 // Takes the plan as it is before addItem, and finds an item already added the way addItem does
-export function addFeedback(plan: Plan, text: string): string {
+export function addFeedback(plan: Plan, text: string): AddFeedback | null {
   const item = text.trim();
   if (!plan.accepted || item === '') {
-    return '';
+    return null;
   }
   const stored = plan.added.find((other) => sameItem(other, item));
   if (stored === undefined) {
-    return `Added "${item}" to ${addedSection(item)}.`;
+    return { id: 'groceries.added', params: { item, section: addedSection(item) } };
   }
   return plan.ticked.includes(addedKey(stored))
-    ? `"${stored}" is already in the cart.`
-    : `"${stored}" is already on the list.`;
+    ? { id: 'groceries.alreadyInCart', params: { item: stored } }
+    : { id: 'groceries.alreadyOnList', params: { item: stored } };
 }
 
 // Ticks whose key isn't on the list, e.g. after a deploy changed the recipes, are ignored

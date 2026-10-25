@@ -1,14 +1,14 @@
-<h1>Recipes</h1>
-<a class="add" routerLink="/add-recipe">Add a recipe</a>
+<h1>{{ language.t('recipes.title') }}</h1>
+<a class="add" routerLink="/add-recipe">{{ language.t('recipes.addRecipe') }}</a>
 <div class="field">
-  <label for="search">Search recipes</label>
+  <label for="search">{{ language.t('recipes.search') }}</label>
   <input #searchInput type="search" id="search" (input)="query.set(searchInput.value)" />
 </div>
 <!-- Screen readers announce changes inside a live region already on the page, not a region
      added along with its text, so this one stays, empty while the search is -->
 <p class="status" role="status">{{ matchStatus() }}</p>
 @if (!store.canRemove()) {
-  <p class="note">At least {{ minSuggested }} recipes stay suggested, so no more can be removed.</p>
+  <p class="note">{{ language.t('recipes.limit', { min: minSuggested }) }}</p>
 }
 @if (recipes().length > 0) {
   <div class="grid">
@@ -19,39 +19,40 @@
         </h2>
         <p class="servings">{{ servingsText(recipe.servings) }}</p>
         @if (recipe.own) {
-          <p class="own">Your recipe</p>
+          <p class="own">{{ language.t('recipes.own') }}</p>
         }
         @let removed = store.removed().includes(recipe.name);
         @if (removed || store.canRemove()) {
           <p class="suggest">
             @if (removed) {
-              <span>Not suggested</span>
+              <span>{{ language.t('recipes.notSuggested') }}</span>
               <button
                 #suggestAgainButton
                 type="button"
                 class="link"
-                [attr.aria-label]="'Suggest again: ' + recipe.name"
+                [attr.aria-label]="
+                  language.t('recipes.suggestAgainRecipe', { recipe: recipe.name })
+                "
                 (click)="suggestAgain(recipe.name, suggestAgainButton)"
               >
-                Suggest again
+                {{ language.t('recipes.suggestAgain') }}
               </button>
             } @else {
               <button
                 #dontSuggestButton
                 type="button"
                 class="link"
-                [attr.aria-label]="'Don\'t suggest ' + recipe.name"
+                [attr.aria-label]="language.t('recipes.dontSuggestRecipe', { recipe: recipe.name })"
                 (click)="dontSuggest(recipe.name, dontSuggestButton)"
               >
-                Don't suggest
+                {{ language.t('recipes.dontSuggest') }}
               </button>
             }
           </p>
         }
         <ul>
           @for (ingredient of recipe.ingredients; track ingredient.name) {
-            @let shown = displayAmount(ingredient);
-            <li>{{ shown.amount }} {{ shown.unit }} {{ ingredient.name }}</li>
+            <li>{{ language.amount(ingredient) }} {{ ingredient.name }}</li>
           }
         </ul>
       </article>

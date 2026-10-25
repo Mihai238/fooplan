@@ -1,3 +1,4 @@
+import type { MessageId } from '../i18n';
 import { Ingredient, Recipe, Unit } from './recipe';
 import { recipeSlug } from './recipe-slug';
 
@@ -16,18 +17,18 @@ export interface IngredientDraft {
 export type RecipeCheck = { recipe: Recipe } | { problems: RecipeProblems };
 
 export interface RecipeProblems {
-  name?: string;
-  servings?: string;
-  // "Add at least one ingredient.", shown below the legend
-  ingredients?: string;
+  name?: MessageId;
+  servings?: MessageId;
+  // form.atLeastOneIngredient, shown below the legend
+  ingredients?: MessageId;
   // One entry per row of the draft, in its order; a row without problems, or ignored as empty, has
   // an empty one
   rows: RowProblems[];
 }
 
 export interface RowProblems {
-  amount?: string;
-  name?: string;
+  amount?: MessageId;
+  name?: MessageId;
 }
 
 export const MAX_INGREDIENTS = 30;
@@ -56,14 +57,14 @@ export function checkRecipe(draft: RecipeDraft, recipes: readonly Recipe[]): Rec
     seen.push(ingredient);
     ingredients.push({ name: ingredient, amount: value, unit: row.unit });
     return {
-      ...(amountOk ? {} : { amount: 'Enter an amount above 0.' }),
+      ...(amountOk ? {} : { amount: 'form.amountAboveZero' }),
       ...(ingredientProblem ? { name: ingredientProblem } : {}),
     };
   });
   const problems: RecipeProblems = {
     ...(nameProblem ? { name: nameProblem } : {}),
-    ...(servingsOk ? {} : { servings: 'Enter a whole number from 1 to 12.' }),
-    ...(seen.length ? {} : { ingredients: 'Add at least one ingredient.' }),
+    ...(servingsOk ? {} : { servings: 'form.servingsRange' }),
+    ...(seen.length ? {} : { ingredients: 'form.atLeastOneIngredient' }),
     rows,
   };
   if (hasProblems(problems)) {
@@ -72,32 +73,32 @@ export function checkRecipe(draft: RecipeDraft, recipes: readonly Recipe[]): Rec
   return { recipe: { name, servings: +servings, ingredients } };
 }
 
-function checkName(name: string, recipes: readonly Recipe[]): string | undefined {
+function checkName(name: string, recipes: readonly Recipe[]): MessageId | undefined {
   if (!name) {
-    return 'Enter a name.';
+    return 'form.enterName';
   }
   if (name.length > MAX_NAME) {
-    return 'Use at most 60 characters.';
+    return 'form.nameTooLong';
   }
   const slug = recipeSlug(name);
   if (!slug) {
-    return 'Use at least one letter or digit.';
+    return 'form.nameNeedsLetter';
   }
   if (recipes.some((recipe) => recipeSlug(recipe.name) === slug)) {
-    return 'A recipe with this name already exists.';
+    return 'form.nameExists';
   }
   return undefined;
 }
 
-function checkIngredient(name: string, earlier: readonly string[]): string | undefined {
+function checkIngredient(name: string, earlier: readonly string[]): MessageId | undefined {
   if (!name) {
-    return 'Enter an ingredient.';
+    return 'form.enterIngredient';
   }
   if (name.length > MAX_INGREDIENT) {
-    return 'Use at most 40 characters.';
+    return 'form.ingredientTooLong';
   }
   if (earlier.includes(name)) {
-    return 'This ingredient is already in the list.';
+    return 'form.ingredientExists';
   }
   return undefined;
 }

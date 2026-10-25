@@ -1,3 +1,5 @@
+export const LANGUAGE_KEY = 'fooplan.language';
+
 export const TABBABLE =
   'button:not([disabled]), a[href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 

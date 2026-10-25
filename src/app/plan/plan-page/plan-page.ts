@@ -1,6 +1,8 @@
 import { DatePipe } from '@angular/common';
 import { afterNextRender, Component, computed, inject, Injector, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { MessageId } from '../../i18n';
+import { Language, LanguageStore } from '../../language-store';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RecipeStore } from '../../recipes/recipe-store';
 import {
@@ -16,6 +18,8 @@ import {
 } from '../plan';
 import { PlanStore, TODAY } from '../plan-store';
 
+const DATE_FORMATS: Record<Language, string> = { en: 'EEE d MMM', de: 'EEE, d. MMM' };
+
 interface RemovalRow {
   dontSuggest: HTMLButtonElement;
   suggestion: HTMLButtonElement;
@@ -29,6 +33,7 @@ interface RemovalRow {
 })
 export class PlanPage {
   protected readonly store = inject(PlanStore);
+  protected readonly language = inject(LanguageStore);
   private readonly recipes = inject(RecipeStore);
   private readonly readToday = inject(TODAY);
   private readonly injector = inject(Injector);
@@ -38,7 +43,24 @@ export class PlanPage {
   protected readonly today = signal(this.readToday());
   protected readonly complete = computed(() => isComplete(this.plan()));
   protected readonly filled = computed(() => filledMeals(this.plan()));
-  protected readonly defaultDays = DEFAULT_DAYS;
+  protected readonly dateFormat = computed(() => DATE_FORMATS[this.language.language()]);
+  protected readonly summary = computed(() => {
+    const { days, people, kidFriendly } = this.plan();
+    return this.language.t(kidFriendly ? 'plan.summaryKidFriendly' : 'plan.summary', {
+      days: days.length,
+      dayWord: this.language.t(days.length === 1 ? 'day.one' : 'day.other'),
+      people,
+      personWord: this.personWord(people),
+    });
+  });
+  protected readonly nextPlan = computed(() => {
+    const people = this.plan().people;
+    return this.language.t(this.store.kidFriendly() ? 'newPlan.nextKidFriendly' : 'newPlan.next', {
+      days: DEFAULT_DAYS,
+      people,
+      personWord: this.personWord(people),
+    });
+  });
   protected readonly minDays = MIN_DAYS;
   protected readonly maxDays = MAX_DAYS;
   protected readonly minPeople = MIN_PEOPLE;
@@ -48,9 +70,9 @@ export class PlanPage {
   protected readonly fewestPeople = computed(() => this.plan().people <= MIN_PEOPLE);
   protected readonly kidFriendlyDisabled = computed(() => !this.store.canBeKidFriendly());
   protected readonly recipeSlug = recipeSlug;
-  protected readonly meals: readonly { kind: MealKind; label: string }[] = [
-    { kind: 'lunch', label: 'Lunch' },
-    { kind: 'dinner', label: 'Dinner' },
+  protected readonly meals: readonly { kind: MealKind; label: MessageId }[] = [
+    { kind: 'lunch', label: 'meal.lunch' },
+    { kind: 'dinner', label: 'meal.dinner' },
   ];
   private readonly minutesByRecipe = computed(
     () => new Map(this.recipes.all().map((recipe) => [recipe.name, recipe.minutes])),
@@ -156,6 +178,10 @@ export class PlanPage {
     // (element.click(), some assistive technology) close the dialog right after reopening
     this.pressedOnBackdrop = false;
     dialog.showModal();
+  }
+
+  private personWord(people: number): string {
+    return this.language.t(people === 1 ? 'person.one' : 'person.other');
   }
 
   private startPlan(): void {

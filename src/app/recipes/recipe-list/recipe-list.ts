@@ -1,9 +1,9 @@
 import { afterNextRender, Component, computed, inject, Injector, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LanguageStore } from '../../language-store';
 import { MIN_SUGGESTED } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
-import { displayAmount } from '../amount';
-import { servingsText } from '../recipe';
+import { servingsMessage } from '../recipe';
 import { searchRecipes } from '../recipe-search';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
@@ -18,16 +18,18 @@ export class RecipeList {
   protected readonly store = inject(PlanStore);
   private readonly injector = inject(Injector);
   private readonly recipeStore = inject(RecipeStore);
+  protected readonly language = inject(LanguageStore);
   protected readonly query = signal('');
   private readonly search = computed(() => this.query().trim());
   protected readonly recipes = computed(() => searchRecipes(this.recipeStore.all(), this.search()));
-  protected readonly matchStatus = computed(() =>
-    matchStatusText(this.search(), this.recipes().length),
-  );
-  protected readonly displayAmount = displayAmount;
+  protected readonly matchStatus = computed(() => this.matchStatusText());
   protected readonly recipeSlug = recipeSlug;
-  protected readonly servingsText = servingsText;
   protected readonly minSuggested = MIN_SUGGESTED;
+
+  protected servingsText(servings: number): string {
+    const { id, params } = servingsMessage(servings);
+    return this.language.t(id, params);
+  }
 
   protected dontSuggest(name: string, button: HTMLButtonElement): void {
     this.store.removeRecipe(name);
@@ -39,6 +41,20 @@ export class RecipeList {
     this.focusReplacement(button);
   }
 
+  private matchStatusText(): string {
+    const search = this.search();
+    const count = this.recipes().length;
+    if (search === '') {
+      return '';
+    }
+    if (count === 0) {
+      return this.language.t('recipes.noMatch', { search });
+    }
+    return count === 1
+      ? this.language.t('recipes.oneMatch', { search })
+      : this.language.t('recipes.matches', { count, search });
+  }
+
   // "Don't suggest" and "Suggest again" replace each other, so the focus would drop to the page along
   // with the clicked one; the button replacing it exists only once the page is rendered
   private focusReplacement(clicked: HTMLButtonElement): void {
@@ -47,14 +63,4 @@ export class RecipeList {
       afterNextRender(() => suggest.querySelector('button')?.focus(), { injector: this.injector });
     }
   }
-}
-
-function matchStatusText(search: string, count: number): string {
-  if (search === '') {
-    return '';
-  }
-  if (count === 0) {
-    return `No recipe matches "${search}".`;
-  }
-  return count === 1 ? `1 recipe matches "${search}".` : `${count} recipes match "${search}".`;
 }

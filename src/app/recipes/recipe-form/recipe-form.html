@@ -1,8 +1,8 @@
 @let edited = editing();
-<h1>{{ edited ? 'Edit recipe' : 'Add a recipe' }}</h1>
+<h1>{{ language.t(edited ? 'form.edit' : 'form.add') }}</h1>
 <form novalidate (submit)="save($event)">
   <div class="field">
-    <label for="recipe-name">Name</label>
+    <label for="recipe-name">{{ language.t('form.name') }}</label>
     <input
       #nameInput
       type="text"
@@ -15,11 +15,11 @@
       (input)="name.set(nameInput.value)"
     />
     @if (problems().name; as problem) {
-      <p class="error" id="recipe-name-error">{{ problem }}</p>
+      <p class="error" id="recipe-name-error">{{ language.t(problem) }}</p>
     }
   </div>
   <div class="field">
-    <label for="recipe-servings">Servings</label>
+    <label for="recipe-servings">{{ language.t('form.servings') }}</label>
     <input
       #servingsInput
       type="text"
@@ -33,19 +33,19 @@
       (input)="servings.set(servingsInput.value)"
     />
     @if (problems().servings; as problem) {
-      <p class="error" id="recipe-servings-error">{{ problem }}</p>
+      <p class="error" id="recipe-servings-error">{{ language.t(problem) }}</p>
     }
   </div>
   <fieldset>
-    <legend>Ingredients</legend>
+    <legend>{{ language.t('form.ingredients') }}</legend>
     @if (problems().ingredients; as problem) {
-      <p class="error" id="ingredients-error">{{ problem }}</p>
+      <p class="error" id="ingredients-error">{{ language.t(problem) }}</p>
     }
     <div class="rows">
       <div class="row head" aria-hidden="true">
-        <span>Amount</span>
-        <span>Unit</span>
-        <span>Ingredient</span>
+        <span>{{ language.t('form.amount') }}</span>
+        <span>{{ language.t('form.unit') }}</span>
+        <span>{{ language.t('form.ingredient') }}</span>
       </div>
       @for (row of rows(); track row.id; let i = $index, first = $first) {
         @let problem = problems().rows.get(row.id);
@@ -59,7 +59,7 @@
             autocomplete="off"
             [id]="'amount-' + row.id"
             [value]="row.amount"
-            [attr.aria-label]="'Amount ' + (i + 1)"
+            [attr.aria-label]="language.t('form.amountN', { n: i + 1 })"
             [attr.aria-invalid]="problem?.amount || noIngredients ? true : null"
             [attr.aria-describedby]="
               problem?.amount
@@ -72,11 +72,13 @@
           />
           <select
             #unitSelect
-            [attr.aria-label]="'Unit ' + (i + 1)"
+            [attr.aria-label]="language.t('form.unitN', { n: i + 1 })"
             (change)="chooseUnit(row, unitSelect)"
           >
             @for (unit of units; track unit) {
-              <option [value]="unit" [selected]="unit === row.unit">{{ unit }}</option>
+              <option [value]="unit" [selected]="unit === row.unit">
+                {{ language.unit(unit) }}
+              </option>
             }
           </select>
           <input
@@ -85,7 +87,7 @@
             class="ingredient"
             autocomplete="off"
             [value]="row.name"
-            [attr.aria-label]="'Ingredient ' + (i + 1)"
+            [attr.aria-label]="language.t('form.ingredientN', { n: i + 1 })"
             [attr.aria-invalid]="problem?.name ? true : null"
             [attr.aria-describedby]="problem?.name ? 'ingredient-' + row.id + '-error' : null"
             (input)="edit(row, { name: ingredientInput.value })"
@@ -95,27 +97,33 @@
               #removeButton
               type="button"
               class="link"
-              [attr.aria-label]="'Remove ingredient ' + (i + 1)"
+              [attr.aria-label]="language.t('form.removeIngredientN', { n: i + 1 })"
               (click)="remove(i, removeButton)"
             >
-              Remove
+              {{ language.t('form.remove') }}
             </button>
           }
         </div>
         @if (problem?.amount; as message) {
-          <p class="error" [id]="'amount-' + row.id + '-error'">{{ message }}</p>
+          <p class="error" [id]="'amount-' + row.id + '-error'">{{ language.t(message) }}</p>
         }
         @if (problem?.name; as message) {
-          <p class="error" [id]="'ingredient-' + row.id + '-error'">{{ message }}</p>
+          <p class="error" [id]="'ingredient-' + row.id + '-error'">{{ language.t(message) }}</p>
         }
       }
     </div>
     @if (rows().length < maxRows) {
-      <button type="button" class="link add" (click)="addRow()">Add ingredient</button>
+      <button type="button" class="link add" (click)="addRow()">
+        {{ language.t('form.addIngredient') }}
+      </button>
     }
   </fieldset>
   <div class="actions">
-    <button type="submit" class="primary">{{ edited ? 'Save changes' : 'Save recipe' }}</button>
-    <a class="secondary" [routerLink]="edited ? ['/recipes', edited.slug] : '/recipes'">Cancel</a>
+    <button type="submit" class="primary">
+      {{ language.t(edited ? 'form.saveChanges' : 'form.save') }}
+    </button>
+    <a class="secondary" [routerLink]="edited ? ['/recipes', edited.slug] : '/recipes'">{{
+      language.t('form.cancel')
+    }}</a>
   </div>
 </form>

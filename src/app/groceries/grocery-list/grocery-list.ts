@@ -9,16 +9,24 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { LanguageStore } from '../../language-store';
 import { PlanStore } from '../../plan/plan-store';
-import { displayAmount } from '../../recipes/amount';
 import { RecipeStore } from '../../recipes/recipe-store';
-import { AddedItem, addFeedback, itemKey, ListItem, listItems, shoppingView } from '../groceries';
+import {
+  AddedItem,
+  AddFeedback,
+  addFeedback,
+  itemKey,
+  ListItem,
+  listItems,
+  shoppingView,
+} from '../groceries';
 
 const UNDO_SECONDS = 5;
 
 interface UndoLine {
   key: string;
-  label: string;
+  item: ListItem;
 }
 
 @Component({
@@ -33,12 +41,26 @@ export class GroceryList {
   private readonly recipes = inject(RecipeStore);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
+  protected readonly language = inject(LanguageStore);
   protected readonly plan = this.store.plan;
   protected readonly key = itemKey;
   protected readonly view = computed(() =>
     shoppingView(listItems(this.plan(), this.recipes.all()), this.plan().ticked),
   );
-  protected readonly feedback = signal('');
+  private readonly feedback = signal<AddFeedback | null>(null);
+  // Rendered from the message, so the status follows a change of language
+  protected readonly feedbackText = computed(() => {
+    const feedback = this.feedback();
+    if (feedback === null) {
+      return '';
+    }
+    return feedback.id === 'groceries.added'
+      ? this.language.t(feedback.id, {
+          ...feedback.params,
+          section: this.language.section(feedback.params.section),
+        })
+      : this.language.t(feedback.id, feedback.params);
+  });
   protected readonly undoHovered = signal(false);
   protected readonly undoFocused = signal(false);
   // The id of the pointer pressing on the bar, so another finger lifted elsewhere leaves the press on
@@ -159,7 +181,7 @@ export class GroceryList {
       this.undoFocused.set(false);
       this.undoPress.set(null);
     }
-    this.undoLine.set({ key: itemKey(item), label: this.labelOf(item) });
+    this.undoLine.set({ key: itemKey(item), item });
     this.undoExpired.set(false);
     clearTimeout(this.undoTimer);
     this.undoTimer = setTimeout(() => this.undoExpired.set(true), UNDO_SECONDS * 1000);
@@ -169,8 +191,7 @@ export class GroceryList {
     if ('added' in item) {
       return item.name;
     }
-    const shown = displayAmount(item);
-    return `${shown.amount} ${shown.unit} ${item.name}`;
+    return `${this.language.amount(item)} ${item.name}`;
   }
 
   private isInCart(key: string): boolean {
