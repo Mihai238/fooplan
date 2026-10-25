@@ -1,4 +1,4 @@
-import { addedKey, Plan } from '../plan/plan';
+import { addedKey, Plan, sameItem } from '../plan/plan';
 import { Recipe, Unit } from '../recipes/recipe';
 import { PANTRY_STAPLES, Section, SECTIONS, sectionOf } from './sections';
 
@@ -52,13 +52,26 @@ export function groceryList(plan: Plan, recipes: readonly Recipe[]): GroceryItem
     .sort((a, b) => SECTIONS.indexOf(a.section) - SECTIONS.indexOf(b.section) || byName(a, b));
 }
 
-// Recipes spell ingredient names in lowercase, so this matches the whole text with a name ignoring
-// case, while the item still reads as typed
 export function addedItems(plan: Plan): AddedItem[] {
   if (!plan.accepted) {
     return [];
   }
-  return plan.added.map((name) => ({ name, section: sectionOf(name.toLowerCase()), added: true }));
+  return plan.added.map((name) => ({ name, section: addedSection(name), added: true }));
+}
+
+// Takes the plan as it is before addItem, and finds an item already added the way addItem does
+export function addFeedback(plan: Plan, text: string): string {
+  const item = text.trim();
+  if (!plan.accepted || item === '') {
+    return '';
+  }
+  const stored = plan.added.find((other) => sameItem(other, item));
+  if (stored === undefined) {
+    return `Added "${item}" to ${addedSection(item)}.`;
+  }
+  return plan.ticked.includes(addedKey(stored))
+    ? `"${stored}" is already in the cart.`
+    : `"${stored}" is already on the list.`;
 }
 
 // Ticks whose key isn't on the list, e.g. after a deploy changed the recipes, are ignored
@@ -113,6 +126,12 @@ function cookedRecipes(
 // which Math.ceil alone would turn into 4
 function roundUp(amount: number): number {
   return Math.ceil(Number(amount.toFixed(6)));
+}
+
+// Recipes spell ingredient names in lowercase, so this matches the whole text with a name ignoring
+// case, while the item still reads as typed
+function addedSection(name: string): Section {
+  return sectionOf(name.toLowerCase());
 }
 
 function unitOf(item: ListItem): string {

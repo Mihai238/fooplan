@@ -411,6 +411,257 @@ describe('GroceryList', () => {
     addButton();
   });
 
+  describe('status after "Add"', () => {
+    it('shows one empty status element right after the form and before the sections, without tabindex or hidden, and leaves the field without aria-describedby', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      expect(element.querySelectorAll('[role="status"]'), 'status elements').toHaveLength(1);
+      const status = statusElement();
+      expect(field().form?.nextElementSibling, "the form's next sibling").toBe(status);
+      const grid = element.querySelector('.sections');
+      expect(grid, 'no sections grid').not.toBeNull();
+      expect(
+        status.compareDocumentPosition(grid!) & Node.DOCUMENT_POSITION_FOLLOWING,
+        'status not before the sections grid',
+      ).toBeTruthy();
+      expect(statusText()).toBe('');
+      expect(status.hasAttribute('tabindex'), 'tabindex').toBe(false);
+      expect(status.hasAttribute('hidden'), 'hidden attribute').toBe(false);
+      expect(field().hasAttribute('aria-describedby'), 'aria-describedby').toBe(false);
+    });
+
+    it('never hides the empty status element with the hidden attribute, display: none or visibility: hidden', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      expectStatusShownAndEmpty('on opening');
+
+      await add('coffee');
+      expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
+      await add('');
+      expectStatusShownAndEmpty('after an empty entry');
+    });
+
+    it('keeps the focus in the field after "Add" and on Enter, and the status element does not take it on focus()', async () => {
+      acceptOneDayPlan(store);
+      await open();
+
+      await add('coffee');
+      expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
+      expect(document.activeElement, 'focus after "Add"').toBe(field());
+      statusElement().focus();
+      expect(document.activeElement, 'status element took the focus').toBe(field());
+
+      await type('COFFEE');
+      await pressEnter();
+      expect(statusText(), 'text not shown').toBe('"coffee" is already on the list.');
+      expect(document.activeElement, 'focus after Enter').toBe(field());
+    });
+
+    it('gives the status element a class of its own, not "empty", and shows no "Accept a plan" text', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      expect(statusElement().classList.contains('empty'), 'class "empty"').toBe(false);
+      expect(element.querySelector('p.empty')).toBeNull();
+    });
+
+    it('says "Added "toilet paper" to Other." after "Add", lists it under "Other" and empties the field', async () => {
+      acceptOneDayPlan(store);
+      await open();
+
+      await add('toilet paper');
+      expect(statusText()).toBe('Added "toilet paper" to Other.');
+      expect(labelsIn(sectionHeaded('Other'))).toContain('toilet paper');
+      expect(field().value).toBe('');
+    });
+
+    it('says "Added "coffee" to Other." after Enter', async () => {
+      acceptOneDayPlan(store);
+      await open();
+
+      await type('coffee');
+      await pressEnter();
+      expect(statusText()).toBe('Added "coffee" to Other.');
+      expect(labelsIn(sectionHeaded('Other')), 'item not added').toContain('coffee');
+    });
+
+    it('quotes the entry without its surrounding spaces and names the section the line is listed under', async () => {
+      acceptOneDayPlan(store);
+      await open();
+
+      await add('  Lemon  ');
+      expect(statusText()).toBe('Added "Lemon" to Fruit & vegetables.');
+      expect(labelsIn(sectionHeaded('Fruit & vegetables')), 'item not listed').toContain('Lemon');
+
+      await add('olive oil');
+      expect(statusText()).toBe('Added "olive oil" to Other.');
+      expect(labelsIn(sectionHeaded('Other')), 'item not listed').toContain('olive oil');
+    });
+
+    it('keeps the inner spaces of the entry in the text', async () => {
+      acceptOneDayPlan(store);
+      await open();
+
+      await add('toilet  paper');
+      expect(statusText()).toBe('Added "toilet  paper" to Other.');
+    });
+
+    it('says "Added "onion" to Fruit & vegetables." for an entry named like a plan line, and lists both onion lines', async () => {
+      acceptOneDayPlan(store);
+      const onion = groceryList(store.plan(), RECIPES).find((item) => item.name === 'onion');
+      expect(onion, 'no onion in the plan').toBeDefined();
+      await open();
+
+      await add('onion');
+      expect(statusText()).toBe('Added "onion" to Fruit & vegetables.');
+      const lines = labelsIn(sectionHeaded('Fruit & vegetables')).filter(
+        (line) => line === lineOf(onion!) || line === 'onion',
+      );
+      expect(lines).toEqual([lineOf(onion!), 'onion']);
+    });
+
+    it('says that "coffee" is already on the list for "COFFEE" after "coffee", adds no second line and empties the field', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      await add('coffee');
+
+      await add('COFFEE');
+      expect(statusText()).toBe('"coffee" is already on the list.');
+      const coffees = labelsIn(sectionHeaded('Other')).filter(
+        (line) => line.toLowerCase() === 'coffee',
+      );
+      expect(coffees).toEqual(['coffee']);
+      expect(field().value).toBe('');
+    });
+
+    it('says "Added" again for an item that was added, removed and added again', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      await add('coffee');
+      await click(removeButtonOf(listed().find((item) => labelOf(item) === 'coffee')!));
+      expect(store.plan().added, 'item not removed').toEqual([]);
+
+      await add('Coffee');
+      expect(statusText()).toBe('Added "Coffee" to Other.');
+    });
+
+    it('says that "coffee" is already in the cart for an added item ticked into the cart, and lists it only there', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      await add('coffee');
+      await click(checkboxOf(listed().find((item) => labelOf(item) === 'coffee')!));
+      expect(inCart().map(labelOf), 'item not ticked').toEqual(['coffee']);
+
+      await add('coffee');
+      expect(statusText()).toBe('"coffee" is already in the cart.');
+      expect(listed().map(labelOf)).not.toContain('coffee');
+      expect(inCart().map(labelOf)).toEqual(['coffee']);
+    });
+
+    it('says "Added" for an entry named like a ticked plan line, as only added items count', async () => {
+      acceptOneDayPlan(store);
+      const onion = groceryList(store.plan(), RECIPES).find((item) => item.name === 'onion');
+      expect(onion, 'no onion in the plan').toBeDefined();
+      await open();
+      await click(checkboxOf(listed().find((item) => labelOf(item) === lineOf(onion!))!));
+      expect(inCart().map(labelOf), 'plan line not ticked').toEqual([lineOf(onion!)]);
+
+      await add('onion');
+      expect(statusText()).toBe('Added "onion" to Fruit & vegetables.');
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain('onion');
+      expect(inCart().map(labelOf)).toEqual([lineOf(onion!)]);
+    });
+
+    it('empties the status and adds nothing for an empty entry or one of only spaces', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      await add('coffee');
+      expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
+
+      await add('');
+      expect(statusText(), 'after an empty entry').toBe('');
+      expect(store.plan().added).toEqual(['coffee']);
+
+      await add('toilet paper');
+      expect(statusText(), 'text not shown').toBe('Added "toilet paper" to Other.');
+      await add('   ');
+      expect(statusText(), 'after an entry of only spaces').toBe('');
+      expect(store.plan().added).toEqual(['coffee', 'toilet paper']);
+      expect(field().value).toBe('');
+    });
+
+    it('leaves the text as it is while the user ticks, unticks and removes the item it names', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      await add('coffee');
+      const shown = 'Added "coffee" to Other.';
+      expect(statusText(), 'text not shown').toBe(shown);
+
+      await click(checkboxOf(listed().find((item) => labelOf(item) === 'coffee')!));
+      expect(inCart().map(labelOf), 'item not ticked').toEqual(['coffee']);
+      expect(statusText(), 'after ticking').toBe(shown);
+
+      await click(checkboxOf(inCart()[0]));
+      expect(cart(), 'item not unticked').toBeNull();
+      expect(statusText(), 'after unticking').toBe(shown);
+
+      await click(removeButtonOf(listed().find((item) => labelOf(item) === 'coffee')!));
+      expect(store.plan().added, 'item not removed').toEqual([]);
+      expect(statusText(), 'after removing').toBe(shown);
+    });
+
+    it('keeps the same status element while the texts follow each other', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      const status = statusElement();
+
+      await add('coffee');
+      expect(statusElement(), 'element after "coffee"').toBe(status);
+      expect(statusText()).toBe('Added "coffee" to Other.');
+      await add('COFFEE');
+      expect(statusElement(), 'element after "COFFEE"').toBe(status);
+      expect(statusText()).toBe('"coffee" is already on the list.');
+      await add('');
+      expect(statusElement(), 'element after an empty entry').toBe(status);
+      expect(statusText()).toBe('');
+    });
+
+    it('shows an empty status when the page is opened again, with the added item still listed', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      await add('coffee');
+      expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
+
+      fixture.destroy();
+      await open();
+      expect(TestBed.inject(PlanStore), 'another store').toBe(store);
+      expect(statusText()).toBe('');
+      expect(labelsIn(sectionHeaded('Other'))).toContain('coffee');
+    });
+
+    it('keeps the text in the page only, neither in the plan nor in the storage', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      await add('coffee');
+      expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
+
+      expect(JSON.stringify(store.plan()), 'plan').not.toContain('Added');
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)!;
+        expect(localStorage.getItem(key), `storage "${key}"`).not.toContain('Added');
+      }
+    });
+
+    it('shows no status element while the plan is not accepted, and an empty one once it is', async () => {
+      await open();
+      expect(element.querySelector('p.empty'), 'no message').not.toBeNull();
+      expect(element.querySelectorAll('[role="status"]')).toHaveLength(0);
+
+      acceptOneDayPlan(store);
+      await fixture.whenStable();
+      expect(statusText()).toBe('');
+    });
+  });
+
   async function open() {
     fixture = TestBed.createComponent(GroceryList);
     await fixture.whenStable();
@@ -458,6 +709,11 @@ describe('GroceryList', () => {
       });
       restores.push(() => recipe!.ingredients.splice(0, Infinity, ...original));
     }
+  }
+
+  async function add(text: string) {
+    await type(text);
+    await click(addButton());
   }
 
   function addButton(): HTMLButtonElement {
@@ -509,6 +765,27 @@ describe('GroceryList', () => {
 
   function buttonsIn(node: Element | null): HTMLButtonElement[] {
     return Array.from(node?.querySelectorAll('button') ?? []);
+  }
+
+  function expectStatusShownAndEmpty(when: string) {
+    const status = statusElement();
+    expect(statusText(), `status text ${when}`).toBe('');
+    expect(status.hasAttribute('hidden'), `hidden attribute ${when}`).toBe(false);
+    const style = getComputedStyle(status);
+    expect(style.display, `display ${when}`).not.toBe('none');
+    expect(style.visibility, `visibility ${when}`).not.toBe('hidden');
+  }
+
+  // Trimmed only, unlike textOf: the inner spaces of an entry are part of the text
+  function statusText(): string {
+    return (statusElement().textContent ?? '').trim();
+  }
+
+  function statusElement(): HTMLElement {
+    const found = element.querySelectorAll<HTMLElement>('[role="status"]');
+    expect(found, 'status elements').toHaveLength(1);
+    expect(found[0].tagName, 'status element').toBe('P');
+    return found[0];
   }
 
   function sectionHeaded(heading: string): HTMLElement {

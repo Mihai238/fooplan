@@ -1,9 +1,17 @@
-import { afterNextRender, Component, computed, ElementRef, inject, Injector } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PlanStore } from '../../plan/plan-store';
 import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
-import { AddedItem, itemKey, ListItem, listItems, shoppingView } from '../groceries';
+import { AddedItem, addFeedback, itemKey, ListItem, listItems, shoppingView } from '../groceries';
 
 @Component({
   imports: [RouterLink],
@@ -21,11 +29,13 @@ export class GroceryList {
   protected readonly view = computed(() =>
     shoppingView(listItems(this.plan(), RECIPES), this.plan().ticked),
   );
+  protected readonly feedback = signal('');
 
   // Without preventDefault the browser would submit the form and reload the page. The focus goes
   // back to the field after a click on "Add", so several items can be added in a row
   protected add(event: SubmitEvent, input: HTMLInputElement): void {
     event.preventDefault();
+    this.feedback.set(addFeedback(this.plan(), input.value));
     this.store.addItem(input.value);
     input.value = '';
     input.focus();

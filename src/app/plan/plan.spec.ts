@@ -16,6 +16,7 @@ import {
   pickRecipe,
   Plan,
   removeItem,
+  sameItem,
   setCookExtra,
   setDays,
   setPeople,
@@ -1328,6 +1329,16 @@ describe('plan', () => {
     it("doesn't tick an item added again, even if a tick of it was left behind", () => {
       const plan: Plan = { ...acceptedPlan(), ticked: [addedKey('coffee'), 'onion'] };
       expect(addItem(plan, ' coffee ').ticked).toEqual(['onion']);
+    });
+  });
+
+  describe('sameItem', () => {
+    it('takes two texts for the same item when they are equal ignoring case, and only then', () => {
+      expect(sameItem('coffee', 'COFFEE')).toBe(true);
+      expect(sameItem('Toilet Paper', 'toilet paper')).toBe(true);
+      expect(sameItem('Café', 'cafe')).toBe(false);
+      expect(sameItem('toilet paper', 'toilet  paper')).toBe(false);
+      expect(sameItem('coffee', ' coffee')).toBe(false);
     });
   });
 

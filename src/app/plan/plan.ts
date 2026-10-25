@@ -287,7 +287,7 @@ export function leftoversOf(plan: Plan, day: number): string | null {
   return plan.days[day - 1].dinner.recipe;
 }
 
-function sameItem(a: string, b: string): boolean {
+export function sameItem(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();
 }
 

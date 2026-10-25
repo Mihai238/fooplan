@@ -10,6 +10,9 @@
     <input #itemInput type="text" id="new-item" autocomplete="off" />
     <button type="submit" class="primary">Add</button>
   </form>
+  <!-- Screen readers announce changes inside a live region already on the page, not a region
+       added along with its text, so this one stays, empty until the first "Add" -->
+  <p class="status" role="status">{{ feedback() }}</p>
   @if (view().sections.length > 0) {
     <div class="sections">
       @for (group of view().sections; track group.section) {

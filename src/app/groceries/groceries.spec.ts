@@ -4,6 +4,7 @@ import { Recipe } from '../recipes/recipe';
 import {
   AddedItem,
   addedItems,
+  addFeedback,
   byName,
   bySection,
   GroceryItem,
@@ -307,6 +308,70 @@ describe('groceries', () => {
           added('zucchini', 'Fruit & vegetables'),
         ],
       });
+    });
+  });
+
+  describe('addFeedback', () => {
+    const plan = acceptedPlanFor(2, day('2026-10-24', picked('Chili'), picked('Rice')));
+    const onion = item('onion', 1, 'pc');
+
+    it('says an entry is added under its section, already on the list or already in the cart, and nothing for a blank entry or a plan that is not accepted', () => {
+      expect(addFeedback(plan, 'tea')).toBe('Added "tea" to Other.');
+      expect(addFeedback(plan, ' Lemon ')).toBe('Added "Lemon" to Fruit & vegetables.');
+      expect(addFeedback(plan, '  ')).toBe('');
+
+      const withCoffee = withAdded(plan, 'coffee');
+      expect(addFeedback(withCoffee, ' COFFEE ')).toBe('"coffee" is already on the list.');
+      const coffeeTicked = { ...withCoffee, ticked: [addedKey('coffee')] };
+      expect(addFeedback(coffeeTicked, 'coffee')).toBe('"coffee" is already in the cart.');
+
+      expect(addFeedback(withAdded(plan, 'Café'), 'cafe')).toBe('Added "cafe" to Other.');
+
+      const notAccepted = planFor(2, day('2026-10-24', picked('Chili'), picked('Rice')));
+      expect(addFeedback(notAccepted, 'tea')).toBe('');
+    });
+
+    it('says "Added" for an entry named like a plan line, which is not an added item', () => {
+      expect(groceryList(plan, RECIPES), 'onion line').toContainEqual(onion);
+      expect(addFeedback(plan, 'onion')).toBe('Added "onion" to Fruit & vegetables.');
+      expect(addFeedback(plan, 'Onion')).toBe('Added "Onion" to Fruit & vegetables.');
+    });
+
+    it('never says "already in the cart" because a plan line of that name is ticked, as only added items count', () => {
+      const onionTicked = { ...plan, ticked: [itemKey(onion)] };
+      expect(addFeedback(onionTicked, 'onion')).toBe('Added "onion" to Fruit & vegetables.');
+      expect(addFeedback(withAdded(onionTicked, 'onion'), 'ONION')).toBe(
+        '"onion" is already on the list.',
+      );
+    });
+
+    it('names an item already added by its stored text, not by the entry', () => {
+      const withPaper = withAdded(plan, 'Toilet Paper');
+      expect(addFeedback(withPaper, ' toilet PAPER ')).toBe(
+        '"Toilet Paper" is already on the list.',
+      );
+      const paperTicked = { ...withPaper, ticked: [addedKey('Toilet Paper')] };
+      expect(addFeedback(paperTicked, 'TOILET PAPER')).toBe(
+        '"Toilet Paper" is already in the cart.',
+      );
+    });
+
+    it('keeps the inner spaces of an entry, which make it another item than the one with a single space', () => {
+      expect(addFeedback(withAdded(plan, 'toilet paper'), ' toilet  paper ')).toBe(
+        'Added "toilet  paper" to Other.',
+      );
+    });
+
+    it('says "Added" for an entry that only a stale tick names, as it is not an added item', () => {
+      const staleTick = { ...plan, ticked: [addedKey('coffee')] };
+      expect(addFeedback(staleTick, 'coffee')).toBe('Added "coffee" to Other.');
+    });
+
+    it('returns an empty text for an empty entry, also while items are added and ticked', () => {
+      const withCoffee = { ...withAdded(plan, 'coffee'), ticked: [addedKey('coffee')] };
+      expect(addFeedback(plan, '')).toBe('');
+      expect(addFeedback(withCoffee, '')).toBe('');
+      expect(addFeedback(withCoffee, '   ')).toBe('');
     });
   });
 
