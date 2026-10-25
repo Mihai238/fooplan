@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { groceryList, itemKey } from '../../groceries/groceries';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RECIPES } from '../../recipes/recipes';
+import germanRecipes from '../../recipes/recipes.de.json';
 import { QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
 import { App } from '../../app';
 import { installDialog, LANGUAGE_KEY, modalDialogs, TABBABLE } from '../../testing';
@@ -2762,7 +2763,11 @@ describe('PlanPage', () => {
       expect(store.plan(), 'plan').toEqual(plan);
       expect(
         Array.from(element.querySelectorAll<HTMLButtonElement>('button.suggestion')).map(recipeOf),
-      ).toEqual(plan.days.flatMap((day) => [...day.lunch.suggestions, ...day.dinner.suggestions]));
+      ).toEqual(
+        plan.days
+          .flatMap((day) => [...day.lunch.suggestions, ...day.dinner.suggestions])
+          .map(germanName),
+      );
       const german = textOf(element);
       for (const english of ['Lunch', 'Dinner', 'minutes', 'Other suggestions', 'New plan']) {
         expect(german, 'English left').not.toContain(english);
@@ -2903,7 +2908,7 @@ describe('PlanPage', () => {
         expect(buttonTexts(meal(0))).toEqual(['Rückgängig']);
       });
 
-      it('shows a German plan\'s "Mehr kochen für das Mittagessen morgen", "Reste: Potato goulash", the times "N Minuten", the "Rezept" links named "Rezept für <recipe>", the "×" named "<recipe> nicht vorschlagen" with the title "Nicht vorschlagen", and its dialog "Shakshuka with bread nicht mehr vorschlagen?" with its text, "Weiter vorschlagen" and "Nicht vorschlagen"; and "Es wird mehr gekocht für das Mittagessen morgen" once accepted', async () => {
+      it('shows a German plan\'s "Mehr kochen für das Mittagessen morgen", "Reste: Kartoffelgulasch", the times "N Minuten", the "Rezept" links named "Rezept für <recipe>", the "×" named "<recipe> nicht vorschlagen" with the title "Nicht vorschlagen", and its dialog "Shakshuka mit Brot nicht mehr vorschlagen?" with its text, "Weiter vorschlagen" and "Nicht vorschlagen"; and "Es wird mehr gekocht für das Mittagessen morgen" once accepted', async () => {
         localStorage.setItem(LANGUAGE_KEY, 'de');
         await openWith(COOKED_EXTRA);
         expect(textOf(meal(1).querySelector('label.cook-extra'))).toBe(
@@ -2912,13 +2917,13 @@ describe('PlanPage', () => {
         expect(textOf(meal(1).querySelector('p.minutes'))).toBe(
           `${minutesOf('Potato goulash')} Minuten`,
         );
-        expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Reste: Potato goulash');
+        expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Reste: Kartoffelgulasch');
         const rows = Array.from(meal(3).querySelectorAll<HTMLElement>('div.option'));
         expect(rows.map((row) => Array.from(row.children).map((child) => nameOf(child)))).toEqual(
           SHAKSHUKA_ROW.map((recipe) => [
-            `${recipe} ${minutesOf(recipe)} Minuten`,
-            `Rezept für ${recipe}`,
-            `${recipe} nicht vorschlagen`,
+            `${germanName(recipe)} ${minutesOf(recipe)} Minuten`,
+            `Rezept für ${germanName(recipe)}`,
+            `${germanName(recipe)} nicht vorschlagen`,
           ]),
         );
         expect(rows.map((row) => textOf(row.querySelector('a.recipe-link')))).toEqual([
@@ -2933,7 +2938,7 @@ describe('PlanPage', () => {
         await click(cross);
         const dialog = openDialog();
         expect(textOf(dialog.querySelector('h2'))).toBe(
-          'Shakshuka with bread nicht mehr vorschlagen?',
+          'Shakshuka mit Brot nicht mehr vorschlagen?',
         );
         expect(textOf(dialog.querySelector('p'))).toBe(
           'Ein anderes Rezept nimmt seinen Platz ein, und es wird nicht mehr vorgeschlagen. „Wieder vorschlagen“ auf der Seite Rezepte holt es zurück.',
@@ -2953,7 +2958,7 @@ describe('PlanPage', () => {
         expect(Array.from(element.querySelectorAll('p.note')).map(textOf)).toEqual([
           'Es wird mehr gekocht für das Mittagessen morgen',
         ]);
-        expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Reste: Potato goulash');
+        expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Reste: Kartoffelgulasch');
       });
     });
 
@@ -2966,6 +2971,13 @@ describe('PlanPage', () => {
       const minutes = RECIPES.find((candidate) => candidate.name === recipe)?.minutes;
       expect(minutes, `no time for "${recipe}"`).toBeDefined();
       return minutes!;
+    }
+
+    function germanName(recipe: string): string {
+      const name = (germanRecipes.recipes as Record<string, { name: string } | undefined>)[recipe]
+        ?.name;
+      expect(name, `no German name for "${recipe}"`).toBeDefined();
+      return name!;
     }
 
     function headerButton(name: 'English' | 'Deutsch'): HTMLButtonElement {
@@ -2990,6 +3002,92 @@ describe('PlanPage', () => {
         titles: all.map((node) => node.getAttribute('title')).filter(Boolean),
       };
     }
+  });
+
+  describe('German recipes (#36)', () => {
+    const POMODORO_ROW = ['Spaghetti pomodoro', 'Fish tacos', 'Niçoise salad'];
+
+    beforeEach(() => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+    });
+
+    it('suggests "Spaghetti Pomodoro" with "25 Minuten", its "Rezept" link named "Rezept für Spaghetti Pomodoro" and its "×" "Spaghetti Pomodoro nicht vorschlagen"; shows "Spaghetti Pomodoro" linking to /recipes/spaghetti-pomodoro once picked, storing "Spaghetti pomodoro"; and "Reste: Spaghetti Pomodoro" for the lunch after it is cooked extra', async () => {
+      await openWith(planOf([planDay('2026-10-24', open(...POMODORO_ROW), open(...POMODORO_ROW))]));
+      const row = Array.from(meal(0).querySelectorAll<HTMLElement>('div.option'))[0];
+      expect(Array.from(row.children).map((child) => nameOf(child))).toEqual([
+        'Spaghetti Pomodoro 25 Minuten',
+        'Rezept für Spaghetti Pomodoro',
+        'Spaghetti Pomodoro nicht vorschlagen',
+      ]);
+      expect(recipeOf(suggestionsOf(meal(0))[0])).toBe('Spaghetti Pomodoro');
+
+      await click(suggestionsOf(meal(0))[0]);
+      const link = recipeLink(meal(0));
+      expect(textOf(link)).toBe('Spaghetti Pomodoro');
+      expect(link.getAttribute('href')).toBe('/recipes/spaghetti-pomodoro');
+      expect(store.plan().days[0].lunch.recipe).toBe('Spaghetti pomodoro');
+      const saved = JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null');
+      expect(saved.days[0].lunch.recipe).toBe('Spaghetti pomodoro');
+
+      await openWith(
+        planOf([
+          planDay('2026-10-24', picked('Fish tacos'), picked('Spaghetti pomodoro'), true),
+          planDay(
+            '2026-10-25',
+            covered(),
+            open('Shakshuka with bread', 'Niçoise salad', 'Potato goulash'),
+          ),
+        ]),
+      );
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Reste: Spaghetti Pomodoro');
+    });
+
+    it('suggests the own recipe "Omas Eintopf" as typed next to the German "Spaghetti Pomodoro", named "Rezept für Omas Eintopf" and "Omas Eintopf nicht vorschlagen"', async () => {
+      storeOwnRecipes({
+        name: 'Omas Eintopf',
+        servings: 4,
+        ingredients: [{ name: 'linsen', amount: 200, unit: 'g' }],
+        own: true,
+      });
+      await openWith(
+        planOf([
+          planDay(
+            '2026-10-24',
+            open('Omas Eintopf', 'Spaghetti pomodoro', 'Fish tacos'),
+            open('Niçoise salad', 'Shakshuka with bread', 'Potato goulash'),
+          ),
+        ]),
+      );
+      expect(suggestionsOf(meal(0)).slice(0, 2).map(recipeOf)).toEqual([
+        'Omas Eintopf',
+        'Spaghetti Pomodoro',
+      ]);
+      const row = Array.from(meal(0).querySelectorAll<HTMLElement>('div.option'))[0];
+      expect(
+        Array.from(row.children)
+          .slice(1)
+          .map((child) => nameOf(child)),
+      ).toEqual(['Rezept für Omas Eintopf', 'Omas Eintopf nicht vorschlagen']);
+    });
+
+    describe('edge cases', () => {
+      it('heads the "×" dialog of "Spaghetti pomodoro" "Spaghetti Pomodoro nicht mehr vorschlagen?" and keeps the English name in the removed recipes on "Nicht vorschlagen"', async () => {
+        await openWith(
+          planOf([planDay('2026-10-24', open(...POMODORO_ROW), open(...POMODORO_ROW))]),
+        );
+        const row = Array.from(meal(0).querySelectorAll<HTMLElement>('div.option'))[0];
+        await click(row.children[2] as HTMLButtonElement);
+        const dialog = openDialog();
+        expect(textOf(dialog.querySelector('h2'))).toBe(
+          'Spaghetti Pomodoro nicht mehr vorschlagen?',
+        );
+        await click(button(dialog, 'Nicht vorschlagen'));
+        expect(store.removed()).toContain('Spaghetti pomodoro');
+        expect(JSON.parse(localStorage.getItem('fooplan.removed') ?? '[]')).toContain(
+          'Spaghetti pomodoro',
+        );
+      });
+    });
   });
 
   // What the browser does on Escape and Tab when the page's keydown handlers let it: Escape

@@ -46,12 +46,17 @@ export class RecipePage {
     ),
     { requireSync: true },
   );
-  protected readonly steps = computed(() => {
-    const { steps, ingredients } = this.page().recipe;
-    return steps?.map((step) =>
-      stepParts(step, ingredients, (amount) => this.language.amount(amount)),
-    );
-  });
+  protected readonly name = computed(() => this.recipes.displayName(this.page().recipe));
+  protected readonly ingredients = computed(() =>
+    this.recipes.displayIngredients(this.page().recipe),
+  );
+  protected readonly steps = computed(() =>
+    this.recipes
+      .displaySteps(this.page().recipe)
+      ?.map((step) =>
+        stepParts(step, this.ingredients(), (amount) => this.language.amount(amount)),
+      ),
+  );
   protected readonly view = this.stepsView.view;
   protected readonly step = linkedSignal({ source: this.page, computation: () => 0 });
   protected readonly last = computed(() => this.step() === (this.steps()?.length ?? 0) - 1);

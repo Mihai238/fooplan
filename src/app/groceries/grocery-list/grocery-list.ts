@@ -16,6 +16,7 @@ import {
   AddedItem,
   AddFeedback,
   addFeedback,
+  byShownName,
   itemKey,
   ListItem,
   listItems,
@@ -45,7 +46,11 @@ export class GroceryList {
   protected readonly plan = this.store.plan;
   protected readonly key = itemKey;
   protected readonly view = computed(() =>
-    shoppingView(listItems(this.plan(), this.recipes.all()), this.plan().ticked),
+    shoppingView(
+      listItems(this.plan(), this.recipes.all()),
+      this.plan().ticked,
+      byShownName((item) => this.nameOf(item), this.language.language()),
+    ),
   );
   private readonly feedback = signal<AddFeedback | null>(null);
   // Rendered from the message, so the status follows a change of language
@@ -191,7 +196,12 @@ export class GroceryList {
     if ('added' in item) {
       return item.name;
     }
-    return `${this.language.amount(item)} ${item.name}`;
+    return `${this.language.amount(item)} ${this.nameOf(item)}`;
+  }
+
+  // Added items are the user's own words, so they stay as typed
+  private nameOf(item: ListItem): string {
+    return 'added' in item ? item.name : this.recipes.displayIngredient(item.name);
   }
 
   private isInCart(key: string): boolean {

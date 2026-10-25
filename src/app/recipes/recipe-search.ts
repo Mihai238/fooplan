@@ -1,11 +1,27 @@
-import { Recipe } from './recipe';
+import { Ingredient, Recipe } from './recipe';
 
-export function searchRecipes(recipes: readonly Recipe[], query: string): Recipe[] {
+export interface RecipeTexts {
+  displayName(recipe: Recipe): string;
+  displayIngredients(recipe: Recipe): Ingredient[];
+}
+
+const AS_STORED: RecipeTexts = {
+  displayName: (recipe) => recipe.name,
+  displayIngredients: (recipe) => recipe.ingredients,
+};
+
+export function searchRecipes(
+  recipes: readonly Recipe[],
+  query: string,
+  texts: RecipeTexts = AS_STORED,
+): Recipe[] {
   const text = normalize(query.trim());
   return recipes.filter(
     (recipe) =>
-      normalize(recipe.name).includes(text) ||
-      recipe.ingredients.some((ingredient) => normalize(ingredient.name).includes(text)),
+      normalize(texts.displayName(recipe)).includes(text) ||
+      texts
+        .displayIngredients(recipe)
+        .some((ingredient) => normalize(ingredient.name).includes(text)),
   );
 }
 

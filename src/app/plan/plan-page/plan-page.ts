@@ -74,8 +74,8 @@ export class PlanPage {
     { kind: 'lunch', label: 'meal.lunch' },
     { kind: 'dinner', label: 'meal.dinner' },
   ];
-  private readonly minutesByRecipe = computed(
-    () => new Map(this.recipes.all().map((recipe) => [recipe.name, recipe.minutes])),
+  private readonly recipesByName = computed(
+    () => new Map(this.recipes.all().map((recipe) => [recipe.name, recipe])),
   );
   protected readonly removing = signal('');
   private removalRow: RemovalRow | null = null;
@@ -101,8 +101,13 @@ export class PlanPage {
     return kind === 'lunch' ? leftoversOf(this.plan(), day) : null;
   }
 
+  protected displayName(name: string): string {
+    const recipe = this.recipesByName().get(name);
+    return recipe ? this.recipes.displayName(recipe) : name;
+  }
+
   protected minutes(recipe: string): number | undefined {
-    return this.minutesByRecipe().get(recipe);
+    return this.recipesByName().get(recipe)?.minutes;
   }
 
   protected newPlan(dialog: HTMLDialogElement): void {

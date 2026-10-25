@@ -1,6 +1,12 @@
+import { TestBed } from '@angular/core/testing';
+import { LanguageStore } from '../language-store';
+import { RANDOM, TODAY } from '../plan/plan-store';
+import { seededRandom } from '../plan/testing';
 import { Ingredient, Recipe } from './recipe';
 import { searchRecipes } from './recipe-search';
+import { RecipeStore } from './recipe-store';
 import { RECIPES } from './recipes';
+import { ownRecipe, storeOwnRecipes } from './testing';
 
 describe('searchRecipes', () => {
   it('finds the recipes whose name contains the search text, ignoring case, accents and surrounding spaces, in RECIPES order', () => {
@@ -93,6 +99,71 @@ describe('searchRecipes', () => {
       'Bruschetta',
       'Tomato soup',
     ]);
+  });
+
+  describe('German texts (#36)', () => {
+    let store: RecipeStore;
+
+    beforeEach(() => {
+      localStorage.clear();
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: RANDOM, useValue: seededRandom(1) },
+          { provide: TODAY, useValue: () => '2026-10-24' },
+        ],
+      });
+      store = TestBed.inject(RecipeStore);
+    });
+
+    it('matches the German recipe and ingredient names in German, not the English ones, and the English names in English, not the German ones', () => {
+      const garlic = RECIPES.filter((recipe) => uses(recipe, 'garlic clove')).map(
+        (recipe) => recipe.name,
+      );
+      expect(garlic, 'recipes with garlic clove').toContain('Spaghetti pomodoro');
+
+      TestBed.inject(LanguageStore).set('de');
+      expect(namesIn('knoblauch')).toEqual(garlic);
+      expect(namesIn('kirschtomaten')).toContain('Pesto pasta with cherry tomatoes');
+      expect(namesIn('garlic')).toEqual([]);
+      expect(namesIn('cherry')).toEqual([]);
+
+      TestBed.inject(LanguageStore).set('en');
+      expect(namesIn('garlic')).toEqual(garlic);
+      expect(namesIn('knoblauch')).toEqual([]);
+      expect(namesIn('kirschtomaten')).toEqual([]);
+    });
+
+    it('ignores accents in German: "kummel" finds the recipes with Kümmel and Kreuzkümmel, while "kuemmel" and "kase" find nothing', () => {
+      const kummel = RECIPES.filter(
+        (recipe) => uses(recipe, 'caraway') || uses(recipe, 'cumin'),
+      ).map((recipe) => recipe.name);
+      expect(kummel, 'recipes with caraway or cumin').toContain('Potato goulash');
+
+      TestBed.inject(LanguageStore).set('de');
+      expect(namesIn('kummel')).toEqual(kummel);
+      expect(namesIn('KÜMMEL')).toEqual(kummel);
+      expect(namesIn('kuemmel')).toEqual([]);
+      expect(namesIn('kase')).toEqual([]);
+    });
+
+    it('matches the ingredients of an own recipe as typed in German, "onion" and not "zwiebel", and its name as typed', () => {
+      storeOwnRecipes(ownRecipe('Kuchen vom Blech'));
+      TestBed.resetTestingModule();
+      store = TestBed.inject(RecipeStore);
+
+      TestBed.inject(LanguageStore).set('de');
+      expect(namesIn('onion')).toEqual(['Kuchen vom Blech']);
+      expect(namesIn('zwiebel')).not.toContain('Kuchen vom Blech');
+      expect(namesIn('vom blech')).toEqual(['Kuchen vom Blech']);
+    });
+
+    function namesIn(query: string): string[] {
+      return names(searchRecipes(store.all(), query, store));
+    }
+
+    function uses(recipe: Recipe, ingredient: string): boolean {
+      return recipe.ingredients.some(({ name }) => name === ingredient);
+    }
   });
 
   function namesFor(query: string): string[] {

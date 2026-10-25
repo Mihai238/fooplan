@@ -1,7 +1,7 @@
 @let recipe = page().recipe;
 <a class="back" [routerLink]="page().back">{{ language.t('recipe.back') }}</a>
 <article>
-  <h1>{{ recipe.name }}</h1>
+  <h1>{{ name() }}</h1>
   <p class="servings">{{ servingsText(recipe.servings) }}</p>
   @if (recipe.own) {
     <p class="own">{{ language.t('recipes.own') }}</p>
@@ -34,7 +34,7 @@
     <p class="note">{{ language.t('recipes.limit', { min: minSuggested }) }}</p>
   }
   <ul>
-    @for (ingredient of recipe.ingredients; track ingredient.name) {
+    @for (ingredient of ingredients(); track ingredient.name) {
       <li>{{ language.amount(ingredient) }} {{ ingredient.name }}</li>
     }
   </ul>
@@ -140,7 +140,7 @@
     (keydown)="trapFocus($event, keepButton, deleteRecipeButton)"
     (close)="focusDelete()"
   >
-    <h2 id="delete-title">{{ language.t('delete.title', { recipe: recipe.name }) }}</h2>
+    <h2 id="delete-title">{{ language.t('delete.title', { recipe: name() }) }}</h2>
     <p id="delete-text">{{ language.t('delete.text') }}</p>
     <div class="actions">
       <button #keepButton type="button" class="secondary" autofocus (click)="dialog.close()">

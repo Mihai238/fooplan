@@ -13,9 +13,10 @@
 @if (recipes().length > 0) {
   <div class="grid">
     @for (recipe of recipes(); track recipe.name) {
+      @let name = recipeStore.displayName(recipe);
       <article>
         <h2>
-          <a [routerLink]="['/recipes', recipeSlug(recipe.name)]">{{ recipe.name }}</a>
+          <a [routerLink]="['/recipes', recipeSlug(recipe.name)]">{{ name }}</a>
         </h2>
         <p class="servings">{{ servingsText(recipe.servings) }}</p>
         @if (recipe.own) {
@@ -30,9 +31,7 @@
                 #suggestAgainButton
                 type="button"
                 class="link"
-                [attr.aria-label]="
-                  language.t('recipes.suggestAgainRecipe', { recipe: recipe.name })
-                "
+                [attr.aria-label]="language.t('recipes.suggestAgainRecipe', { recipe: name })"
                 (click)="suggestAgain(recipe.name, suggestAgainButton)"
               >
                 {{ language.t('recipes.suggestAgain') }}
@@ -42,7 +41,7 @@
                 #dontSuggestButton
                 type="button"
                 class="link"
-                [attr.aria-label]="language.t('recipes.dontSuggestRecipe', { recipe: recipe.name })"
+                [attr.aria-label]="language.t('recipes.dontSuggestRecipe', { recipe: name })"
                 (click)="dontSuggest(recipe.name, dontSuggestButton)"
               >
                 {{ language.t('recipes.dontSuggest') }}
@@ -51,7 +50,7 @@
           </p>
         }
         <ul>
-          @for (ingredient of recipe.ingredients; track ingredient.name) {
+          @for (ingredient of recipeStore.displayIngredients(recipe); track ingredient.name) {
             <li>{{ language.amount(ingredient) }} {{ ingredient.name }}</li>
           }
         </ul>

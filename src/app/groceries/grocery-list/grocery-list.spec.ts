@@ -1471,7 +1471,7 @@ describe('GroceryList', () => {
       expect(bar()).toBeNull();
     });
 
-    it('says „1 Stk. onion“ ist im Wagen. with a "Rückgängig" button in German, and „1 EL soy sauce“ ist im Wagen. for the 15 ml soy sauce, which "Rückgängig" moves back', async () => {
+    it('says „1 Stk. Zwiebel“ ist im Wagen. with a "Rückgängig" button in German, and „1 EL Sojasauce“ ist im Wagen. for the 15 ml soy sauce, which "Rückgängig" moves back', async () => {
       storeOwnRecipes(ONION_STIR_FRY, PLAIN_RICE);
       localStorage.setItem(LANGUAGE_KEY, 'de');
       localStorage.setItem(
@@ -1484,14 +1484,14 @@ describe('GroceryList', () => {
       );
       await reload();
 
-      await tick('1 Stk. onion');
-      expect(barText()).toBe('„1 Stk. onion“ ist im Wagen.');
+      await tick('1 Stk. Zwiebel');
+      expect(barText()).toBe('„1 Stk. Zwiebel“ ist im Wagen.');
       expect(buttonsIn(shownBar()).map(textOf)).toEqual(['Rückgängig']);
-      await tick('1 EL soy sauce');
-      expect(barText()).toBe('„1 EL soy sauce“ ist im Wagen.');
+      await tick('1 EL Sojasauce');
+      expect(barText()).toBe('„1 EL Sojasauce“ ist im Wagen.');
       await click(buttonsIn(shownBar())[0]);
       expect(bar()).toBeNull();
-      expect(listed().map(labelOf)).toContain('1 EL soy sauce');
+      expect(listed().map(labelOf)).toContain('1 EL Sojasauce');
     });
 
     // Own recipes saved before a fresh app starts, as a reload makes, so the list holds the lines
@@ -1589,7 +1589,7 @@ describe('GroceryList', () => {
   });
 
   describe('in German (#35)', () => {
-    it('heads the list "Einkaufsliste" with the field "Eintrag hinzufügen" and the button "Hinzufügen", names the sections in German, as "Obst & Gemüse" for onion, shows "1 Stk. onion", says „Klopapier“ zu Sonstiges hinzugefügt. after adding "Klopapier", heads the cart "Im Wagen (1)" after a tick, and says "Nimm einen Plan an, um zu sehen, was einzukaufen ist." with the link "Zum Plan" without an accepted plan', async () => {
+    it('heads the list "Einkaufsliste" with the field "Eintrag hinzufügen" and the button "Hinzufügen", names the sections in German, as "Obst & Gemüse" for onion, shows "1 Stk. Zwiebel", says „Klopapier“ zu Sonstiges hinzugefügt. after adding "Klopapier", heads the cart "Im Wagen (1)" after a tick, and says "Nimm einen Plan an, um zu sehen, was einzukaufen ist." with the link "Zum Plan" without an accepted plan', async () => {
       storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
       localStorage.setItem(LANGUAGE_KEY, 'de');
       await openAccepted('Quick Dal', 'Plain Rice');
@@ -1603,8 +1603,8 @@ describe('GroceryList', () => {
         'Konserven & Gläser',
         'Sonstiges',
       ]);
-      expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual(['1 Stk. onion']);
-      expect(labelsIn(sectionHeaded('Nudeln, Reis & Getreide'))).toEqual(['150 g rice']);
+      expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual(['1 Stk. Zwiebel']);
+      expect(labelsIn(sectionHeaded('Nudeln, Reis & Getreide'))).toEqual(['150 g Reis']);
       expect(labelsIn(sectionHeaded('Sonstiges'))).toEqual(['1 Stk. mystery spice']);
 
       await addInGerman('Klopapier');
@@ -1615,9 +1615,9 @@ describe('GroceryList', () => {
         buttonsIn(added).map((button) => [textOf(button), button.getAttribute('aria-label')]),
       ).toEqual([['Entfernen', 'Klopapier entfernen']]);
 
-      await click(checkboxOf(listed().find((item) => labelOf(item) === '1 Stk. onion')!));
+      await click(checkboxOf(listed().find((item) => labelOf(item) === '1 Stk. Zwiebel')!));
       expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('Im Wagen (1)');
-      expect(inCart().map(labelOf)).toEqual(['1 Stk. onion']);
+      expect(inCart().map(labelOf)).toEqual(['1 Stk. Zwiebel']);
 
       localStorage.removeItem('fooplan.plan');
       TestBed.resetTestingModule();
@@ -1634,7 +1634,7 @@ describe('GroceryList', () => {
     });
 
     describe('edge cases', () => {
-      it('shows the units pc, tbsp and tsp as "Stk.", "EL" and "TL" in German, keeps g and ml, and writes 2000 g without a thousands separator: "2000 g flour", "1 EL soy sauce", "2 TL lemon juice", "50 ml milk", "3 Stk. egg"; and "2000 g flour", "1 tbsp soy sauce" and "3 pc egg" in English', async () => {
+      it('shows the units pc, tbsp and tsp as "Stk.", "EL" and "TL" in German, keeps g and ml, and writes 2000 g without a thousands separator: "2000 g Mehl", "1 EL Sojasauce", "2 TL lemon juice", "50 ml Milch", "3 Stk. Ei"; and "2000 g flour", "1 tbsp soy sauce" and "3 pc egg" in English', async () => {
         const BAKE: Recipe = {
           name: 'Big Bake',
           servings: 2,
@@ -1664,12 +1664,12 @@ describe('GroceryList', () => {
         const german = listed().map(labelOf);
         expect(german, 'German lines').toEqual(
           expect.arrayContaining([
-            '2000 g flour',
-            '1 EL soy sauce',
+            '2000 g Mehl',
+            '1 EL Sojasauce',
             '2 TL lemon juice',
-            '50 ml milk',
-            '3 Stk. egg',
-            '150 g rice',
+            '50 ml Milch',
+            '3 Stk. Ei',
+            '150 g Reis',
           ]),
         );
         expect(german, 'lines').toHaveLength(english.length);
@@ -1694,6 +1694,82 @@ describe('GroceryList', () => {
       const button = buttonsIn(element).find((candidate) => textOf(candidate) === 'Hinzufügen');
       expect(button, 'no "Hinzufügen" button').toBeDefined();
       await click(button!);
+    }
+  });
+
+  describe('German recipes (#36)', () => {
+    const POMODORO_LINES = [
+      '10 g Basilikum',
+      '1 Stk. Gurke',
+      '2 Stk. Knoblauchzehe',
+      '1 Stk. Paprikaschote',
+      '1 Stk. rote Zwiebel',
+      '3 Stk. Tomate',
+    ];
+
+    beforeEach(() => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+    });
+
+    it('lists "400 g Dosentomaten" under "Konserven & Gläser" and "2 Stk. Knoblauchzehe", "1 Stk. rote Zwiebel" and "3 Stk. Tomate" under "Obst & Gemüse", sorted by the German names, for "Spaghetti pomodoro" and "Greek salad with feta and bread" accepted for 2, and stores the tick of "2 Stk. Knoblauchzehe" under the English name', async () => {
+      await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
+      expect(labelsIn(sectionHeaded('Konserven & Gläser'))).toContain('400 g Dosentomaten');
+      expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual(POMODORO_LINES);
+
+      await click(checkboxOf(lineLabelled('2 Stk. Knoblauchzehe')));
+      expect(inCart().map(labelOf)).toEqual(['2 Stk. Knoblauchzehe']);
+      expect(store.plan().ticked).toEqual([itemKey({ name: 'garlic clove', unit: 'pc' })]);
+    });
+
+    describe('edge cases', () => {
+      it('sorts "Römersalat" with the o, before "Rotkohl" and "Zitrone", in German for "Chicken Caesar salad" and "Fish tacos"', async () => {
+        await openAccepted('Chicken Caesar salad', 'Fish tacos');
+        expect(namesIn(sectionHeaded('Obst & Gemüse'))).toEqual([
+          'Avocado',
+          'Knoblauchzehe',
+          'Koriander',
+          'Limette',
+          'Römersalat',
+          'Rotkohl',
+          'Zitrone',
+        ]);
+      });
+
+      it('shows an added "garlic clove" as typed, sorted by that text among the German lines of "Obst & Gemüse", and quotes it as typed', async () => {
+        await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
+        await type('garlic clove');
+        await click(buttonsIn(element).find((candidate) => textOf(candidate) === 'Hinzufügen')!);
+        expect(statusText()).toBe('„garlic clove“ zu Obst & Gemüse hinzugefügt.');
+        expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual([
+          '10 g Basilikum',
+          'garlic clove',
+          ...POMODORO_LINES.slice(1),
+        ]);
+      });
+
+      it('keeps "2 Stk. Knoblauchzehe", ticked in German, in the cart as "2 pc garlic clove" in English', async () => {
+        await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
+        await click(checkboxOf(lineLabelled('2 Stk. Knoblauchzehe')));
+
+        localStorage.setItem(LANGUAGE_KEY, 'en');
+        TestBed.resetTestingModule();
+        configure();
+        store = TestBed.inject(PlanStore);
+        await open();
+        expect(inCart().map(labelOf)).toEqual(['2 pc garlic clove']);
+        expect(labelsIn(sectionHeaded('Fruit & vegetables'))).not.toContain('2 pc garlic clove');
+      });
+    });
+
+    function lineLabelled(label: string): HTMLElement {
+      const line = listed().find((item) => labelOf(item) === label);
+      expect(line, `no line "${label}"`).toBeDefined();
+      return line!;
+    }
+
+    // The amount and the unit are one word each, as in "2 Stk." or "10 g"
+    function namesIn(section: HTMLElement): string[] {
+      return labelsIn(section).map((label) => label.replace(/^\S+ \S+ /, ''));
     }
   });
 

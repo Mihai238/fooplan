@@ -7,6 +7,7 @@ import {
   addedItems,
   addFeedback,
   byName,
+  byShownName,
   bySection,
   GroceryItem,
   groceryList,
@@ -510,6 +511,56 @@ describe('groceries', () => {
       expect(shoppingView(list, [stale, itemKey(beef)])).toEqual({
         sections: bySection([basil, zucchini, parmesan]),
         inCart: [beef],
+      });
+    });
+  });
+
+  describe('byShownName', () => {
+    it('sorts by the shown name in the given locale, e.g. "Römersalat" with the o in German, while the items keep their names', () => {
+      const shown = new Map([
+        ['romaine lettuce', 'Römersalat'],
+        ['red cabbage', 'Rotkohl'],
+        ['avocado', 'Avocado'],
+      ]);
+      const romaine = item('romaine lettuce', 1, 'pc');
+      const cabbage = item('red cabbage', 1, 'pc');
+      const avocado = item('avocado', 1, 'pc');
+      const typed = added('Zitrone', 'Fruit & vegetables');
+      const order = byShownName((line) => shown.get(line.name) ?? line.name, 'de');
+      expect([typed, cabbage, romaine, avocado].sort(order)).toEqual([
+        avocado,
+        romaine,
+        cabbage,
+        typed,
+      ]);
+    });
+
+    it("puts the plan's line before an added item of the same shown name, and orders by unit next", () => {
+      const order = byShownName((line) => line.name.toUpperCase(), 'de');
+      const typed = added('Ei', 'Dairy & eggs');
+      const pieces = item('ei', 2, 'pc');
+      const grams = item('ei', 100, 'g');
+      expect([typed, pieces, grams].sort(order)).toEqual([grams, pieces, typed]);
+    });
+  });
+
+  describe('shoppingView with an order', () => {
+    it('sorts the sections and the cart by the order it is given, keeping each item in its section', () => {
+      const onion = item('onion', 1, 'pc');
+      const garlic = item('garlic clove', 2, 'pc');
+      const tomato = item('tomato', 3, 'pc');
+      const shown = new Map([
+        ['onion', 'Zwiebel'],
+        ['garlic clove', 'Knoblauchzehe'],
+        ['tomato', 'Tomate'],
+      ]);
+      const order = byShownName((line) => shown.get(line.name) ?? line.name, 'de');
+      expect(shoppingView([onion, garlic, tomato], [], order).sections).toEqual([
+        { section: 'Fruit & vegetables', items: [garlic, tomato, onion] },
+      ]);
+      expect(shoppingView([onion, garlic, tomato], [onion, tomato].map(itemKey), order)).toEqual({
+        sections: [{ section: 'Fruit & vegetables', items: [garlic] }],
+        inCart: [tomato, onion],
       });
     });
   });

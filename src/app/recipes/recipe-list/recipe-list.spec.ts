@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
 import { leaveSuggested, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../amount';
+import { Recipe } from '../recipe';
 import { RecipeStore } from '../recipe-store';
 import { RECIPES } from '../recipes';
 import { LANGUAGE_KEY } from '../../testing';
@@ -683,7 +684,7 @@ describe('RecipeList', () => {
       await reload();
     });
 
-    it('heads the page "Rezepte" with the link "Rezept hinzufügen" and the field "Rezepte suchen"; says 44 Rezepte passen zu „s“. for "s", 1 Rezept passt zu „carbonara“. and Kein Rezept passt zu „kase“.; shows "2 Portionen" and "200 g spaghetti" on the card of "Spaghetti pomodoro", whose "Nicht vorschlagen" is named "Spaghetti pomodoro nicht vorschlagen" and turns into "Nicht vorgeschlagen" and "Wieder vorschlagen" on a click', async () => {
+    it('heads the page "Rezepte" with the link "Rezept hinzufügen" and the field "Rezepte suchen"; says 44 Rezepte passen zu „s“. for "s", 1 Rezept passt zu „carbonara“. and Kein Rezept passt zu „kase“.; shows "2 Portionen" and "200 g Spaghetti" on the card of "Spaghetti Pomodoro", whose "Nicht vorschlagen" is named "Spaghetti Pomodoro nicht vorschlagen" and turns into "Nicht vorgeschlagen" and "Wieder vorschlagen" on a click', async () => {
       expect(textOf(element.querySelector('h1')!)).toBe('Rezepte');
       const add = element.querySelector<HTMLAnchorElement>('a.add');
       expect(textOf(add!)).toBe('Rezept hinzufügen');
@@ -698,18 +699,18 @@ describe('RecipeList', () => {
       expect(statusText()).toBe('Kein Rezept passt zu „kase“.');
       await search('', 'Rezepte suchen');
 
-      const card = cardOf('Spaghetti pomodoro');
+      const card = cardOf('Spaghetti Pomodoro');
       expect(textOf(card.querySelector('p.servings')!)).toBe('2 Portionen');
-      expect(ingredientLinesOf('Spaghetti pomodoro')).toContain('200 g spaghetti');
+      expect(ingredientLinesOf('Spaghetti Pomodoro')).toContain('200 g Spaghetti');
       const dontSuggest = card.querySelector<HTMLButtonElement>('p.suggest button')!;
       expect(textOf(dontSuggest)).toBe('Nicht vorschlagen');
-      expect(dontSuggest.getAttribute('aria-label')).toBe('Spaghetti pomodoro nicht vorschlagen');
+      expect(dontSuggest.getAttribute('aria-label')).toBe('Spaghetti Pomodoro nicht vorschlagen');
       await click(dontSuggest);
-      const suggest = cardOf('Spaghetti pomodoro').querySelector('p.suggest')!;
+      const suggest = cardOf('Spaghetti Pomodoro').querySelector('p.suggest')!;
       expect(textOf(suggest.querySelector('span')!)).toBe('Nicht vorgeschlagen');
       const again = suggest.querySelector('button')!;
       expect(textOf(again)).toBe('Wieder vorschlagen');
-      expect(again.getAttribute('aria-label')).toBe('Wieder vorschlagen: Spaghetti pomodoro');
+      expect(again.getAttribute('aria-label')).toBe('Wieder vorschlagen: Spaghetti Pomodoro');
     });
 
     describe('edge cases', () => {
@@ -723,15 +724,15 @@ describe('RecipeList', () => {
         }
       });
 
-      it('shows decimal amounts with a comma and the units pc, tbsp and tsp as "Stk.", "EL" and "TL" on the cards: "0,5 Stk. red onion", "0,5 TL chili flakes", "0,25 TL nutmeg", "1 EL vegetable oil" and "400 g canned white beans"', async () => {
-        expect(ingredientLinesOf('Tuna and white bean salad with bread')).toEqual(
-          expect.arrayContaining(['0,5 Stk. red onion', '400 g canned white beans']),
+      it('shows decimal amounts with a comma and the units pc, tbsp and tsp as "Stk.", "EL" and "TL" on the cards: "0,5 Stk. rote Zwiebel", "0,5 TL Chiliflocken", "0,25 TL Muskatnuss", "1 EL Pflanzenöl" and "400 g weiße Bohnen"', async () => {
+        expect(ingredientLinesOf('Thunfisch-Bohnen-Salat mit Brot')).toEqual(
+          expect.arrayContaining(['0,5 Stk. rote Zwiebel', '400 g weiße Bohnen']),
         );
-        expect(ingredientLinesOf('Spaghetti aglio e olio')).toContain('0,5 TL chili flakes');
-        expect(ingredientLinesOf('Bratwurst with sauerkraut and mashed potatoes')).toContain(
-          '0,25 TL nutmeg',
+        expect(ingredientLinesOf('Spaghetti Aglio e Olio')).toContain('0,5 TL Chiliflocken');
+        expect(ingredientLinesOf('Bratwurst mit Sauerkraut und Kartoffelpüree')).toContain(
+          '0,25 TL Muskatnuss',
         );
-        expect(ingredientLinesOf('Teriyaki chicken with rice')).toContain('1 EL vegetable oil');
+        expect(ingredientLinesOf('Teriyaki-Hähnchen mit Reis')).toContain('1 EL Pflanzenöl');
         const lines = articles().flatMap((article) =>
           Array.from(article.querySelectorAll('li')).map(textOf),
         );
@@ -754,6 +755,73 @@ describe('RecipeList', () => {
       expect(article, `"${name}" not shown`).toBeDefined();
       return article!;
     }
+  });
+
+  describe('German recipes (#36)', () => {
+    // Saved as the form saves "Linsen": it stores ingredient names in lowercase
+    const OMAS_EINTOPF: Recipe = {
+      name: 'Omas Eintopf',
+      servings: 4,
+      ingredients: [{ name: 'linsen', amount: 200, unit: 'g' }],
+      own: true,
+    };
+
+    it('shows "Spaghetti Pomodoro" linking to /recipes/spaghetti-pomodoro as the first card in German, says „knoblauch“ matches the recipes with garlic clove, "Spaghetti Pomodoro" among them, and that nothing matches „garlic“; and that nothing matches "knoblauch" in English', async () => {
+      const garlic = RECIPES.filter((recipe) =>
+        recipe.ingredients.some((ingredient) => ingredient.name === 'garlic clove'),
+      );
+      expect(garlic.length, 'recipes with garlic clove').toBeGreaterThan(1);
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await reload();
+
+      const first = articles()[0].querySelector('h2 a');
+      expect(textOf(first!)).toBe('Spaghetti Pomodoro');
+      expect(first!.getAttribute('href')).toBe('/recipes/spaghetti-pomodoro');
+      await search('knoblauch', 'Rezepte suchen');
+      expect(statusText()).toBe(`${garlic.length} Rezepte passen zu „knoblauch“.`);
+      expect(articles()).toHaveLength(garlic.length);
+      expect(listedNames()).toContain('Spaghetti Pomodoro');
+      await search('garlic', 'Rezepte suchen');
+      expect(statusText()).toBe('Kein Rezept passt zu „garlic“.');
+
+      localStorage.setItem(LANGUAGE_KEY, 'en');
+      await reload();
+      await search('knoblauch');
+      expect(statusText()).toBe('No recipe matches "knoblauch".');
+    });
+
+    it('shows the own recipe "Omas Eintopf" with "200 g linsen" as typed next to the German "Spaghetti Pomodoro" in German, and finds it by "linsen", in German and in English', async () => {
+      storeOwnRecipes(OMAS_EINTOPF);
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await reload();
+      expect(listedNames()).toEqual(expect.arrayContaining(['Spaghetti Pomodoro', 'Omas Eintopf']));
+      expect(ingredientLinesOf('Omas Eintopf')).toEqual(['200 g linsen']);
+      await search('linsen', 'Rezepte suchen');
+      expect(listedNames()).toEqual(['Omas Eintopf']);
+      expect(statusText()).toBe('1 Rezept passt zu „linsen“.');
+
+      localStorage.setItem(LANGUAGE_KEY, 'en');
+      await reload();
+      expect(ingredientLinesOf('Omas Eintopf')).toEqual(['200 g linsen']);
+      await search('linsen');
+      expect(listedNames()).toEqual(['Omas Eintopf']);
+      expect(statusText()).toBe('1 recipe matches "linsen".');
+    });
+
+    describe('edge cases', () => {
+      it('shows the German ingredient lines "200 g Spaghetti", "400 g Dosentomaten", "2 Stk. Knoblauchzehe", "2 EL Olivenöl", "10 g Basilikum" and "30 g Parmesan" on the card of "Spaghetti Pomodoro" in German', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await reload();
+        expect(ingredientLinesOf('Spaghetti Pomodoro')).toEqual([
+          '200 g Spaghetti',
+          '400 g Dosentomaten',
+          '2 Stk. Knoblauchzehe',
+          '2 EL Olivenöl',
+          '10 g Basilikum',
+          '30 g Parmesan',
+        ]);
+      });
+    });
   });
 
   function configure() {

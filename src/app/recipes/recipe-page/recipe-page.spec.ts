@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
+import { LanguageStore } from '../../language-store';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
 import { Plan } from '../../plan/plan';
 import {
@@ -1374,14 +1375,21 @@ describe('RecipePage', () => {
     });
 
     describe('edge cases', () => {
-      it('shows the units of the step amounts in German, "Peel and thinly slice the garlic cloves (2 Stk.)." and "(2 EL)" for the olive oil, keeping "(200 g)" and the English step text, in the step view and in "Alle Schritte"', async () => {
+      it('shows the units of the step amounts in German, "(2 EL)" for the olive oil keeping "(200 g)" on "Spaghetti Pomodoro" and "Die Paprikaschoten und die rote Zwiebel (1 Stk.) in dünne Streifen schneiden." on "Hähnchen-Fajitas", in the step view and in "Alle Schritte"', async () => {
+        const fajitasStep4 =
+          'Die Paprikaschoten und die rote Zwiebel (1 Stk.) in dünne Streifen schneiden.';
         harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
         expect(amountsIn(stepParagraph())).toEqual(['(200 g)']);
         await click(button('Weiter'));
-        expect(textOf(stepParagraph())).toBe('Peel and thinly slice the garlic cloves (2 Stk.).');
-        expect(amountsIn(stepParagraph())).toEqual(['(2 Stk.)']);
         await click(button('Weiter'));
         expect(amountsIn(stepParagraph())).toContain('(2 EL)');
+
+        await harness.navigateByUrl('/recipes/chicken-fajitas');
+        for (let step = 1; step < 4; step++) {
+          await click(button('Weiter'));
+        }
+        expect(textOf(stepParagraph())).toBe(fajitasStep4);
+        expect(amountsIn(stepParagraph())).toEqual(['(1 Stk.)']);
 
         const allSteps = Array.from(page().querySelectorAll('div.view button')).find(
           (viewButton) => textOf(viewButton) === 'Alle Schritte',
@@ -1389,19 +1397,19 @@ describe('RecipePage', () => {
         expect(allSteps, 'no "Alle Schritte" button').toBeDefined();
         await click(allSteps!);
         const items = Array.from(page().querySelectorAll<HTMLElement>('ol.all > li'));
-        expect(textOf(items[1])).toBe('Peel and thinly slice the garlic cloves (2 Stk.).');
+        expect(textOf(items[3])).toBe(fajitasStep4);
         const amounts = items.flatMap(amountsIn);
         expect(amounts.filter((amount) => /\b(pc|tbsp|tsp)\b/.test(amount))).toEqual([]);
       });
 
-      it('shows the ingredients with German units and decimal commas, "0,5 Stk. red onion" on the page of "Greek salad with feta and bread" and "2 EL olive oil" on "Spaghetti pomodoro"', async () => {
+      it('shows the ingredients with German units and decimal commas, "0,5 Stk. rote Zwiebel" on the page of "Griechischer Salat mit Feta und Brot" and "2 EL Olivenöl" on "Spaghetti Pomodoro"', async () => {
         harness = await RouterTestingHarness.create('/recipes/greek-salad-with-feta-and-bread');
-        expect(ingredientLines()).toContain('0,5 Stk. red onion');
+        expect(ingredientLines()).toContain('0,5 Stk. rote Zwiebel');
         expect(ingredientLines().filter((line) => /\b(pc|tbsp|tsp)\b|\d\.\d/.test(line))).toEqual(
           [],
         );
         await harness.navigateByUrl('/recipes/spaghetti-pomodoro');
-        expect(ingredientLines()).toContain('2 EL olive oil');
+        expect(ingredientLines()).toContain('2 EL Olivenöl');
       });
 
       it('shows "Nicht vorschlagen", then "Nicht vorgeschlagen" and "Wieder vorschlagen", "1 Portion" for an own recipe for 1, and "Dieses Rezept ist in deinem Plan. Mach die Wahl rückgängig oder starte einen neuen Plan, um es zu löschen." while it is picked', async () => {
@@ -1445,6 +1453,126 @@ describe('RecipePage', () => {
 
     function amountsIn(element: HTMLElement): string[] {
       return Array.from(element.querySelectorAll('span.amount')).map(textOf);
+    }
+  });
+
+  describe('German recipes (#36)', () => {
+    const POMODORO_STEP_1 = 'Einen großen Topf Salzwasser für die Spaghetti zum Kochen bringen.';
+
+    it('shows "Spaghetti Pomodoro", the ingredient lines "200 g Spaghetti", "400 g Dosentomaten", "2 Stk. Knoblauchzehe", "2 EL Olivenöl", "10 g Basilikum" and "30 g Parmesan" and the German step 1 at /recipes/spaghetti-pomodoro in German, and the page as before in English', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      expect(headings().map(textOf)).toEqual(['Spaghetti Pomodoro']);
+      expect(ingredientLines()).toEqual([
+        '200 g Spaghetti',
+        '400 g Dosentomaten',
+        '2 Stk. Knoblauchzehe',
+        '2 EL Olivenöl',
+        '10 g Basilikum',
+        '30 g Parmesan',
+      ]);
+      expect(textWithoutAmounts(stepParagraph())).toBe(POMODORO_STEP_1);
+
+      TestBed.resetTestingModule();
+      configure();
+      localStorage.setItem(LANGUAGE_KEY, 'en');
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      const recipe = recipeNamed('Spaghetti pomodoro');
+      expect(headings().map(textOf)).toEqual(['Spaghetti pomodoro']);
+      expect(ingredientLines()).toEqual(linesOf(recipe));
+      expect(textOf(stepParagraph())).toBe(stepsOf('Spaghetti pomodoro')[0]);
+    });
+
+    // The header's "EN" button sets the language on the LanguageStore, which the page follows
+    it('shows "Spaghetti pomodoro" and the English step 3 at "Step 3 of 7" when the user switches to English on step 3 of the German page', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      await click(button('Weiter'));
+      await click(button('Weiter'));
+      expect(textOf(page().querySelector('p.counter'))).toBe('Schritt 3 von 7');
+      expect(textWithoutAmounts(stepParagraph())).toBe(
+        'Das Olivenöl in einer weiten Pfanne bei niedriger Hitze erwärmen und den Knoblauch 1 bis 2 Minuten anbraten, bis er duftet, aber nicht braun wird.',
+      );
+
+      TestBed.inject(LanguageStore).set('en');
+      await harness.fixture.whenStable();
+      expect(headings().map(textOf)).toEqual(['Spaghetti pomodoro']);
+      expect(textOf(page().querySelector('p.counter'))).toBe('Step 3 of 7');
+      expect(textOf(stepParagraph())).toBe(stepsOf('Spaghetti pomodoro')[2]);
+    });
+
+    it('shows the own recipe "Omas Eintopf" with "200 g linsen" as typed and no steps in German and in English, while the German page of "Spaghetti pomodoro" heads "Spaghetti Pomodoro"', async () => {
+      // Saved as the form saves "Linsen": it stores ingredient names in lowercase
+      storeOwnRecipes({
+        name: 'Omas Eintopf',
+        servings: 4,
+        ingredients: [{ name: 'linsen', amount: 200, unit: 'g' }],
+        own: true,
+      });
+      for (const language of ['de', 'en']) {
+        TestBed.resetTestingModule();
+        configure();
+        localStorage.setItem(LANGUAGE_KEY, language);
+        harness = await RouterTestingHarness.create('/recipes/omas-eintopf');
+        expect(headings().map(textOf), `${language}: heading`).toEqual(['Omas Eintopf']);
+        expect(ingredientLines(), `${language}: ingredients`).toEqual(['200 g linsen']);
+        expect(page().querySelector('div.steps'), `${language}: steps`).toBeNull();
+        if (language === 'de') {
+          await harness.navigateByUrl('/recipes/spaghetti-pomodoro');
+          expect(headings().map(textOf)).toEqual(['Spaghetti Pomodoro']);
+        }
+      }
+    });
+
+    describe('edge cases', () => {
+      it('shows "(200 g)" after "Spaghetti" in the German step 1 and no amount in step 2, whose "Knoblauchzehen" is not the German name "Knoblauchzehe", and "(2 EL)" after "Olivenöl" in step 3, in the step view and in "Alle Schritte"', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+        expect(textOf(stepParagraph())).toBe(
+          'Einen großen Topf Salzwasser für die Spaghetti (200 g) zum Kochen bringen.',
+        );
+        expect(amountsIn(stepParagraph())).toEqual(['(200 g)']);
+        await click(button('Weiter'));
+        expect(textOf(stepParagraph())).toBe(
+          'Die Knoblauchzehen schälen und in dünne Scheiben schneiden.',
+        );
+        expect(amountsIn(stepParagraph())).toEqual([]);
+        await click(button('Weiter'));
+        expect(textOf(stepParagraph())).toMatch(/^Das Olivenöl \(2 EL\) in einer weiten Pfanne/);
+
+        await click(button('Alle Schritte'));
+        const items = Array.from(page().querySelectorAll<HTMLElement>('ol.all > li'));
+        expect(items.slice(0, 3).map(amountsIn)).toEqual([['(200 g)'], [], ['(2 EL)']]);
+        expect(textOf(items[1])).toBe(
+          'Die Knoblauchzehen schälen und in dünne Scheiben schneiden.',
+        );
+      });
+
+      it('opens "Pesto-Pasta mit Kirschtomaten" at its English slug /recipes/pesto-pasta-with-cherry-tomatoes in German, and no recipe page at /recipes/pesto-pasta-mit-kirschtomaten', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        harness = await RouterTestingHarness.create('/recipes/pesto-pasta-with-cherry-tomatoes');
+        expect(router().url).toBe('/recipes/pesto-pasta-with-cherry-tomatoes');
+        expect(headings().map(textOf)).toEqual(['Pesto-Pasta mit Kirschtomaten']);
+
+        await harness.navigateByUrl('/recipes/pesto-pasta-mit-kirschtomaten');
+        expect(router().url).toBe('/recipes');
+      });
+    });
+
+    function stepParagraph(): HTMLElement {
+      const steps = page().querySelectorAll<HTMLElement>('p.step');
+      expect(steps, 'p.step').toHaveLength(1);
+      return steps[0];
+    }
+
+    function amountsIn(element: HTMLElement): string[] {
+      return Array.from(element.querySelectorAll('span.amount')).map(textOf);
+    }
+
+    function textWithoutAmounts(element: HTMLElement): string {
+      const shown = element.cloneNode(true) as HTMLElement;
+      shown.querySelectorAll('span.amount').forEach((amount) => amount.remove());
+      return textOf(shown).replace(/ ([.,])/g, '$1');
     }
   });
 

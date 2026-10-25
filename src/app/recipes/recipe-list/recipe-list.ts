@@ -17,11 +17,13 @@ import { RecipeStore } from '../recipe-store';
 export class RecipeList {
   protected readonly store = inject(PlanStore);
   private readonly injector = inject(Injector);
-  private readonly recipeStore = inject(RecipeStore);
+  protected readonly recipeStore = inject(RecipeStore);
   protected readonly language = inject(LanguageStore);
   protected readonly query = signal('');
   private readonly search = computed(() => this.query().trim());
-  protected readonly recipes = computed(() => searchRecipes(this.recipeStore.all(), this.search()));
+  protected readonly recipes = computed(() =>
+    searchRecipes(this.recipeStore.all(), this.search(), this.recipeStore),
+  );
   protected readonly matchStatus = computed(() => this.matchStatusText());
   protected readonly recipeSlug = recipeSlug;
   protected readonly minSuggested = MIN_SUGGESTED;

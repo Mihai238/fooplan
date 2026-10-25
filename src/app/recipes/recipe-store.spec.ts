@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { LanguageStore } from '../language-store';
 import { PlanStore, RANDOM, TODAY } from '../plan/plan-store';
 import { seededRandom } from '../plan/testing';
 import { checkRecipe } from './own-recipe';
@@ -243,6 +244,75 @@ describe('RecipeStore', () => {
 
       expect(reload().own()).toStrictEqual([QUICK_DAL]);
     });
+  });
+
+  describe('German texts (#36)', () => {
+    it('shows "Spaghetti pomodoro" as "Spaghetti Pomodoro" with its German steps in German and as it is in English, and an own recipe named like it as typed, with its own steps, in both', () => {
+      const pomodoro = builtIn('Spaghetti pomodoro');
+      const namedLikeIt: Recipe = {
+        ...ownRecipe('Spaghetti pomodoro'),
+        steps: ['Boil the pasta.', 'Add the sauce.', 'Serve.'],
+      };
+      const language = TestBed.inject(LanguageStore);
+
+      language.set('de');
+      expect(store.displayName(pomodoro)).toBe('Spaghetti Pomodoro');
+      expect(store.displaySteps(pomodoro)?.[0]).toBe(
+        'Einen großen Topf Salzwasser für die Spaghetti zum Kochen bringen.',
+      );
+      expect(store.displaySteps(pomodoro)).toHaveLength(pomodoro.steps!.length);
+      expect(store.displayName(namedLikeIt)).toBe('Spaghetti pomodoro');
+      expect(store.displaySteps(namedLikeIt)).toEqual(namedLikeIt.steps);
+
+      language.set('en');
+      expect(store.displayName(pomodoro)).toBe('Spaghetti pomodoro');
+      expect(store.displaySteps(pomodoro)).toEqual(pomodoro.steps);
+      expect(store.displayName(namedLikeIt)).toBe('Spaghetti pomodoro');
+      expect(store.displaySteps(namedLikeIt)).toEqual(namedLikeIt.steps);
+    });
+
+    it('shows "garlic clove" as "Knoblauchzehe" and "bratwurst" as "Bratwürste" in German, and "mystery spice", which has no entry, and every name in English as it is', () => {
+      const language = TestBed.inject(LanguageStore);
+
+      language.set('de');
+      expect(store.displayIngredient('garlic clove')).toBe('Knoblauchzehe');
+      expect(store.displayIngredient('bratwurst')).toBe('Bratwürste');
+      expect(store.displayIngredient('mystery spice')).toBe('mystery spice');
+
+      language.set('en');
+      expect(store.displayIngredient('garlic clove')).toBe('garlic clove');
+      expect(store.displayIngredient('mystery spice')).toBe('mystery spice');
+    });
+
+    it('lists the ingredients of "Spaghetti pomodoro" under their German names in German, with their amounts and units, and the "onion" of an own recipe as typed; and both as they are in English', () => {
+      const pomodoro = builtIn('Spaghetti pomodoro');
+      const own = ownRecipe('Zwiebelkuchen');
+      const language = TestBed.inject(LanguageStore);
+
+      language.set('de');
+      expect(store.displayIngredients(pomodoro)).toEqual(
+        pomodoro.ingredients.map((ingredient) => ({
+          ...ingredient,
+          name: store.displayIngredient(ingredient.name),
+        })),
+      );
+      expect(store.displayIngredients(pomodoro)[2]).toEqual({
+        name: 'Knoblauchzehe',
+        amount: 2,
+        unit: 'pc',
+      });
+      expect(store.displayIngredients(own)).toEqual([{ name: 'onion', amount: 1, unit: 'pc' }]);
+
+      language.set('en');
+      expect(store.displayIngredients(pomodoro)).toEqual(pomodoro.ingredients);
+      expect(store.displayIngredients(own)).toEqual(own.ingredients);
+    });
+
+    function builtIn(name: string): Recipe {
+      const recipe = RECIPES.find((candidate) => candidate.name === name);
+      expect(recipe, `no recipe "${name}"`).toBeDefined();
+      return recipe!;
+    }
   });
 
   function createStore(): RecipeStore {

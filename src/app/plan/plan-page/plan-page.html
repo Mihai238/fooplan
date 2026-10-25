@@ -123,7 +123,7 @@
             @if (current.recipe) {
               <p class="recipe">
                 <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
-                  {{ current.recipe }}
+                  {{ displayName(current.recipe) }}
                 </a>
               </p>
               @if (minutes(current.recipe); as recipeMinutes) {
@@ -159,7 +159,7 @@
             <p class="recipe">
               {{ language.t('plan.leftovers') }}
               <a class="name" [routerLink]="['/recipes', recipeSlug(leftoverRecipe)]">
-                {{ leftoverRecipe }}
+                {{ displayName(leftoverRecipe) }}
               </a>
             </p>
           } @else if (!plan().accepted) {
@@ -171,7 +171,7 @@
                   class="suggestion"
                   (click)="store.pick(ref, recipe)"
                 >
-                  <span class="name">{{ recipe }}</span>
+                  <span class="name">{{ displayName(recipe) }}</span>
                   <!-- On a line of its own, as Prettier would put it, the space would follow the line
                        break, which Angular keeps as a second space -->
                   <!-- prettier-ignore -->
@@ -180,7 +180,7 @@
                 <a
                   class="recipe-link"
                   [routerLink]="['/recipes', recipeSlug(recipe)]"
-                  [attr.aria-label]="language.t('plan.recipeFor', { recipe })"
+                  [attr.aria-label]="language.t('plan.recipeFor', { recipe: displayName(recipe) })"
                 >
                   {{ language.t('plan.recipe') }}
                 </a>
@@ -190,7 +190,9 @@
                     type="button"
                     class="dont-suggest"
                     [title]="language.t('plan.dontSuggestTitle')"
-                    [attr.aria-label]="language.t('plan.dontSuggestRecipe', { recipe })"
+                    [attr.aria-label]="
+                      language.t('plan.dontSuggestRecipe', { recipe: displayName(recipe) })
+                    "
                     (click)="askDontSuggest(recipe, { dontSuggest, suggestion }, dontSuggestDialog)"
                   >
                     <span aria-hidden="true">×</span>
@@ -276,7 +278,9 @@
   (keydown)="trapFocus($event, keepSuggestingButton, dontSuggestButton)"
   (close)="focusRow()"
 >
-  <h2 id="dont-suggest-title">{{ language.t('dontSuggest.title', { recipe: removing() }) }}</h2>
+  <h2 id="dont-suggest-title">
+    {{ language.t('dontSuggest.title', { recipe: displayName(removing()) }) }}
+  </h2>
   <p id="dont-suggest-text">{{ language.t('dontSuggest.text') }}</p>
   <div class="actions">
     <button

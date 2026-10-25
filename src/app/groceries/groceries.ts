@@ -27,6 +27,8 @@ export interface ShoppingView {
   inCart: ListItem[];
 }
 
+export type ItemOrder = (a: ListItem, b: ListItem) => number;
+
 export type AddFeedback =
   | { id: 'groceries.added'; params: { item: string; section: Section } }
   | { id: 'groceries.alreadyInCart' | 'groceries.alreadyOnList'; params: { item: string } };
@@ -79,14 +81,18 @@ export function addFeedback(plan: Plan, text: string): AddFeedback | null {
 }
 
 // Ticks whose key isn't on the list, e.g. after a deploy changed the recipes, are ignored
-export function shoppingView(items: readonly ListItem[], ticked: readonly string[]): ShoppingView {
+export function shoppingView(
+  items: readonly ListItem[],
+  ticked: readonly string[],
+  order: ItemOrder = byName,
+): ShoppingView {
   const tickedKeys = new Set(ticked);
   const toBuy: ListItem[] = [];
   const inCart: ListItem[] = [];
   for (const item of items) {
     (tickedKeys.has(itemKey(item)) ? inCart : toBuy).push(item);
   }
-  return { sections: bySection(toBuy.sort(byName)), inCart: inCart.sort(byName) };
+  return { sections: bySection(toBuy.sort(order)), inCart: inCart.sort(order) };
 }
 
 export function bySection<T extends ListItem>(items: readonly T[]): SectionItems<T>[] {
@@ -96,13 +102,15 @@ export function bySection<T extends ListItem>(items: readonly T[]): SectionItems
   })).filter((group) => group.items.length > 0);
 }
 
-// For the same name the plan's lines, which have an amount, come before an added one
-export function byName(a: ListItem, b: ListItem): number {
-  return (
-    a.name.localeCompare(b.name, 'en') ||
+export const byName: ItemOrder = byShownName((item) => item.name, 'en');
+
+// The shown name may be a translation, while the item keeps its English name for its key and
+// section. For the same name the plan's lines, which have an amount, come before an added one
+export function byShownName(nameOf: (item: ListItem) => string, locale: string): ItemOrder {
+  return (a, b) =>
+    nameOf(a).localeCompare(nameOf(b), locale) ||
     Number('added' in a) - Number('added' in b) ||
-    unitOf(a).localeCompare(unitOf(b), 'en')
-  );
+    unitOf(a).localeCompare(unitOf(b), 'en');
 }
 
 export function itemKey(item: { name: string; unit: Unit } | AddedItem): string {
