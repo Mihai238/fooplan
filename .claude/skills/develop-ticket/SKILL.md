@@ -1,51 +1,65 @@
 ---
 name: develop-ticket
-description: Develop a GitHub issue from its spec and acceptance criteria - tests first, implementation, quality gate (tests + browser check + review by agents), one squashed commit, merged into main. Also resumes a ticket in progress. Use when asked to work on, implement, develop or continue an issue or ticket.
-argument-hint: <issue number>
+description: Develop GitHub issues unattended from their spec and acceptance criteria - tests first, implementation, quality gate (tests + browser check + review by agents), one commit per ticket merged into main and deployed, issue closed. Without a number, works through every open issue in dependency order. Also resumes a run in progress. Use when asked to work on, implement, develop or continue an issue or ticket, or all of them.
+argument-hint: [issue number]
 ---
 
-# Develop ticket $ARGUMENTS
+# Develop tickets $ARGUMENTS
 
 ## Before anything
 
-The user has created this worktree for the ticket. Never create, switch or remove worktrees or branches.
+The user has created this worktree for the run. Never create, switch or remove worktrees or branches:
+the worktree's branch only carries each ticket on its way to `main`.
 
-- **`.ticket.md` exists in the worktree root and its `Step:` isn't `done`:** read it and continue at the
-  step its `Step:` line names. On a resume, check `git log <Start>..HEAD` and `git status` against the
-  progress log before going on.
-- **No `.ticket.md`, or it says `Step: done`:** start at step 1, which overwrites the finished one.
+- **`.ticket.md` exists in the worktree root and its `Step:` is neither `done` nor `skipped`:** read it
+  and continue that ticket at the step its `Step:` line names, then go on with the queue. On a resume,
+  check `git log <Start>..HEAD` and `git status` against the progress log before going on.
+- **Otherwise:** build the queue and start its first ticket at step 1, which overwrites the finished
+  `.ticket.md`.
+
+## The queue
+
+- **With an issue number** (`12` or `#12`): that issue, after the open issues it depends on, and theirs.
+- **Without:** every open issue that doesn't carry the `needs-human` label.
+
+An issue depends on the ones its body names in a `Depends on #2 and #3.` line; `Changes #N` and
+`Works best after #N` don't order anything. A ticket is ready when every issue it depends on is closed.
+Take the ready ticket with the lowest number. After each ticket, read the open issues again
+(`gh issue list --state open --json number,title,body,labels`), because a closed one makes others ready.
+
+A ticket that depends on a `needs-human` issue, or sits in a dependency cycle, is skipped with that
+reason. The run ends when no ticket in the queue is ready.
 
 ## Rules for the whole flow
 
-- `.ticket.md` (gitignored, from `ticket-template.md` next to this file) is the state. After every step,
-  update its `Step:` line and add a line to the progress log. Write decisions to `## Decisions`. Agents
-  get their context from `.ticket.md` and report back short results, never file dumps.
+- Nothing waits for the user. Unclear criteria are decided at step 1, the plan at step 3 is approved
+  automatically, and a ticket the flow can't finish is skipped (see the end of this file). The only
+  stops are blockers no ticket can get past: a working tree that isn't clean at step 1, a branch that
+  can't fast-forward to `main`, and `gh` failing to reach the repository. Stop and ask then.
+- `.ticket.md` (gitignored, from `ticket-template.md` next to this file) is the state of the current
+  ticket. After every step, update its `Step:` line and add a line to the progress log. Write decisions
+  to `## Decisions`. Agents get their context from `.ticket.md` and report back short results, never
+  file dumps.
 - Everything the flow produces lives in `.ticket.md`, never only in the scratchpad: the scratchpad is
   under `/tmp` and gone after a machine restart. That includes criteria written retroactively for work
   that was committed without them.
-- There are two stops: step 4 when the gate hasn't passed after three rounds, and step 6 when a
-  conflict with `main` is unclear. Unclear criteria at step 1 are decided, and the plan at step 3 is
-  published but approved automatically. Otherwise work without asking unless something blocks you.
 - Commit `wip: <slice>` freely as checkpoints; step 5 squashes them into one commit. Push only in
-  step 6, and only to `main`; never force anything.
-- The GitHub issue is read only: read it with `gh issue view <number> --comments`, never comment, label,
-  assign, close or edit it unless the user asks.
+  step 6, and only to `main`; never force-push. `git reset --hard` only ever goes back to `<Start>`,
+  when skipping a ticket.
+- Read an issue with `gh issue view <number> --comments`. The flow closes it with a comment (step 6),
+  or labels and comments it when skipping it; it never edits an issue's title or body or assigns it.
 - Follow CLAUDE.md, in particular: delegate implementing, browser testing and the quality gate to agents;
   tell agents to save edits incrementally, and resume an agent that died on a 529 instead of taking its
   work over.
 
 ## 1. Intake
 
-The argument is the issue number (`12` or `#12`).
-
-1. `git status` must be clean, since the `wip:` commits would take in anything already changed. If it
-   isn't, stop and ask.
-2. Read the issue with `gh issue view <number> --comments`. If `gh` can't resolve the repository or the
-   issue, stop and ask. The spec and the acceptance criteria come from the issue body and its comments,
-   plus whatever the user adds in the chat; the chat wins where they differ.
-   If the issue depends on others (`Depends on #2 and #3.`) and any of them is still open
-   (`gh issue view <n> --json state`), stop and ask: the work it builds on isn't there yet.
-3. Create `.ticket.md` from the template. Set `Ticket:` to the issue's URL and `Start:` to
+1. `git status` must be clean, since the `wip:` commits would take in anything already changed.
+2. `git fetch origin main` and `git merge --ff-only origin/main`, so the ticket starts from the latest
+   `main`.
+3. Read the issue. The spec and the acceptance criteria come from the issue body and its comments, plus
+   whatever the user adds in the chat; the chat wins where they differ.
+4. Create `.ticket.md` from the template. Set `Ticket:` to the issue's URL and `Start:` to
    `git rev-parse HEAD`. Put the spec into `## Spec` and each criterion as Given / When / Then into the
    criteria table, with the level of the one test that proves it most cheaply:
 
@@ -55,7 +69,7 @@ The argument is the issue number (`12` or `#12`).
    | What a component shows or does on input | component | Vitest spec of the component (TestBed) |
    | A user workflow across screens, or anything a spec can't see (routing, real rendering, the console) | browser | Scenario in `## Browser scenarios`, run with the `browser-test` skill |
 
-4. If a criterion is ambiguous, contradicts the spec or can't be tested, don't ask: take the reading
+5. If a criterion is ambiguous, contradicts the spec or can't be tested, don't ask: take the reading
    that fits the spec best, write it into the table as a testable criterion, and the original wording
    and the reason into `## Decisions`.
 
@@ -136,13 +150,12 @@ give it a row in `## Review findings` with its outcome:
 - Important: `fixed`, or `wrong` / `intentional` with the reason.
 - Nit: `fixed` when cheap, otherwise `not worth it`. Skip a simplification that breaks a pattern the
   neighbouring code follows.
-- Pre-existing: `left`. Not fixed in this ticket; the summary in step 5 lists it.
+- Pre-existing: `left`. Not fixed in this ticket; the summary lists it.
 
 Gate failures, failed scenarios and Important findings go back to step 3, then the next round starts.
 
-If round 3 still ends with a failing gate or an open Important finding, **STOP**: more fixes on the
-same approach rarely converge. Show the user what is open and whether the approach is the cause, and go
-on as they decide.
+If round 3 still ends with a failing gate or an open Important finding, skip the ticket: more fixes on
+the same approach rarely converge. The reason names what is open and whether the approach is the cause.
 
 ## 5. Commit
 
@@ -155,23 +168,45 @@ issue reference. The `wip:` commits are gone.
 of in a merge commit. `main` may be checked out in another worktree, so don't switch to it here.
 
 1. `git fetch origin main` and `git rebase origin/main`. Resolve a conflict when the intent of both
-   sides is clear; when it isn't, `git rebase --abort` and **STOP**.
+   sides is clear; when it isn't, `git rebase --abort` and skip the ticket.
 2. If the rebase brought in new commits, rerun the gate runner (tests and build) on the result.
 3. `git push origin HEAD:main`. If it's rejected because `main` moved meanwhile, go back to 1.
 4. The push deploys (`.github/workflows/deploy.yml`): find the run with
    `gh run list --workflow deploy.yml --commit <the pushed commit>` and wait for it with
-   `gh run watch <id> --exit-status`.
-5. Stop any dev server the flow started, and set `Step: done` in `.ticket.md`, so the next ticket in
-   this worktree starts fresh.
-6. Show the user, in a few lines:
-   - what changed and the criteria table with results,
-   - the rounds the gate took and the review findings counted by outcome, with every Important one
-     not fixed and every Pre-existing one listed, so the user can decide whether it needs an issue,
-   - what the browser tester could not verify (see the end of the `browser-test` skill), for the user
-     to check,
-   - the readings of unclear criteria decided at step 1,
-   - the open edge-case questions from the plan, which no test covers yet,
-   - the commit on `main` and whether the deployment succeeded.
+   `gh run watch <id> --exit-status`. If it fails, fix it in a new commit, rerun the affected part of
+   the gate and this step. After three failed deployments, or when the failure isn't in the code
+   (Actions or Pages down), label and comment the issue as when skipping, leave it open with the
+   commit on `main`, and go on with 6.
+5. Close the issue: `gh issue close <number> --comment "<commit> is on main and deployed."`
+6. Stop any dev server the flow started, set `Step: done` in `.ticket.md`, and show the user the
+   summary of the ticket without waiting for an answer. Then go on with the queue.
 
-Fix a failed deployment, and corrections the user brings later, in a new commit: rerun the affected
-part of the gate, then this step.
+## Skipping a ticket
+
+1. Write the reason into `.ticket.md`.
+2. Drop the ticket's work: `git rebase --abort` if a rebase is in progress, then
+   `git reset --hard <Start>`.
+3. Label the issue `needs-human` (create the label first if the repository doesn't have it:
+   `gh label create needs-human --description "develop-ticket couldn't finish it; remove the label to retry"`)
+   and comment on it: why the flow gave up, what is open, and what would unblock it, such as a spec
+   that settles a question.
+4. Stop any dev server the flow started, set `Step: skipped` in `.ticket.md`, and go on with the queue.
+
+## Summary
+
+After each ticket, in a few lines:
+
+- what changed and the criteria table with results, or why it was skipped,
+- the rounds the gate took and the review findings counted by outcome, with every Important one not
+  fixed and every Pre-existing one listed, so the user can decide whether it needs an issue,
+- what the browser tester could not verify (see the end of the `browser-test` skill), for the user to
+  check,
+- the readings of unclear criteria decided at step 1,
+- the open edge-case questions from the plan, which no test covers yet,
+- the commit on `main` and whether the deployment succeeded.
+
+At the end of the run, list the tickets done with their commits, the ones skipped with their reasons,
+and the open issues left waiting on a skipped one.
+
+Fix corrections the user brings later in a new commit: rerun the affected part of the gate, then
+step 6.

@@ -52,4 +52,6 @@ A hello-world Angular 22 app: standalone components, zoneless, Vitest. Needs Nod
 
 ## Tickets
 
-- Tickets are GitHub issues. Work one with the `develop-ticket` skill.
+- Tickets are GitHub issues. The `develop-ticket` skill develops one (`/develop-ticket 12`) or every open one (`/develop-ticket`) unattended, merges each into `main` and closes it.
+- A ticket names the issues it builds on in a `Depends on #N.` line: only that line orders the tickets.
+- An issue the skill couldn't finish gets the `needs-human` label and a comment why; remove the label to have it retried.

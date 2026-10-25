@@ -1,7 +1,7 @@
 # #{{ISSUE}} {{TITLE}}
 
 Ticket: (the issue's URL)
-Start: (commit the work started from; step 5 squashes the work onto it)
+Start: (commit the work started from; step 5 squashes the work onto it, skipping resets to it)
 Step: 1 intake
 Round: 0
 Reviewed: (commit the last review round covered; later rounds review only what came after it)
