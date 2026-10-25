@@ -1,14 +1,26 @@
 export function readStored(key: string): unknown {
   try {
-    return JSON.parse(localStorage.getItem(key) ?? 'null');
+    return JSON.parse(readStoredText(key) ?? 'null');
   } catch {
     return null;
   }
 }
 
 export function writeStored(key: string, value: unknown): void {
+  writeStoredText(key, JSON.stringify(value));
+}
+
+export function readStoredText(key: string): string | null {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+export function writeStoredText(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
   } catch {
     // Storage can be blocked or full; the change then lives until the page is reloaded
   }

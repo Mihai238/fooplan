@@ -17,6 +17,7 @@ import { displayAmount } from '../amount';
 import { servingsText } from '../recipe';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
+import { StepsView, StepsViewStore } from '../steps-view-store';
 
 const FORM_URL = /^\/(add-recipe|recipes\/[^/]+\/edit)$/;
 
@@ -31,6 +32,7 @@ export class RecipePage {
   protected readonly store = inject(PlanStore);
   private readonly injector = inject(Injector);
   private readonly recipes = inject(RecipeStore);
+  private readonly stepsView = inject(StepsViewStore);
   // The router reuses this page for another slug, and the route's guard lets only a known one in
   protected readonly page = toSignal(
     inject(ActivatedRoute).paramMap.pipe(
@@ -41,6 +43,7 @@ export class RecipePage {
     ),
     { requireSync: true },
   );
+  protected readonly view = this.stepsView.view;
   protected readonly step = linkedSignal({ source: this.page, computation: () => 0 });
   protected readonly last = computed(
     () => this.step() === (this.page().recipe.steps?.length ?? 0) - 1,
@@ -58,6 +61,12 @@ export class RecipePage {
   private readonly deleteButton = viewChild<ElementRef<HTMLButtonElement>>('deleteButton');
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   private pressedOnBackdrop = false;
+
+  protected showView(view: StepsView): void {
+    if (view !== this.view()) {
+      this.stepsView.set(view);
+    }
+  }
 
   // A button disabled while it has the focus drops the focus to the page, so on the first step the
   // focus moves on to "Next". In a recipe of two steps "Next" replaces "Done" there, so it exists

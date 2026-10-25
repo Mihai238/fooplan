@@ -68,30 +68,46 @@
   }
   @if (recipe.steps; as steps) {
     <div class="steps">
-      <!-- Screen readers announce changes inside a live region already on the page, not a region
-           added along with its text, so this one stays across the steps -->
-      <div aria-live="polite" aria-atomic="true">
-        <p class="counter">Step {{ step() + 1 }} of {{ steps.length }}</p>
-        <p class="step">{{ steps[step()] }}</p>
-      </div>
-      <div class="actions">
-        <button
-          #previousButton
-          type="button"
-          class="secondary"
-          [disabled]="step() === 0"
-          (click)="showPrevious(previousButton)"
-        >
-          Previous
+      <div class="view" role="group" aria-label="Show steps">
+        <button type="button" [attr.aria-pressed]="view() === 'steps'" (click)="showView('steps')">
+          Step by step
         </button>
-        @if (last()) {
-          <a #doneLink class="primary" [routerLink]="page().back">Done</a>
-        } @else {
-          <button #nextButton type="button" class="primary" (click)="showNext(nextButton)">
-            Next
-          </button>
-        }
+        <button type="button" [attr.aria-pressed]="view() === 'all'" (click)="showView('all')">
+          All steps
+        </button>
       </div>
+      @if (view() === 'steps') {
+        <!-- Screen readers announce changes inside a live region already on the page, not a region
+             added along with its text, so this one stays across the steps -->
+        <div aria-live="polite" aria-atomic="true">
+          <p class="counter">Step {{ step() + 1 }} of {{ steps.length }}</p>
+          <p class="step">{{ steps[step()] }}</p>
+        </div>
+        <div class="actions">
+          <button
+            #previousButton
+            type="button"
+            class="secondary"
+            [disabled]="step() === 0"
+            (click)="showPrevious(previousButton)"
+          >
+            Previous
+          </button>
+          @if (last()) {
+            <a #doneLink class="primary" [routerLink]="page().back">Done</a>
+          } @else {
+            <button #nextButton type="button" class="primary" (click)="showNext(nextButton)">
+              Next
+            </button>
+          }
+        </div>
+      } @else {
+        <ol class="all">
+          @for (text of steps; track $index) {
+            <li>{{ text }}</li>
+          }
+        </ol>
+      }
     </div>
   }
 </article>

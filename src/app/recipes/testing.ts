@@ -1,6 +1,7 @@
 import { Recipe } from './recipe';
 
 export const RECIPES_KEY = 'fooplan.recipes';
+export const STEPS_VIEW_KEY = 'fooplan.stepsView';
 
 export const QUICK_DAL: Recipe = {
   name: 'Quick Dal',

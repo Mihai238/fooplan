@@ -19,7 +19,7 @@ import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
 import { RecipeStore } from '../recipe-store';
 import { RECIPES } from '../recipes';
-import { ownRecipe, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../testing';
+import { ownRecipe, QUICK_DAL, RECIPES_KEY, STEPS_VIEW_KEY, storeOwnRecipes } from '../testing';
 
 const LIMIT_NOTE = 'At least 15 recipes stay suggested, so no more can be removed.';
 const PLAN_NOTE = 'This recipe is in your plan. Undo its pick or start a new plan to delete it.';
@@ -359,6 +359,359 @@ describe('RecipePage', () => {
     await click(done);
     expect(router().url).toBe('/recipes');
     expect(page().querySelectorAll('article').length).toBe(RECIPES.length);
+  });
+
+  describe('"Step by step" and "All steps"', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('starts div.steps with a group "Show steps" of "Step by step", pressed, and "All steps", not pressed, followed by "Step 1 of N", step 1, "Previous" and "Next", when opened with no saved view', async () => {
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      const steps = stepsOf('Spaghetti carbonara');
+      const block = page().querySelector('div.steps');
+      expect(block, 'no div.steps').not.toBeNull();
+      const group = viewGroup();
+      expect(block!.firstElementChild, 'first in div.steps').toBe(group);
+      expect(group.matches('div.view'), 'group is a div.view').toBe(true);
+      expect(Array.from(group.children).map((child) => child.tagName)).toEqual([
+        'BUTTON',
+        'BUTTON',
+      ]);
+      expect(pressedStates()).toEqual([
+        ['Step by step', 'true'],
+        ['All steps', 'false'],
+      ]);
+      expect(group.closest('[aria-live]'), 'group inside the live region').toBeNull();
+      expectStepView(1, steps);
+      for (const shown of [
+        page().querySelector<HTMLElement>('p.counter')!,
+        elementShowing(steps[0]),
+        button('Previous'),
+        button('Next'),
+      ]) {
+        expect(group.compareDocumentPosition(shown), `"${textOf(shown)}" below the switch`).toBe(
+          Node.DOCUMENT_POSITION_FOLLOWING,
+        );
+      }
+      expect(button('Previous').disabled).toBe(true);
+    });
+
+    it('shows the N steps in order with exactly their texts in an ol.all below the switch, with "All steps" pressed, no counter, p.step, "Previous", "Next", "Done" or live region, "Back" still shown and all saved in fooplan.stepsView, on "All steps"', async () => {
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      const steps = stepsOf('Spaghetti carbonara');
+      await click(viewButton('All steps'));
+
+      expectAllStepsView(steps);
+      const list = page().querySelector<HTMLElement>('div.steps ol.all');
+      expect(list, 'no ol.all in div.steps').not.toBeNull();
+      expect(viewGroup().compareDocumentPosition(list!), 'ol.all below the switch').toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      backLink();
+      expect(localStorage.getItem(STEPS_VIEW_KEY)).toBe('all');
+    });
+
+    it('shows the step of step 3 again, "Step 3 of N", with steps saved in fooplan.stepsView, on "All steps" and then "Step by step"', async () => {
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      const steps = stepsOf('Spaghetti carbonara');
+      await click(button('Next'));
+      await click(button('Next'));
+      expect(stepCounters(), 'before switching').toEqual([`Step 3 of ${steps.length}`]);
+
+      await click(viewButton('All steps'));
+      expectAllStepsView(steps, 'after "All steps"');
+      await click(viewButton('Step by step'));
+      expectStepView(3, steps);
+      expect(button('Previous').disabled).toBe(false);
+      button('Next');
+      expect(localStorage.getItem(STEPS_VIEW_KEY)).toBe('steps');
+    });
+
+    it('changes nothing on a click on the pressed button: "Step by step" on step 3 keeps step 3 and fooplan.stepsView absent, and "All steps" in its view keeps the list, calls no setItem and keeps step 3', async () => {
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      const steps = stepsOf('Spaghetti carbonara');
+      await click(button('Next'));
+      await click(button('Next'));
+
+      await click(viewButton('Step by step'));
+      expectStepView(3, steps, '"Step by step" pressed');
+      expect(localStorage.getItem(STEPS_VIEW_KEY), '"Step by step" pressed').toBeNull();
+
+      await click(viewButton('All steps'));
+      expectAllStepsView(steps, 'switched to "All steps"');
+      const setItem = vi.spyOn(Storage.prototype, 'setItem');
+      await click(viewButton('All steps'));
+      expectAllStepsView(steps, '"All steps" pressed');
+      expect(setItem).not.toHaveBeenCalled();
+      expect(localStorage.getItem(STEPS_VIEW_KEY)).toBe('all');
+      await click(viewButton('Step by step'));
+      expectStepView(3, steps, 'switched back');
+    });
+
+    it('opens and reloads a recipe page in the "All steps" view with all saved in fooplan.stepsView, and in the step view with nothing saved', async () => {
+      const steps = stepsOf('Spaghetti carbonara');
+      localStorage.setItem(STEPS_VIEW_KEY, 'all');
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      expectAllStepsView(steps, 'opened');
+
+      // A fresh app on the same URL and localStorage, as a reload makes
+      TestBed.resetTestingModule();
+      configure();
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      expectAllStepsView(steps, 'reloaded');
+
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      configure();
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      expectStepView(1, steps, 'nothing saved');
+    });
+
+    it('shows "Niçoise salad", opened after "Spaghetti carbonara" was switched to "All steps" on step 3, in the "All steps" view, and at "Step 1 of 7" with its step 1 on "Step by step"', async () => {
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      await click(button('Next'));
+      await click(button('Next'));
+      await click(viewButton('All steps'));
+      expectAllStepsView(stepsOf('Spaghetti carbonara'), 'Spaghetti carbonara');
+
+      await harness.navigateByUrl('/recipes/nicoise-salad');
+      const salad = stepsOf('Niçoise salad');
+      expect(headings().map(textOf)).toEqual(['Niçoise salad']);
+      expectAllStepsView(salad, 'Niçoise salad opened');
+      await click(viewButton('Step by step'));
+      expect(stepCounters()).toEqual(['Step 1 of 7']);
+      expectStepView(1, salad, '"Step by step" on Niçoise salad');
+    });
+
+    it('keeps the focus on "All steps" and on "Step by step" when the focused button is clicked', async () => {
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      const steps = stepsOf('Spaghetti carbonara');
+      const all = viewButton('All steps');
+      all.focus();
+      expect(document.activeElement, 'focus before "All steps"').toBe(all);
+      await click(all);
+      expectAllStepsView(steps);
+      expect(document.activeElement, 'focus after "All steps"').toBe(all);
+
+      const stepByStep = viewButton('Step by step');
+      stepByStep.focus();
+      expect(document.activeElement, 'focus before "Step by step"').toBe(stepByStep);
+      await click(stepByStep);
+      expectStepView(1, steps);
+      expect(document.activeElement, 'focus after "Step by step"').toBe(stepByStep);
+    });
+
+    it('shows no group "Show steps" on the page of the own recipe "Quick Dal"', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
+      expect(viewGroups()).toEqual([]);
+      expect(buttonsLabelled('Step by step')).toEqual([]);
+      expect(buttonsLabelled('All steps')).toEqual([]);
+      expect(page().querySelector('ol.all')).toBeNull();
+    });
+
+    describe('edge cases', () => {
+      it('lists every step from step 1, not from the current one, on "All steps" on step 3', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        const steps = stepsOf('Spaghetti carbonara');
+        await click(button('Next'));
+        await click(button('Next'));
+        await click(viewButton('All steps'));
+        expect(allSteps()).toEqual(steps);
+        expect(stepCounters()).toEqual([]);
+      });
+
+      it('shows no "Done" and no "Previous", and every step, on "All steps" on the last step', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        const steps = stepsOf('Spaghetti carbonara');
+        await stepToLast(steps);
+        doneLink();
+        await click(viewButton('All steps'));
+        expect(controlsLabelled('Done')).toEqual([]);
+        expectAllStepsView(steps);
+      });
+
+      it('keeps the ingredient lines exactly the ingredients, apart from the steps listed in ol.all, in the "All steps" view', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        const recipe = recipeNamed('Spaghetti carbonara');
+        await click(viewButton('All steps'));
+        expect(allSteps(), 'steps not listed').toEqual(stepsOf('Spaghetti carbonara'));
+        expect(ingredientLines()).toEqual(linesOf(recipe));
+        expect(page().querySelector('ul ol.all, ol.all ul')).toBeNull();
+      });
+
+      it('shows "Step N of N" with the last step and "Done" again on "All steps" and then "Step by step" on the last step', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        const steps = stepsOf('Spaghetti carbonara');
+        await stepToLast(steps);
+        await click(viewButton('All steps'));
+        await click(viewButton('Step by step'));
+        expectStepView(steps.length, steps);
+        doneLink();
+        expect(buttonsLabelled('Next')).toEqual([]);
+      });
+
+      it('goes on to step 4 on "Next" after switching to "All steps" and back on step 3', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        const steps = stepsOf('Spaghetti carbonara');
+        await click(button('Next'));
+        await click(button('Next'));
+        await click(viewButton('All steps'));
+        await click(viewButton('Step by step'));
+        await click(button('Next'));
+        expectStepView(4, steps);
+      });
+
+      it('calls no setItem and keeps step 3 on a click on the pressed "Step by step" with steps saved in fooplan.stepsView', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        const steps = stepsOf('Spaghetti carbonara');
+        await click(button('Next'));
+        await click(button('Next'));
+        await click(viewButton('All steps'));
+        await click(viewButton('Step by step'));
+        expect(localStorage.getItem(STEPS_VIEW_KEY), 'steps not saved').toBe('steps');
+
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+        await click(viewButton('Step by step'));
+        expectStepView(3, steps);
+        expect(setItem).not.toHaveBeenCalled();
+      });
+
+      it('keeps "Step N of N" and "Done" on a click on the pressed "Step by step" on the last step', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        const steps = stepsOf('Spaghetti carbonara');
+        await stepToLast(steps);
+        await click(viewButton('Step by step'));
+        expectStepView(steps.length, steps);
+        doneLink();
+        expect(localStorage.getItem(STEPS_VIEW_KEY)).toBeNull();
+      });
+
+      it('shows "Step 1 of N" with step 1 on "Step by step" on a page opened in the "All steps" view', async () => {
+        localStorage.setItem(STEPS_VIEW_KEY, 'all');
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        const steps = stepsOf('Spaghetti carbonara');
+        expectAllStepsView(steps, 'opened');
+        await click(viewButton('Step by step'));
+        expectStepView(1, steps);
+        expect(button('Previous').disabled).toBe(true);
+      });
+
+      it('opens "Spaghetti carbonara" in the step view at step 1, with steps saved, after "Step by step" was chosen on "Niçoise salad"', async () => {
+        localStorage.setItem(STEPS_VIEW_KEY, 'all');
+        harness = await RouterTestingHarness.create('/recipes/nicoise-salad');
+        await click(viewButton('Step by step'));
+        expectStepView(1, stepsOf('Niçoise salad'), 'Niçoise salad');
+
+        await harness.navigateByUrl('/recipes/spaghetti-carbonara');
+        expect(headings().map(textOf)).toEqual(['Spaghetti carbonara']);
+        expectStepView(1, stepsOf('Spaghetti carbonara'));
+        expect(localStorage.getItem(STEPS_VIEW_KEY)).toBe('steps');
+      });
+
+      it('opens "Niçoise salad" in the "All steps" view when reached through the Plan page after "All steps" was chosen on "Spaghetti carbonara"', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        await click(viewButton('All steps'));
+        await harness.navigateByUrl('/plan');
+        expect(textOf(page().querySelector('h1')), 'Plan page not shown').toBe('Plan');
+
+        await harness.navigateByUrl('/recipes/nicoise-salad');
+        expect(headings().map(textOf)).toEqual(['Niçoise salad']);
+        expectAllStepsView(stepsOf('Niçoise salad'));
+      });
+
+      it('keeps the group "Show steps" and both its buttons as the same elements across "All steps" and "Step by step"', async () => {
+        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        const steps = stepsOf('Spaghetti carbonara');
+        const group = viewGroup();
+        const [stepByStep, all] = [viewButton('Step by step'), viewButton('All steps')];
+
+        await click(all);
+        expectAllStepsView(steps);
+        expect(viewGroup(), 'group after "All steps"').toBe(group);
+        expect(viewButton('Step by step'), '"Step by step" after "All steps"').toBe(stepByStep);
+        expect(viewButton('All steps'), '"All steps" after "All steps"').toBe(all);
+
+        await click(stepByStep);
+        expectStepView(1, steps);
+        expect(viewGroup(), 'group after "Step by step"').toBe(group);
+        expect(viewButton('Step by step'), '"Step by step" after "Step by step"').toBe(stepByStep);
+        expect(viewButton('All steps'), '"All steps" after "Step by step"').toBe(all);
+      });
+
+      it('shows no group "Show steps" and no ol.all on the page of the own recipe "Quick Dal" with all saved, keeps all saved and opens "Spaghetti carbonara" afterwards in the "All steps" view', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        localStorage.setItem(STEPS_VIEW_KEY, 'all');
+        harness = await RouterTestingHarness.create('/recipes/quick-dal');
+        expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
+        expect(viewGroups()).toEqual([]);
+        expect(page().querySelector('ol.all')).toBeNull();
+        expect(page().querySelectorAll('li')).toHaveLength(QUICK_DAL.ingredients.length);
+        expect(localStorage.getItem(STEPS_VIEW_KEY)).toBe('all');
+
+        await harness.navigateByUrl('/recipes/spaghetti-carbonara');
+        expect(headings().map(textOf)).toEqual(['Spaghetti carbonara']);
+        expectAllStepsView(stepsOf('Spaghetti carbonara'));
+      });
+    });
+
+    function expectStepView(current: number, steps: string[], context = 'step view') {
+      expect(pressedStates(), context).toEqual([
+        ['Step by step', 'true'],
+        ['All steps', 'false'],
+      ]);
+      expect(stepCounters(), context).toEqual([`Step ${current} of ${steps.length}`]);
+      expect(textOf(page().querySelector('p.step')), context).toBe(steps[current - 1]);
+      expect(page().querySelector('ol.all'), `${context}: ol.all`).toBeNull();
+    }
+
+    function expectAllStepsView(steps: string[], context = '"All steps" view') {
+      expect(pressedStates(), context).toEqual([
+        ['Step by step', 'false'],
+        ['All steps', 'true'],
+      ]);
+      expect(allSteps(), context).toEqual(steps);
+      expect(page().querySelector('p.counter'), `${context}: p.counter`).toBeNull();
+      expect(stepCounters(), context).toEqual([]);
+      expect(page().querySelector('p.step'), `${context}: p.step`).toBeNull();
+      expect(page().querySelector('[aria-live]'), `${context}: live region`).toBeNull();
+      for (const label of ['Previous', 'Next', 'Done']) {
+        expect(controlsLabelled(label), `${context}: "${label}"`).toEqual([]);
+      }
+    }
+
+    function pressedStates(): [string, string | null][] {
+      return Array.from(viewGroup().querySelectorAll('button')).map((viewButton) => [
+        textOf(viewButton),
+        viewButton.getAttribute('aria-pressed'),
+      ]);
+    }
+
+    function viewButton(label: string): HTMLButtonElement {
+      const found = Array.from(viewGroup().querySelectorAll('button')).filter(
+        (candidate) => textOf(candidate) === label,
+      );
+      expect(found, `"${label}" buttons in the group "Show steps"`).toHaveLength(1);
+      return found[0];
+    }
+
+    function viewGroup(): HTMLElement {
+      const groups = viewGroups();
+      expect(groups, 'groups "Show steps"').toHaveLength(1);
+      return groups[0];
+    }
+
+    function viewGroups(): HTMLElement[] {
+      return Array.from(page().querySelectorAll<HTMLElement>('[role="group"]')).filter(
+        (group) => group.getAttribute('aria-label') === 'Show steps',
+      );
+    }
+
+    function allSteps(): string[] {
+      return Array.from(page().querySelectorAll('ol.all > li')).map(textOf);
+    }
   });
 
   describe('own recipes', () => {
@@ -852,7 +1205,7 @@ describe('RecipePage', () => {
   }
 
   function ingredientLines(): string[] {
-    return Array.from(page().querySelectorAll('li')).map(textOf);
+    return Array.from(page().querySelectorAll('ul > li')).map(textOf);
   }
 
   function stepCounters(): string[] {
