@@ -41,6 +41,7 @@ A hello-world Angular 22 app: standalone components, zoneless, Vitest. Needs Nod
 ## Working with agents
 
 - Keep the main session for planning, reviewing and deciding. Delegate to subagents whatever pulls a lot of content into the context: implementing features (in parallel when they touch different files), follow-up fixes after an agent run, and browser testing.
+- Give a subagent the cheapest model tier that does its task reliably: mechanical work (browser checks, lookups) doesn't need the session's model; implementing, reviewing and writing tickets do.
 - Agents can die on API overload errors (529). Tell them to save edits incrementally, and resume them rather than taking the work over.
 - Before implementing a feature, show the plan as an HTML artifact and wait for the user's approval; the `develop-ticket` flow publishes its plan and goes on without waiting. Fixes from a review or the user's feedback go ahead without a new plan.
 - Never write auto-memory: it is hidden and stays on one machine. Durable rules go into this file, a skill or `.claude/rules/`, where they're versioned with the project.
