@@ -7,6 +7,7 @@ import {
   DEFAULT_DAYS,
   DEFAULT_PEOPLE,
   dropSuggestion,
+  dropSuggestionsOutside,
   eatOut,
   filledMeals,
   forgetRecipe,
@@ -23,6 +24,7 @@ import {
   sameItem,
   setCookExtra,
   setDays,
+  setKidFriendly,
   setPeople,
   toggleTicked,
 } from './plan';
@@ -155,6 +157,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       const grown = setDays(plan, 5, RECIPES, seededRandom(1));
       expect(grown.days.map((d) => d.date)).toEqual([
@@ -242,6 +245,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       const shrunk = setDays(plan, 1, recipes, seededRandom(1));
       expect(shrunk.days).toHaveLength(1);
@@ -267,6 +271,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
       expect(shrunk.days).toHaveLength(2);
@@ -286,6 +291,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
       expect(shrunk.days).toEqual(plan.days.slice(0, 2));
@@ -392,6 +398,7 @@ describe('plan', () => {
           ticked: [],
           added: [],
           shown: ['Risotto', 'Shakshuka', ...shown, 'Quiche'],
+          kidFriendly: false,
         };
         const withPick = pickRecipe(sharing, LUNCH, 'Chili', FOURTEEN_RECIPES, seededRandom(seed));
         const dinner = withPick.days[0].dinner.suggestions;
@@ -428,6 +435,7 @@ describe('plan', () => {
           ticked: [],
           added: [],
           shown: ['C', 'G', 'H', 'I', 'A', 'B', 'D', 'E', 'F'],
+          kidFriendly: false,
         };
         const cookExtra = setCookExtra(nextLunchPicked, 0, true, recipes, seededRandom(seed));
         const afterCookExtra = otherSuggestions(
@@ -451,6 +459,7 @@ describe('plan', () => {
           ticked: [],
           added: [],
           shown: ['B', 'C', 'G', 'H', 'I', 'A', 'D', 'E', 'F'],
+          kidFriendly: false,
         };
         const shrunk = setDays(lastDayPicked, 1, recipes, seededRandom(seed));
         const afterShrink = otherSuggestions(shrunk, DINNER, recipes, seededRandom(seed));
@@ -488,6 +497,7 @@ describe('plan', () => {
           ticked: [],
           added: [],
           shown: [],
+          kidFriendly: false,
         };
         const result = pickRecipe(plan, LUNCH, 'Chili', RECIPES, seededRandom(seed));
         const dinner = result.days[0].dinner;
@@ -510,6 +520,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne', 'Minestrone', 'Pesto'],
+        kidFriendly: false,
       };
       // Always takes the first fresh candidate, so drawing the second replacement before the first
       // is recorded in shown would repeat it
@@ -538,6 +549,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       const result = pickRecipe(plan, LUNCH, 'Chili', RECIPES, seededRandom(1));
       expect(result.days[1]).toEqual(plan.days[1]);
@@ -901,6 +913,76 @@ describe('plan', () => {
     });
   });
 
+  describe('dropSuggestionsOutside', () => {
+    const RECIPES_LEFT = [
+      'Spaghetti pomodoro',
+      'Spaghetti carbonara',
+      'Mac and cheese',
+      'Potato goulash',
+      'Tuna pasta bake',
+      'Fish tacos',
+      'Shakshuka with bread',
+    ];
+
+    it('replaces "Penne arrabbiata" and "Pad thai with chicken" in their places in every open meal suggesting them with different recipes among the given ones, keeps the other suggestions and the dinner picked as "Niçoise salad", and returns the same plan when every suggestion is among them or the plan is accepted', () => {
+      const plan = planOf([
+        day(
+          '2026-10-24',
+          open('Penne arrabbiata', 'Spaghetti pomodoro', 'Mac and cheese'),
+          picked('Niçoise salad'),
+        ),
+        day(
+          '2026-10-25',
+          open('Fish tacos', 'Pad thai with chicken', 'Tuna pasta bake'),
+          open('Spaghetti carbonara', 'Penne arrabbiata', 'Potato goulash'),
+        ),
+      ]);
+      for (const seed of SEEDS) {
+        const result = dropSuggestionsOutside(plan, RECIPES_LEFT, seededRandom(seed));
+        const lunch = result.days[0].lunch.suggestions;
+        const { lunch: secondLunch, dinner: secondDinner } = result.days[1];
+        const context = `seed ${seed}: ${suggestionsOf(result).join(', ')}`;
+        expect(lunch.slice(1), context).toEqual(['Spaghetti pomodoro', 'Mac and cheese']);
+        expect(result.days[0].dinner, context).toEqual(picked('Niçoise salad'));
+        expect([secondLunch.suggestions[0], secondLunch.suggestions[2]], context).toEqual([
+          'Fish tacos',
+          'Tuna pasta bake',
+        ]);
+        expect([secondDinner.suggestions[0], secondDinner.suggestions[2]], context).toEqual([
+          'Spaghetti carbonara',
+          'Potato goulash',
+        ]);
+        expect(
+          suggestionsOf(result).filter((name) => !RECIPES_LEFT.includes(name)),
+          context,
+        ).toEqual([]);
+        for (const meal of openMealsOf(result)) {
+          expect(new Set(meal.suggestions).size, context).toBe(3);
+        }
+      }
+
+      const inside = planOf([
+        day(
+          '2026-10-24',
+          open('Spaghetti pomodoro', 'Mac and cheese', 'Fish tacos'),
+          picked('Niçoise salad'),
+        ),
+      ]);
+      expectUnchanged(inside, (p) => dropSuggestionsOutside(p, RECIPES_LEFT, seededRandom(1)));
+      const accepted = planOf(
+        [
+          day(
+            '2026-10-24',
+            open('Penne arrabbiata', 'Spaghetti pomodoro', 'Fish tacos'),
+            picked('Mac and cheese'),
+          ),
+        ],
+        { accepted: true },
+      );
+      expectUnchanged(accepted, (p) => dropSuggestionsOutside(p, RECIPES_LEFT, seededRandom(1)));
+    });
+  });
+
   describe('dropSuggestion', () => {
     it("puts the unpicked recipe shown longest ago that the meal isn't showing in the dropped recipe's place, never the dropped recipe itself, keeps the other two in their places and changes no meal without it, and replaces it in every open meal showing it", () => {
       const plan: Plan = {
@@ -931,6 +1013,7 @@ describe('plan', () => {
           'Potato goulash',
           'Pad thai',
         ],
+        kidFriendly: false,
       };
       // Shakshuka with bread and Chickpea and spinach curry are the only candidates, and Shakshuka
       // with bread was shown longest ago
@@ -1019,6 +1102,173 @@ describe('plan', () => {
       expect(
         leftoversOf(dropSuggestion(cookExtraPlan(), 'Curry', RECIPES, seededRandom(1)), 1),
       ).toBe('Curry');
+    });
+
+    describe('edge cases', () => {
+      it('keeps the dropped recipe in its place when every other recipe is picked or shown by the meal, so no suggestion is undefined', () => {
+        const plan = oneDayPlan(
+          open('Spaghetti carbonara', 'Shakshuka with bread', 'Niçoise salad'),
+          picked('Fish tacos'),
+          ['Spaghetti carbonara', 'Shakshuka with bread', 'Niçoise salad', 'Fish tacos'],
+        );
+        const recipes = ['Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'];
+        for (const seed of SEEDS) {
+          expectUnchanged(plan, (p) =>
+            dropSuggestion(p, 'Shakshuka with bread', recipes, seededRandom(seed)),
+          );
+        }
+      });
+    });
+  });
+
+  describe('setKidFriendly', () => {
+    // setKidFriendly gets the candidates: the kid-friendly recipes still suggested
+    const KID_FRIENDLY = [
+      'Spaghetti pomodoro',
+      'Spaghetti carbonara',
+      'Mac and cheese',
+      'Potato goulash',
+      'Tuna pasta bake',
+      'Fish tacos',
+      'Shakshuka with bread',
+    ];
+    const ALL = [...KID_FRIENDLY, 'Penne arrabbiata', 'Pad thai with chicken', 'Niçoise salad'];
+
+    it('replaces "Penne arrabbiata" in its place in an open lunch with a kid-friendly recipe not shown yet, counted as shown, keeps "Spaghetti pomodoro" and "Mac and cheese" and the dinner picked as "Pad thai with chicken", and sets kidFriendly; turning it off keeps every suggestion; an accepted plan or an unchanged value returns the same plan', () => {
+      const plan = planOf(
+        [
+          day(
+            '2026-10-24',
+            open('Penne arrabbiata', 'Spaghetti pomodoro', 'Mac and cheese'),
+            picked('Pad thai with chicken'),
+          ),
+          day(
+            '2026-10-25',
+            open('Spaghetti carbonara', 'Tuna pasta bake', 'Fish tacos'),
+            open('Mac and cheese', 'Spaghetti carbonara', 'Tuna pasta bake'),
+          ),
+        ],
+        { kidFriendly: false },
+      );
+      const notShown = KID_FRIENDLY.filter((name) => !plan.shown.includes(name));
+      for (const seed of SEEDS) {
+        const on = setKidFriendly(plan, true, KID_FRIENDLY, seededRandom(seed));
+        expect(on.kidFriendly, `seed ${seed}`).toBe(true);
+        const [replacement, ...kept] = on.days[0].lunch.suggestions;
+        expect(notShown, `seed ${seed}: ${replacement}`).toContain(replacement);
+        expect(kept, `seed ${seed}`).toEqual(['Spaghetti pomodoro', 'Mac and cheese']);
+        expect(on.days[0].dinner, `seed ${seed}`).toEqual(picked('Pad thai with chicken'));
+        expect(on.days[1], `seed ${seed}`).toEqual(plan.days[1]);
+        expect(on.shown, `seed ${seed}`).toContain(replacement);
+
+        const off = setKidFriendly(on, false, ALL, seededRandom(seed));
+        expect(off.kidFriendly, `seed ${seed}`).toBe(false);
+        expect(off.days, `seed ${seed}`).toEqual(on.days);
+        expect(setKidFriendly(on, true, KID_FRIENDLY, seededRandom(seed)), `seed ${seed}`).toBe(on);
+      }
+      expectUnchanged(plan, (unchanged) => setKidFriendly(unchanged, false, ALL, seededRandom(1)));
+      const accepted = planOf(
+        [day('2026-10-24', picked('Penne arrabbiata'), picked('Mac and cheese'))],
+        { accepted: true, kidFriendly: false },
+      );
+      expectUnchanged(accepted, (unchanged) =>
+        setKidFriendly(unchanged, true, KID_FRIENDLY, seededRandom(1)),
+      );
+    });
+
+    describe('edge cases', () => {
+      it('keeps a lunch eating out, a "Cook extra" dinner picked as "Pad thai with chicken" with the lunch its leftovers cover, and what they offered, strong flavours included, when turned on', () => {
+        const plan = planOf(
+          [
+            day(
+              '2026-10-24',
+              eatingOut(['Penne arrabbiata', 'Mac and cheese', 'Spaghetti pomodoro']),
+              picked('Pad thai with chicken', [
+                'Niçoise salad',
+                'Pad thai with chicken',
+                'Fish tacos',
+              ]),
+              true,
+            ),
+            day(
+              '2026-10-25',
+              covered(),
+              open('Spaghetti carbonara', 'Tuna pasta bake', 'Fish tacos'),
+            ),
+          ],
+          { kidFriendly: false },
+        );
+        const on = setKidFriendly(plan, true, KID_FRIENDLY, seededRandom(1));
+        expect(on.kidFriendly).toBe(true);
+        expect(on.days).toEqual(plan.days);
+        expect(leftoversOf(on, 1)).toBe('Pad thai with chicken');
+      });
+
+      it('replaces a strong-flavoured suggestion with the only candidate the meal does not show and no meal picked, also when every candidate has been shown', () => {
+        const plan = {
+          ...planOf(
+            [
+              day(
+                '2026-10-24',
+                open('Penne arrabbiata', 'Spaghetti pomodoro', 'Mac and cheese'),
+                picked('Potato goulash'),
+              ),
+            ],
+            { kidFriendly: false },
+          ),
+          shown: [
+            'Spaghetti carbonara',
+            'Penne arrabbiata',
+            'Spaghetti pomodoro',
+            'Mac and cheese',
+            'Potato goulash',
+          ],
+        };
+        const candidates = [
+          'Spaghetti pomodoro',
+          'Mac and cheese',
+          'Potato goulash',
+          'Spaghetti carbonara',
+        ];
+        for (const seed of SEEDS) {
+          const on = setKidFriendly(plan, true, candidates, seededRandom(seed));
+          expect(on.days[0].lunch.suggestions, `seed ${seed}`).toEqual([
+            'Spaghetti carbonara',
+            'Spaghetti pomodoro',
+            'Mac and cheese',
+          ]);
+        }
+      });
+
+      it('replaces the strong-flavoured suggestions of two open meals with three different kid-friendly recipes not shown yet, keeping "Mac and cheese" in both', () => {
+        const plan = planOf(
+          [
+            day(
+              '2026-10-24',
+              open('Penne arrabbiata', 'Mac and cheese', 'Spaghetti pomodoro'),
+              open('Mac and cheese', 'Niçoise salad', 'Pad thai with chicken'),
+            ),
+          ],
+          { kidFriendly: false },
+        );
+        const notShown = KID_FRIENDLY.filter((name) => !plan.shown.includes(name));
+        for (const seed of SEEDS) {
+          const { lunch, dinner } = setKidFriendly(plan, true, KID_FRIENDLY, seededRandom(seed))
+            .days[0];
+          const context = `seed ${seed}: ${lunch.suggestions.join(', ')} / ${dinner.suggestions.join(', ')}`;
+          expect(lunch.suggestions.slice(1), context).toEqual([
+            'Mac and cheese',
+            'Spaghetti pomodoro',
+          ]);
+          expect(dinner.suggestions[0], context).toBe('Mac and cheese');
+          const replacements = [lunch.suggestions[0], ...dinner.suggestions.slice(1)];
+          expect(
+            replacements.filter((name) => !notShown.includes(name)),
+            context,
+          ).toEqual([]);
+          expect(new Set(replacements).size, context).toBe(3);
+        }
+      });
     });
   });
 
@@ -1241,6 +1491,7 @@ describe('plan', () => {
           ticked: [],
           added: [],
           shown: ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne', 'Minestrone', 'Pesto'],
+          kidFriendly: false,
         };
         const withPick = pickRecipe(plan, DINNER, 'Dal', FOURTEEN_RECIPES, random);
         const cookExtra = setCookExtra(withPick, 0, true, FOURTEEN_RECIPES, random);
@@ -1308,6 +1559,7 @@ describe('plan', () => {
           ticked: [],
           added: [],
           shown: ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne', 'Minestrone', 'Pesto'],
+          kidFriendly: false,
         };
         let picks = pickRecipe(plan, LUNCH, 'Chili', FOURTEEN_RECIPES, random);
         picks = pickRecipe(picks, DINNER, 'Curry', FOURTEEN_RECIPES, random);
@@ -1610,6 +1862,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       const result = setCookExtra(plan, 0, true, recipes, seededRandom(1));
       expect(result.days[0]).toEqual({ ...plan.days[0], cookExtra: true });
@@ -1642,6 +1895,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       expectUnchanged(off, (p) => setCookExtra(p, 0, false, RECIPES, seededRandom(1)));
     });
@@ -1661,6 +1915,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       const result = setCookExtra(plan, 0, true, RECIPES, seededRandom(1));
       expect(result.days[0].cookExtra).toBe(true);
@@ -1691,6 +1946,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       expectUnchanged(lastDay, (p) => setCookExtra(p, 1, true, RECIPES, seededRandom(1)));
       const oneDay = oneDayPlan(picked('Chili'), picked('Curry'));
@@ -1711,6 +1967,7 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [],
+        kidFriendly: false,
       };
       expectUnchanged(accepted, (p) => setCookExtra(p, 0, true, RECIPES, seededRandom(1)));
       const acceptedCookExtra = completeCookExtraPlan(true);
@@ -2378,7 +2635,36 @@ describe('plan', () => {
       }
     });
 
+    it('reads a plan saved without kidFriendly as not kid-friendly, returns null for kidFriendly "yes", and reads back a kid-friendly plan with a dinner picked as "Pad thai with chicken"', () => {
+      const names = ['Pad thai with chicken', 'Mac and cheese', 'Spaghetti pomodoro', 'Fish tacos'];
+      const plan = planOf([
+        day(
+          '2026-10-24',
+          open('Mac and cheese', 'Spaghetti pomodoro', 'Fish tacos'),
+          picked('Pad thai with chicken'),
+        ),
+      ]);
+      const { kidFriendly: _, ...savedBefore } = plan;
+      expect(parsePlan(structuredClone(savedBefore), names)?.kidFriendly).toBe(false);
+      expect(parsePlan({ ...structuredClone(plan), kidFriendly: 'yes' }, names)).toBeNull();
+      const kidFriendly = { ...plan, kidFriendly: true };
+      expect(parsePlan(structuredClone(kidFriendly), names)).toEqual(kidFriendly);
+    });
+
     describe('edge cases', () => {
+      it('returns null for kidFriendly 1 or null, and reads back kidFriendly false', () => {
+        const plan = storedPlan();
+        expect(parsePlan({ ...structuredClone(plan), kidFriendly: 1 }, RECIPES), '1').toBeNull();
+        expect(
+          parsePlan({ ...structuredClone(plan), kidFriendly: null }, RECIPES),
+          'null',
+        ).toBeNull();
+        expect(parsePlan({ ...structuredClone(plan), kidFriendly: false }, RECIPES)).toEqual({
+          ...plan,
+          kidFriendly: false,
+        });
+      });
+
       it('reads back a meal eating out without offered, a dinner eating out, one whose offered names a recipe picked or suggested for another meal, and an accepted plan with meals eating out', () => {
         const withoutOffered = storedPlan();
         withoutOffered.days[1].lunch = eatingOut();
@@ -2454,6 +2740,7 @@ describe('plan', () => {
         'Pesto',
         'Curry',
       ],
+      kidFriendly: false,
     };
   }
 
@@ -2469,6 +2756,7 @@ describe('plan', () => {
       ticked: [],
       added: [],
       shown: ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash'],
+      kidFriendly: false,
     };
   }
 
@@ -2490,6 +2778,7 @@ describe('plan', () => {
       ticked: [],
       added: [],
       shown,
+      kidFriendly: false,
     };
   }
 

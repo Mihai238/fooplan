@@ -101,7 +101,7 @@ export class RecipeForm {
         // dropping a name RecipeStore no longer has and rejecting a plan that holds one
         const store = this.injector.get(PlanStore);
         this.recipes.replace(savedName, check.recipe);
-        store.renameRecipe(savedName, check.recipe.name);
+        store.recipeEdited(savedName, check.recipe.name);
         this.savedName.set(check.recipe.name);
       } else {
         this.recipes.add(check.recipe);

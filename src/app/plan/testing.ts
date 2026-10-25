@@ -1,10 +1,31 @@
 import { TestBed } from '@angular/core/testing';
 import { RecipeStore } from '../recipes/recipe-store';
+import { RECIPES } from '../recipes/recipes';
 import { Meal, MealRef, Plan, PlanDay, Random } from './plan';
 import { PlanStore } from './plan-store';
 
 export const LUNCH: MealRef = { day: 0, kind: 'lunch' };
 export const DINNER: MealRef = { day: 0, kind: 'dinner' };
+
+// The built-in recipes with a strong flavour, as recipes.spec.ts pins them, so the plan specs don't
+// depend on isKidFriendly
+export const NOT_KID_FRIENDLY = [
+  'Chicken fajitas',
+  'Chicken Caesar salad',
+  'Penne arrabbiata',
+  'Spaghetti aglio e olio',
+  'Chicken quesadillas',
+  'Pad thai with chicken',
+  'Thai green curry with prawns',
+  'Bean burritos',
+  'Sweet potato and black bean chili',
+  'Niçoise salad',
+  'Avocado toast with fried egg',
+];
+
+export const KID_FRIENDLY = RECIPES.map((recipe) => recipe.name).filter(
+  (name) => !NOT_KID_FRIENDLY.includes(name),
+);
 
 export function suggestionsOf(plan: Plan): string[] {
   return plan.days.flatMap((day) => [...day.lunch.suggestions, ...day.dinner.suggestions]);
@@ -47,7 +68,14 @@ export function leaveSuggested(store: PlanStore, count: number, ...kept: string[
 }
 
 // Lists every recipe of the days as shown, as loading the plan would
-export function planOf(planDays: PlanDay[], { people = 2, accepted = false } = {}): Plan {
+export function planOf(
+  planDays: PlanDay[],
+  {
+    people = 2,
+    accepted = false,
+    kidFriendly = false,
+  }: { people?: number; accepted?: boolean; kidFriendly?: boolean } = {},
+): Plan {
   const shown = planDays.flatMap((planDay) =>
     [planDay.lunch, planDay.dinner].flatMap((meal) => [
       ...(meal.recipe === null ? [] : [meal.recipe]),
@@ -62,6 +90,7 @@ export function planOf(planDays: PlanDay[], { people = 2, accepted = false } = {
     ticked: [],
     added: [],
     shown: [...new Set(shown)],
+    kidFriendly,
   };
 }
 

@@ -189,7 +189,7 @@ describe('routes', () => {
       "Grandma's Soup",
     );
     TestBed.inject(RecipeStore).replace("Grandma's Soup", ownRecipe('Red Soup'));
-    TestBed.inject(PlanStore).renameRecipe("Grandma's Soup", 'Red Soup');
+    TestBed.inject(PlanStore).recipeEdited("Grandma's Soup", 'Red Soup');
     TestBed.inject(PlanStore).deleteRecipe('Quick Dal');
     expect(TestBed.inject(RecipeStore).bySlug('red-soup'), 'not renamed').toBeDefined();
     // The router ignores a navigation to the URL it is on

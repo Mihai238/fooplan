@@ -23,7 +23,9 @@ h1 {
 }
 
 label,
-.stepper-label {
+.stepper-label,
+.note,
+.minutes {
   color: var(--muted);
   font-size: 0.875rem;
 }
@@ -32,9 +34,10 @@ label,
   margin-right: 0.25rem;
 }
 
-/* A phone can't fit both steppers beside their labels in one row, so the labels go above them and
-   the steppers share the row below the title and "New plan" */
-@media (max-width: 40rem) {
+/* The title, both steppers beside their labels, the checkbox and "New plan" fit in one row from
+   about 44.2rem; 46rem leaves headroom for wider system fonts. Up to it the labels go above the
+   steppers, which share the row below the title and "New plan" */
+@media (max-width: 46rem) {
   .toolbar:has(.stepper) {
     display: grid;
     grid-template-columns: auto auto;
@@ -59,11 +62,18 @@ label,
     grid-column: 1 / -1;
     margin-right: 0;
   }
+
+  .kid-friendly {
+    grid-row: 3;
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
 }
 
 /* Below this width the two steppers side by side would overflow the row */
 @media (max-width: 21.5rem) {
-  .stepper {
+  .stepper,
+  .kid-friendly {
     grid-row: auto;
     grid-column: 1 / -1;
   }
@@ -151,24 +161,33 @@ a.name:hover {
   text-decoration-color: currentColor;
 }
 
-.cook-extra {
+/* The page's labels are those of its checkboxes */
+label {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
 }
 
-.cook-extra input {
+label input {
   margin: 0;
   accent-color: var(--accent);
   cursor: pointer;
 }
 
+/* As high as the step buttons, so the whole label is a touch target and the toolbar keeps its
+   height */
+.kid-friendly {
+  min-height: max(2.75rem, 44px);
+}
+
 .note,
 .minutes {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.875rem;
+}
+
+.toolbar + .note {
+  margin-bottom: 1rem;
 }
 
 button {
@@ -222,15 +241,19 @@ button {
   white-space: nowrap;
 }
 
-.dont-suggest {
+.dont-suggest,
+.step {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  padding: 0;
+}
+
+.dont-suggest {
   width: 44px;
   height: 44px;
   margin: -0.25rem -0.5rem -0.25rem 0;
-  padding: 0;
   background: none;
   color: var(--muted);
   font-size: 1rem;
@@ -249,14 +272,9 @@ button {
 }
 
 .step {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
   /* 2.75rem drops below the 44 px touch minimum when the browser's default font size is smaller */
   width: max(2.75rem, 44px);
   height: max(2.75rem, 44px);
-  padding: 0;
   font-size: 0.75rem;
 }
 

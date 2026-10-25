@@ -2,6 +2,7 @@ import { computed } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { groceryList, itemKey } from '../groceries/groceries';
 import { RecipeStore } from '../recipes/recipe-store';
+import { Recipe } from '../recipes/recipe';
 import { RECIPES } from '../recipes/recipes';
 import { ownRecipe, PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../recipes/testing';
 import { addedKey, DEFAULT_DAYS, MealRef, Plan } from './plan';
@@ -11,8 +12,10 @@ import {
   covered,
   day,
   DINNER,
+  KID_FRIENDLY,
   leaveSuggested,
   LUNCH,
+  NOT_KID_FRIENDLY,
   open,
   picked,
   planOf,
@@ -176,6 +179,7 @@ describe('PlanStore', () => {
       ticked: [],
       added: [],
       shown: names.slice(0, 6),
+      kidFriendly: false,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
     store = reload();
@@ -235,6 +239,7 @@ describe('PlanStore', () => {
       ticked: [],
       added: [],
       shown: [lunch, dinner, other, ...rest.slice(0, 3)],
+      kidFriendly: false,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 
@@ -289,6 +294,7 @@ describe('PlanStore', () => {
       ticked: [],
       added: [],
       shown: [],
+      kidFriendly: false,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
     expectFreshPlan(reload().plan(), '2026-10-24');
@@ -511,7 +517,7 @@ describe('PlanStore', () => {
         expect(store.deleteBlock('Quick Dal')).toBeNull();
       });
 
-      it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" in the plan and in its place in the removed recipes on renameRecipe after RecipeStore.replace, and loads both unchanged after a reload', () => {
+      it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" in the plan and in its place in the removed recipes on recipeEdited after RecipeStore.replace, and loads both unchanged after a reload', () => {
         storeOwnRecipes(QUICK_DAL);
         localStorage.setItem(
           REMOVED_KEY,
@@ -534,7 +540,7 @@ describe('PlanStore', () => {
         const before = store.plan();
 
         recipes().replace('Quick Dal', { ...QUICK_DAL, name: 'Daily Dal' });
-        store.renameRecipe('Quick Dal', 'Daily Dal');
+        store.recipeEdited('Quick Dal', 'Daily Dal');
         const expected: Plan = {
           ...before,
           days: [
@@ -776,6 +782,401 @@ describe('PlanStore', () => {
         storedRemoved: localStorage.getItem(REMOVED_KEY),
         storedRecipes: localStorage.getItem(RECIPES_KEY),
       };
+    }
+  });
+
+  describe('kid-friendly', () => {
+    it('turns kid-friendly on with setKidFriendly, suggesting none of the 11 recipes that are not kid-friendly, saves it and keeps it after a reload, and keeps the same plan when set on again', () => {
+      expect(store.plan().kidFriendly, 'new plan').toBe(false);
+      expect(
+        suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)).length,
+        'strong flavours suggested before',
+      ).toBeGreaterThan(0);
+
+      store.setKidFriendly(true);
+      expect(store.plan().kidFriendly).toBe(true);
+      expectKidFriendly('turned on');
+      store = reload();
+      expect(store.plan().kidFriendly, 'after a reload').toBe(true);
+      expectKidFriendly('after a reload');
+
+      const before = store.plan();
+      store.setKidFriendly(true);
+      expect(store.plan()).toBe(before);
+    });
+
+    it('draws only kid-friendly recipes while kid-friendly is on, for "Other suggestions", the days, picks, "Cook extra" turned off and the replacement of a removed recipe, and from every suggested recipe again for a new plan once it is off', () => {
+      store.setKidFriendly(true);
+      expectKidFriendly('turned on');
+      for (const meal of mealRefs()) {
+        for (let click = 1; click <= 3; click++) {
+          store.otherSuggestions(meal);
+          expectKidFriendly(`day ${meal.day} ${meal.kind}, "Other suggestions" ${click}`);
+        }
+      }
+      store.setDays(1);
+      store.setDays(5);
+      expectKidFriendly('5 days again');
+      for (const meal of mealRefs().slice(0, -1)) {
+        pickFirstSuggestion(meal);
+        expectKidFriendly(`picked day ${meal.day} ${meal.kind}`);
+      }
+      store.setCookExtra(0, true);
+      store.setCookExtra(0, false);
+      expect(store.plan().days[1].lunch.suggestions, 'lunch not reopened').toHaveLength(3);
+      expectKidFriendly('"Cook extra" off');
+      const removed = store.plan().days[4].dinner.suggestions[0];
+      store.removeRecipe(removed);
+      expect(store.removed(), `${removed} not removed`).toEqual([removed]);
+      expectKidFriendly(`${removed} removed`);
+
+      store.setKidFriendly(false);
+      store.newPlan();
+      expect(store.plan().kidFriendly).toBe(false);
+      expect(
+        suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)).length,
+        'strong flavours in the new plan',
+      ).toBeGreaterThan(0);
+    });
+
+    it('lets recipes be removed with kid-friendly on while 16 kid-friendly recipes are suggested, none once 15 are left, not even one that is not kid-friendly, and again once it is off', () => {
+      const sixteen = KID_FRIENDLY.slice(0, 16);
+      leaveSuggested(store, 27, ...sixteen, ...NOT_KID_FRIENDLY);
+      store.setKidFriendly(true);
+      expect(store.canRemove(), '16 kid-friendly suggested').toBe(true);
+
+      store.removeRecipe(sixteen[0]);
+      expect(store.removed(), `${sixteen[0]} not removed`).toContain(sixteen[0]);
+      expect(store.canRemove(), '15 kid-friendly suggested').toBe(false);
+      const before = store.removed();
+      store.removeRecipe(sixteen[1]);
+      store.removeRecipe(NOT_KID_FRIENDLY[0]);
+      expect(store.removed(), 'removed at 15 kid-friendly suggested').toEqual(before);
+
+      store.setKidFriendly(false);
+      expect(store.canRemove(), 'turned off').toBe(true);
+      store.removeRecipe(NOT_KID_FRIENDLY[0]);
+      expect(store.removed()).toEqual([...before, NOT_KID_FRIENDLY[0]]);
+    });
+
+    it('keeps "New plan" kid-friendly, suggesting none of the 11 recipes that are not kid-friendly, also after a reload, and not kid-friendly when it is off', () => {
+      store.setKidFriendly(true);
+      acceptOneDayPlan(store);
+
+      store.newPlan();
+      expectFreshPlan(store.plan(), '2026-10-24');
+      expect(store.plan().kidFriendly).toBe(true);
+      expectKidFriendly('new plan');
+      expect(reload().plan(), 'after a reload').toEqual(store.plan());
+
+      store = reload();
+      store.setKidFriendly(false);
+      store.newPlan();
+      expect(store.plan().kidFriendly, 'turned off').toBe(false);
+    });
+
+    it('replaces "Penne arrabbiata" and "Niçoise salad" suggested by a saved kid-friendly plan in their places with kid-friendly recipes when loading it, keeps the other suggestions and the dinner picked as "Pad thai with chicken", and saves the plan with the replacements', () => {
+      const saved = planOf(
+        [
+          day(
+            '2026-10-24',
+            open('Spaghetti carbonara', 'Penne arrabbiata', 'Mac and cheese'),
+            picked('Pad thai with chicken'),
+          ),
+          day(
+            '2026-10-25',
+            open('Fish tacos', 'Potato goulash', 'Tuna pasta bake'),
+            open('Niçoise salad', 'Spaghetti pomodoro', 'Shakshuka with bread'),
+          ),
+        ],
+        { kidFriendly: true },
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+
+      store = reload();
+      const [first, second] = store.plan().days;
+      expect(store.plan().kidFriendly).toBe(true);
+      expect(first.lunch.suggestions[0]).toBe('Spaghetti carbonara');
+      expect(KID_FRIENDLY).toContain(first.lunch.suggestions[1]);
+      expect(first.lunch.suggestions[2]).toBe('Mac and cheese');
+      expect(first.dinner).toEqual(picked('Pad thai with chicken'));
+      expect(second.lunch).toEqual(saved.days[1].lunch);
+      expect(KID_FRIENDLY).toContain(second.dinner.suggestions[0]);
+      expect(second.dinner.suggestions.slice(1)).toEqual([
+        'Spaghetti pomodoro',
+        'Shakshuka with bread',
+      ]);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'), 'not saved').toEqual(
+        store.plan(),
+      );
+    });
+
+    it('replaces the own recipe "Plain Rice" in its place with a kid-friendly recipe once it is edited to use chili flakes while kid-friendly is on, keeping its name, and "Onion Rice" once it is edited and renamed to "Spicy Rice", and saves the plan', () => {
+      storeOwnRecipes(PLAIN_RICE, ownRecipe('Onion Rice'));
+      load(
+        planOf(
+          [
+            day(
+              '2026-10-24',
+              open('Spaghetti carbonara', 'Plain Rice', 'Mac and cheese'),
+              open('Onion Rice', 'Spaghetti pomodoro', 'Potato goulash'),
+            ),
+          ],
+          { kidFriendly: true },
+        ),
+      );
+      const recipeStore = TestBed.inject(RecipeStore);
+
+      recipeStore.replace('Plain Rice', withChiliFlakes(PLAIN_RICE));
+      store.recipeEdited('Plain Rice', 'Plain Rice');
+      const { lunch } = store.plan().days[0];
+      expect(lunch.suggestions[0]).toBe('Spaghetti carbonara');
+      expect(KID_FRIENDLY).toContain(lunch.suggestions[1]);
+      expect(lunch.suggestions[2]).toBe('Mac and cheese');
+
+      recipeStore.replace('Onion Rice', {
+        ...withChiliFlakes(ownRecipe('Onion Rice')),
+        name: 'Spicy Rice',
+      });
+      store.recipeEdited('Onion Rice', 'Spicy Rice');
+      const { dinner } = store.plan().days[0];
+      expect(KID_FRIENDLY).toContain(dinner.suggestions[0]);
+      expect(dinner.suggestions.slice(1)).toEqual(['Spaghetti pomodoro', 'Potato goulash']);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'), 'not saved').toEqual(
+        store.plan(),
+      );
+    });
+
+    it('turns kid-friendly off once the own recipe "Plain Rice", one of exactly 15 kid-friendly recipes suggested, is edited to use chili flakes with kid-friendly on and 9 meals picked, so "Other suggestions" still gives the open meal 3 suggestions and the saved plan loads again', () => {
+      storeOwnRecipes(PLAIN_RICE);
+      store = reload();
+      leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 14), PLAIN_RICE.name, ...NOT_KID_FRIENDLY);
+      store.setKidFriendly(true);
+      expect(store.plan().kidFriendly, 'not turned on').toBe(true);
+      for (const meal of mealRefs().slice(0, -1)) {
+        const { suggestions } = store.plan().days[meal.day][meal.kind];
+        store.pick(meal, suggestions.filter((name) => name !== PLAIN_RICE.name)[0]);
+      }
+
+      TestBed.inject(RecipeStore).replace(PLAIN_RICE.name, withChiliFlakes(PLAIN_RICE));
+      store.recipeEdited(PLAIN_RICE.name, PLAIN_RICE.name);
+      expect(store.plan().kidFriendly, 'still kid-friendly').toBe(false);
+
+      const openMeals = mealRefs().filter(
+        (meal) => store.plan().days[meal.day][meal.kind].recipe === null,
+      );
+      expect(openMeals, 'open meals').toHaveLength(1);
+      for (const meal of openMeals) {
+        store.otherSuggestions(meal);
+        expect(
+          store.plan().days[meal.day][meal.kind].suggestions,
+          `day ${meal.day} ${meal.kind}`,
+        ).toHaveLength(3);
+      }
+      const plan = store.plan();
+      expect(reload().plan(), 'saved plan not loaded').toEqual(plan);
+    });
+
+    it('replaces the deleted own recipe "Plain Rice" with a kid-friendly recipe while kid-friendly is on, also when only recipes that are not kid-friendly have not been shown yet', () => {
+      storeOwnRecipes(PLAIN_RICE);
+      load({
+        ...planOf(
+          [
+            day(
+              '2026-10-24',
+              open('Spaghetti carbonara', 'Plain Rice', 'Mac and cheese'),
+              picked('Potato goulash'),
+            ),
+          ],
+          { kidFriendly: true },
+        ),
+        shown: [...KID_FRIENDLY, PLAIN_RICE.name],
+      });
+
+      store.deleteRecipe(PLAIN_RICE.name);
+      const { suggestions } = store.plan().days[0].lunch;
+      expect(TestBed.inject(RecipeStore).own(), 'not deleted').toEqual([]);
+      expect(suggestions[0]).toBe('Spaghetti carbonara');
+      expect(KID_FRIENDLY).toContain(suggestions[1]);
+      expect(suggestions[2]).toBe('Mac and cheese');
+    });
+
+    it('replaces "Penne arrabbiata" among the remembered suggestions with a kid-friendly recipe when the user undoes the pick of "Mac and cheese" while kid-friendly is on, also when only recipes that are not kid-friendly have not been shown yet', () => {
+      load({
+        ...planOf(
+          [
+            day(
+              '2026-10-24',
+              picked('Mac and cheese', [
+                'Penne arrabbiata',
+                'Mac and cheese',
+                'Spaghetti pomodoro',
+              ]),
+              picked('Potato goulash'),
+            ),
+          ],
+          { kidFriendly: true },
+        ),
+        shown: [...KID_FRIENDLY, 'Penne arrabbiata'],
+      });
+
+      store.clear(LUNCH);
+      const { suggestions } = store.plan().days[0].lunch;
+      expect(KID_FRIENDLY).toContain(suggestions[0]);
+      expect(suggestions.slice(1)).toEqual(['Mac and cheese', 'Spaghetti pomodoro']);
+    });
+
+    it('can be kid-friendly with 15 kid-friendly recipes suggested and not with 14, whatever the number of other recipes suggested', () => {
+      leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+      expect(store.canBeKidFriendly(), '14 kid-friendly suggested').toBe(false);
+
+      store.restoreRecipe(KID_FRIENDLY[14]);
+      expect(store.canBeKidFriendly(), '15 kid-friendly suggested').toBe(true);
+    });
+
+    describe('edge cases', () => {
+      it('changes nothing on setKidFriendly(true) while 14 kid-friendly recipes are suggested', () => {
+        leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+        const before = store.plan();
+        const stored = localStorage.getItem(STORAGE_KEY);
+
+        store.setKidFriendly(true);
+        expect(store.plan()).toBe(before);
+        expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
+      });
+
+      it('loads a saved kid-friendly plan not kid-friendly, with its suggestions, and saves it while only 14 kid-friendly recipes are suggested', () => {
+        localStorage.setItem(REMOVED_KEY, JSON.stringify(KID_FRIENDLY.slice(14)));
+        const saved = planOf(
+          [day('2026-10-24', open(...KID_FRIENDLY.slice(0, 3)), open(...KID_FRIENDLY.slice(3, 6)))],
+          { kidFriendly: true },
+        );
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+
+        store = reload();
+        expect(store.plan()).toEqual({ ...saved, kidFriendly: false });
+        expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'), 'not saved').toEqual(
+          store.plan(),
+        );
+      });
+
+      it('keeps a saved accepted kid-friendly plan kid-friendly while only 14 kid-friendly recipes are suggested, saving nothing, and starts "New plan" not kid-friendly from it, drawing from every suggested recipe', () => {
+        localStorage.setItem(REMOVED_KEY, JSON.stringify(KID_FRIENDLY.slice(14)));
+        const stored = JSON.stringify(
+          planOf([day('2026-10-24', picked(KID_FRIENDLY[0]), picked(KID_FRIENDLY[1]))], {
+            accepted: true,
+            kidFriendly: true,
+          }),
+        );
+        localStorage.setItem(STORAGE_KEY, stored);
+
+        store = reload();
+        expect(store.plan().kidFriendly, 'accepted plan').toBe(true);
+        expect(localStorage.getItem(STORAGE_KEY), 'accepted plan saved').toBe(stored);
+
+        store.newPlan();
+        expect(store.plan().kidFriendly, 'new plan').toBe(false);
+        expect(
+          suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)).length,
+          'strong flavours in the new plan',
+        ).toBeGreaterThan(0);
+      });
+
+      it('keeps "Penne arrabbiata" suggested by a saved plan that is not kid-friendly when loading it, and saves nothing', () => {
+        const stored = JSON.stringify(
+          planOf(
+            [
+              day(
+                '2026-10-24',
+                open('Spaghetti carbonara', 'Penne arrabbiata', 'Mac and cheese'),
+                picked('Pad thai with chicken'),
+              ),
+            ],
+            { kidFriendly: false },
+          ),
+        );
+        localStorage.setItem(STORAGE_KEY, stored);
+
+        store = reload();
+        expect(store.plan().days).toEqual(JSON.parse(stored).days);
+        expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
+      });
+
+      it('keeps the same plan and writes nothing once the own recipe "Plain Rice", suggested, is edited to use chili flakes, keeping its name, while kid-friendly is off', () => {
+        storeOwnRecipes(PLAIN_RICE);
+        load(
+          planOf(
+            [
+              day(
+                '2026-10-24',
+                open('Spaghetti carbonara', 'Plain Rice', 'Mac and cheese'),
+                picked('Potato goulash'),
+              ),
+            ],
+            { kidFriendly: false },
+          ),
+        );
+        TestBed.inject(RecipeStore).replace(PLAIN_RICE.name, withChiliFlakes(PLAIN_RICE));
+        const before = store.plan();
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+        try {
+          store.recipeEdited(PLAIN_RICE.name, PLAIN_RICE.name);
+          expect(setItem).not.toHaveBeenCalled();
+        } finally {
+          setItem.mockRestore();
+        }
+        expect(store.plan()).toBe(before);
+      });
+
+      it('tells "limit" from deleteBlock for the own recipe "Plain Rice" and deletes nothing while it is one of exactly 15 kid-friendly recipes suggested with kid-friendly on, and null while it is off', () => {
+        storeOwnRecipes(PLAIN_RICE);
+        store = reload();
+        leaveSuggested(
+          store,
+          26,
+          ...KID_FRIENDLY.slice(0, 14),
+          PLAIN_RICE.name,
+          ...NOT_KID_FRIENDLY,
+        );
+        expect(store.deleteBlock(PLAIN_RICE.name), 'off').toBeNull();
+
+        store.setKidFriendly(true);
+        expect(store.deleteBlock(PLAIN_RICE.name), 'on').toBe('limit');
+        store.deleteRecipe(PLAIN_RICE.name);
+        expect(
+          TestBed.inject(RecipeStore)
+            .own()
+            .map((recipe) => recipe.name),
+        ).toEqual([PLAIN_RICE.name]);
+      });
+    });
+
+    function load(plan: Plan) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
+      store = reload();
+      expect(store.plan(), 'saved plan not loaded').toEqual(plan);
+    }
+
+    function withChiliFlakes(recipe: Recipe): Recipe {
+      return {
+        ...recipe,
+        ingredients: [...recipe.ingredients, { name: 'chili flakes', amount: 1, unit: 'tsp' }],
+      };
+    }
+
+    function expectKidFriendly(step: string) {
+      expect(
+        suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)),
+        step,
+      ).toEqual([]);
+    }
+
+    function mealRefs(): MealRef[] {
+      return store.plan().days.flatMap((_, i): MealRef[] => [
+        { day: i, kind: 'lunch' },
+        { day: i, kind: 'dinner' },
+      ]);
     }
   });
 

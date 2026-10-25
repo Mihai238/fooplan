@@ -12,7 +12,9 @@ import {
   covered,
   day as planDay,
   eatingOut,
+  KID_FRIENDLY,
   leaveSuggested,
+  NOT_KID_FRIENDLY,
   open,
   picked,
   planOf,
@@ -657,6 +659,7 @@ describe('PlanPage', () => {
           'Oven-baked salmon with potatoes and green beans',
           'Spaghetti carbonara',
         ],
+        kidFriendly: false,
       };
     }
 
@@ -696,6 +699,7 @@ describe('PlanPage', () => {
               'Shakshuka with bread',
               'Chickpea and spinach curry',
             ],
+        kidFriendly: false,
       };
     }
   });
@@ -1380,6 +1384,310 @@ describe('PlanPage', () => {
       const dialog = openDialog();
       vi.spyOn(dialog, 'getBoundingClientRect').mockReturnValue(BOX);
       return dialog;
+    }
+  });
+
+  describe('"Kid-friendly" checkbox', () => {
+    const NOTE =
+      "Fewer than 15 kid-friendly recipes are suggested, so the plan can't be kid-friendly.";
+
+    it('shows the heading "Plan", the Days stepper, the People stepper, an enabled unchecked checkbox named "Kid-friendly" and "New plan" in the toolbar, in this order, and no note; checks it when the user presses Space on it, keeping the focus on it, suggests none of the 11 recipes that are not kid-friendly and saves the plan as kid-friendly', async () => {
+      const toolbar = element.querySelector<HTMLElement>('div.toolbar');
+      expect(toolbar, 'no toolbar').not.toBeNull();
+      const checkbox = kidFriendly();
+      const controls = [
+        toolbar!.querySelector('h1')!,
+        stepper('Days'),
+        stepper('People'),
+        checkbox,
+        button(toolbar!, 'New plan'),
+      ];
+      expect(textOf(controls[0])).toBe('Plan');
+      expect(
+        controls.filter((control) => !toolbar!.contains(control)),
+        'outside the toolbar',
+      ).toEqual([]);
+      controls.slice(1).forEach((control, i) => {
+        expect(follows(control, controls[i]), `control ${i + 1} after control ${i}`).toBe(true);
+      });
+      expect(checkbox.type).toBe('checkbox');
+      expect(textOf(checkbox.closest('label.kid-friendly'))).toBe('Kid-friendly');
+      expect(checkbox.checked).toBe(false);
+      expect(checkbox.disabled).toBe(false);
+      expect(element.querySelector('p.note')).toBeNull();
+
+      await pressSpace(checkbox);
+      expect(kidFriendly().checked).toBe(true);
+      expect(document.activeElement).toBe(kidFriendly());
+      expect(store.plan().kidFriendly).toBe(true);
+      expectNoStrongFlavours('turned on');
+      expect(JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null')).toMatchObject({
+        kidFriendly: true,
+      });
+    });
+
+    it('suggests none of the 11 recipes that are not kid-friendly with kid-friendly on when the user clicks "Other suggestions", raises Days from 2 to 3, picks a suggestion and clicks "Undo" on a meal that showed "Penne arrabbiata"', async () => {
+      await openWith(
+        planOf(
+          [
+            planDay(
+              '2026-10-24',
+              picked('Mac and cheese', [
+                'Penne arrabbiata',
+                'Mac and cheese',
+                'Spaghetti pomodoro',
+              ]),
+              open('Spaghetti carbonara', 'Potato goulash', 'Tuna pasta bake'),
+            ),
+            planDay(
+              '2026-10-25',
+              open('Fish tacos', 'Shakshuka with bread', 'Greek salad with feta and bread'),
+              open('Chicken curry with rice', 'Teriyaki chicken with rice', 'Fish tacos'),
+            ),
+          ],
+          { kidFriendly: false },
+        ),
+      );
+      await click(kidFriendly());
+      expect(store.plan().kidFriendly, 'not turned on').toBe(true);
+
+      await click(button(meal(1), 'Other suggestions'));
+      expectNoStrongFlavours('"Other suggestions"');
+      await click(arrow('One more day'));
+      expect(days(), 'days').toHaveLength(3);
+      expectNoStrongFlavours('3 days');
+      await pickFirstSuggestion(1);
+      expectNoStrongFlavours('picked');
+      await click(button(meal(0), 'Undo'));
+      expect(suggestionsOf(meal(0)), 'lunch not reopened').toHaveLength(3);
+      expectNoStrongFlavours('"Undo"');
+    });
+
+    it('shows "×" buttons with kid-friendly on while 16 kid-friendly recipes are suggested, none once the user removes one and 15 are left, and the "×" buttons again when the user unticks "Kid-friendly"', async () => {
+      leaveSuggested(store, 27, ...KID_FRIENDLY.slice(0, 16), ...NOT_KID_FRIENDLY);
+      await fixture.whenStable();
+      await click(kidFriendly());
+      expect(crosses().length, '"×" buttons at 16 kid-friendly suggested').toBeGreaterThan(0);
+
+      await click(crosses()[0]);
+      await click(button(openDialog(), "Don't suggest"));
+      expect(KID_FRIENDLY.filter((name) => !store.removed().includes(name))).toHaveLength(15);
+      expect(crosses(), '"×" buttons at 15 kid-friendly suggested').toEqual([]);
+      expect(store.canRemove()).toBe(false);
+
+      await click(kidFriendly());
+      expect(kidFriendly().checked, 'still checked').toBe(false);
+      expect(store.canRemove()).toBe(true);
+      expect(crosses().length, '"×" buttons once off').toBeGreaterThan(0);
+    });
+
+    it('disables the checkbox, described by p.note#kid-friendly-note between the toolbar and the days, while kid-friendly is off and 14 kid-friendly recipes are suggested, enables it without the note once one is brought back, and keeps it enabled once the user ticks it with 15 suggested', async () => {
+      leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+      await fixture.whenStable();
+      expect(kidFriendly().disabled).toBe(true);
+      expect(kidFriendly().getAttribute('aria-describedby')).toBe('kid-friendly-note');
+      const note = element.querySelector('p.note#kid-friendly-note');
+      expect(note, 'no note').not.toBeNull();
+      expect(textOf(note)).toBe(NOTE);
+      expect(element.querySelector('div.toolbar')!.nextElementSibling, 'after the toolbar').toBe(
+        note,
+      );
+      expect(note!.nextElementSibling, 'before the days').toBe(element.querySelector('.days'));
+
+      store.restoreRecipe(KID_FRIENDLY[14]);
+      await fixture.whenStable();
+      expect(kidFriendly().disabled, 'disabled at 15').toBe(false);
+      expect(element.querySelector('#kid-friendly-note'), 'note at 15').toBeNull();
+
+      await click(kidFriendly());
+      expect(kidFriendly().checked, 'not checked').toBe(true);
+      expect(kidFriendly().disabled, 'disabled once on').toBe(false);
+    });
+
+    it('shows "1 day for 2 people, kid-friendly" and no checkbox once the user accepts a complete 1-day plan with kid-friendly on, and "1 day for 2 people" with it off', async () => {
+      await click(kidFriendly());
+      await acceptOneDayPlan();
+      expect(store.plan().accepted, 'not accepted').toBe(true);
+      expect(textOf(element.querySelector('.summary'))).toBe('1 day for 2 people, kid-friendly');
+      expect(element.querySelector('#kid-friendly')).toBeNull();
+
+      localStorage.clear();
+      await reload();
+      await acceptOneDayPlan();
+      expect(textOf(element.querySelector('.summary'))).toBe('1 day for 2 people');
+    });
+
+    it('says "The new plan starts today, for 5 days and 2 people, kid-friendly." in the "New plan" dialog with kid-friendly on and a picked meal, and starts the new plan kid-friendly, checked and without the 11 recipes that are not kid-friendly; says "… for 5 days and 2 people." with it off and starts the new plan not kid-friendly', async () => {
+      await click(kidFriendly());
+      await pickFirstSuggestion(0);
+      await click(button(element, 'New plan'));
+      expect(textOf(openDialog().querySelector('#new-plan-next'))).toBe(
+        'The new plan starts today, for 5 days and 2 people, kid-friendly.',
+      );
+      await click(button(openDialog(), 'Start new plan'));
+      expect(openDialogOrNull(), 'dialog still open').toBeNull();
+      expect(store.plan().kidFriendly).toBe(true);
+      expect(kidFriendly().checked).toBe(true);
+      expectNoStrongFlavours('new plan');
+
+      await click(kidFriendly());
+      await pickFirstSuggestion(0);
+      await click(button(element, 'New plan'));
+      expect(textOf(openDialog().querySelector('#new-plan-next'))).toBe(
+        'The new plan starts today, for 5 days and 2 people.',
+      );
+      await click(button(openDialog(), 'Start new plan'));
+      expect(store.plan().kidFriendly).toBe(false);
+    });
+
+    it('replaces "Penne arrabbiata" suggested by a saved kid-friendly plan with a kid-friendly recipe when the page opens and saves the plan, and keeps it for a saved plan that is not kid-friendly', async () => {
+      const savedDays = [
+        planDay(
+          '2026-10-24',
+          open('Penne arrabbiata', 'Spaghetti pomodoro', 'Mac and cheese'),
+          picked('Spaghetti carbonara'),
+        ),
+      ];
+      localStorage.setItem(
+        'fooplan.plan',
+        JSON.stringify(planOf(savedDays, { kidFriendly: true })),
+      );
+      await reload();
+      const shown = suggestionsOf(meal(0)).map(recipeOf);
+      expect(KID_FRIENDLY).toContain(shown[0]);
+      expect(shown.slice(1)).toEqual(['Spaghetti pomodoro', 'Mac and cheese']);
+      expect(
+        JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null').days[0].lunch.suggestions,
+        'not saved',
+      ).toEqual(shown);
+
+      const notKidFriendly = JSON.stringify(planOf(savedDays, { kidFriendly: false }));
+      localStorage.setItem('fooplan.plan', notKidFriendly);
+      await reload();
+      expect(suggestionsOf(meal(0)).map(recipeOf)).toEqual([
+        'Penne arrabbiata',
+        'Spaghetti pomodoro',
+        'Mac and cheese',
+      ]);
+      expect(localStorage.getItem('fooplan.plan')).toBe(notKidFriendly);
+    });
+
+    describe('edge cases', () => {
+      it('keeps the dinner picked as "Pad thai with chicken" when the user ticks "Kid-friendly", and every suggestion when the user unticks it', async () => {
+        await openWith(
+          planOf(
+            [
+              planDay(
+                '2026-10-24',
+                open('Penne arrabbiata', 'Spaghetti pomodoro', 'Mac and cheese'),
+                picked('Pad thai with chicken'),
+              ),
+            ],
+            { kidFriendly: false },
+          ),
+        );
+        await click(kidFriendly());
+        expect(kidFriendly().checked, 'not checked').toBe(true);
+        expect(textOf(meal(1).querySelector('p.recipe')), 'ticked').toBe('Pad thai with chicken');
+        const shown = suggestionsOf(meal(0)).map(recipeOf);
+
+        await click(kidFriendly());
+        expect(kidFriendly().checked, 'still checked').toBe(false);
+        expect(suggestionsOf(meal(0)).map(recipeOf)).toEqual(shown);
+        expect(textOf(meal(1).querySelector('p.recipe')), 'unticked').toBe('Pad thai with chicken');
+      });
+
+      it('gives the enabled checkbox no aria-describedby and shows no note on a fresh plan, nor with exactly 15 kid-friendly recipes suggested while kid-friendly is off', async () => {
+        for (const step of ['fresh plan', '15 kid-friendly suggested']) {
+          if (step !== 'fresh plan') {
+            leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 15), ...NOT_KID_FRIENDLY);
+            await fixture.whenStable();
+          }
+          expect(kidFriendly().disabled, step).toBe(false);
+          expect(kidFriendly().hasAttribute('aria-describedby'), step).toBe(false);
+          expect(element.querySelector('#kid-friendly-note'), step).toBeNull();
+        }
+      });
+
+      it('opens a saved kid-friendly plan with the checkbox unchecked and disabled and the note shown while only 14 kid-friendly recipes are suggested', async () => {
+        localStorage.setItem('fooplan.removed', JSON.stringify(KID_FRIENDLY.slice(14)));
+        const saved = planOf(
+          [
+            planDay(
+              '2026-10-24',
+              open(...KID_FRIENDLY.slice(0, 3)),
+              open(...KID_FRIENDLY.slice(3, 6)),
+            ),
+          ],
+          { kidFriendly: true },
+        );
+        localStorage.setItem('fooplan.plan', JSON.stringify(saved));
+        await reload();
+
+        expect(store.plan(), 'saved plan not loaded').toEqual({ ...saved, kidFriendly: false });
+        expect(kidFriendly().checked, 'unchecked').toBe(false);
+        expect(kidFriendly().disabled, 'disabled').toBe(true);
+        expect(kidFriendly().getAttribute('aria-describedby')).toBe('kid-friendly-note');
+        expect(textOf(element.querySelector('p.note#kid-friendly-note'))).toBe(NOTE);
+      });
+
+      it('shows neither the checkbox nor the note once the user accepts a plan that is not kid-friendly while 14 kid-friendly recipes are suggested', async () => {
+        leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+        await fixture.whenStable();
+        expect(kidFriendly().disabled, 'disabled before accepting').toBe(true);
+
+        await acceptOneDayPlan();
+        expect(store.plan().accepted, 'not accepted').toBe(true);
+        expect(element.querySelector('#kid-friendly')).toBeNull();
+        expect(element.querySelector('#kid-friendly-note')).toBeNull();
+      });
+
+      it('says "The new plan starts today, for 5 days and 2 people." in the "New plan" dialog of a saved accepted kid-friendly plan while only 14 kid-friendly recipes are suggested, and starts the new plan not kid-friendly', async () => {
+        localStorage.setItem('fooplan.removed', JSON.stringify(KID_FRIENDLY.slice(14)));
+        await openWith(
+          planOf([planDay('2026-10-24', picked('Spaghetti pomodoro'), picked('Mac and cheese'))], {
+            accepted: true,
+            kidFriendly: true,
+          }),
+        );
+        expect(textOf(element.querySelector('.summary'))).toBe('1 day for 2 people, kid-friendly');
+
+        await click(button(element, 'New plan'));
+        expect(textOf(openDialog().querySelector('#new-plan-next'))).toBe(
+          'The new plan starts today, for 5 days and 2 people.',
+        );
+        await click(button(openDialog(), 'Start new plan'));
+        expect(store.plan().kidFriendly).toBe(false);
+      });
+    });
+
+    function kidFriendly(): HTMLInputElement {
+      const found = element.querySelector<HTMLInputElement>('input#kid-friendly');
+      expect(found, 'no #kid-friendly checkbox').not.toBeNull();
+      return found!;
+    }
+
+    function crosses(): HTMLButtonElement[] {
+      return Array.from(element.querySelectorAll<HTMLButtonElement>('button.dont-suggest'));
+    }
+
+    function expectNoStrongFlavours(step: string) {
+      const shown = Array.from(element.querySelectorAll<HTMLButtonElement>('button.suggestion'));
+      expect(
+        shown.map(recipeOf).filter((name) => NOT_KID_FRIENDLY.includes(name)),
+        step,
+      ).toEqual([]);
+    }
+
+    // jsdom gives Space on a checkbox no default action, so the toggle and its change event, which
+    // the browser fires, are fired here
+    async function pressSpace(checkbox: HTMLInputElement) {
+      checkbox.focus();
+      checkbox.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      checkbox.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true }));
+      checkbox.checked = !checkbox.checked;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      await fixture.whenStable();
     }
   });
 
@@ -2246,7 +2554,7 @@ describe('PlanPage', () => {
       expectCurrent('Tue 27 Oct');
     });
 
-    it('saves the plan after a pick with the same keys as before: days, people, accepted, ticked, added and shown, and date, lunch, dinner and cookExtra on each day', async () => {
+    it('saves the plan after a pick with the same keys as before: days, people, accepted, ticked, added, shown and kidFriendly, and date, lunch, dinner and cookExtra on each day', async () => {
       await openWith(openPlan(...AROUND_TODAY));
       const recipe = await pickFirstSuggestion(0);
       const saved = JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null') as Plan;
@@ -2255,6 +2563,7 @@ describe('PlanPage', () => {
         'accepted',
         'added',
         'days',
+        'kidFriendly',
         'people',
         'shown',
         'ticked',

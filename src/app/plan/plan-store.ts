@@ -1,4 +1,5 @@
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
+import { isKidFriendly } from '../recipes/kid-friendly';
 import { RecipeStore } from '../recipes/recipe-store';
 import { readStored, writeStored } from '../storage';
 import {
@@ -7,6 +8,7 @@ import {
   clearMeal,
   createPlan,
   dropSuggestion,
+  dropSuggestionsOutside,
   eatOut,
   forgetRecipe,
   isPicked,
@@ -21,6 +23,7 @@ import {
   renameRecipe,
   setCookExtra,
   setDays,
+  setKidFriendly,
   setPeople,
   toggleTicked,
 } from './plan';
@@ -48,7 +51,9 @@ export class PlanStore {
   private readonly random = inject(RANDOM);
   private readonly today = inject(TODAY);
   private readonly recipes = inject(RecipeStore);
-  // Declared before the plan, since a new plan is drawn from the recipes not removed
+  // Declared before the plan down to canBeKidFriendly, since loading it reads them all: it draws
+  // from the recipes not removed, and from the kid-friendly ones among them for a kid-friendly
+  // plan while enough of them are suggested
   private readonly removedState = signal<string[]>(
     parseRemoved(readStored(REMOVED_KEY), this.recipeNames()),
   );
@@ -57,20 +62,37 @@ export class PlanStore {
     const removed = this.removed();
     return this.recipeNames().filter((name) => !removed.includes(name));
   });
-  readonly canRemove = computed(() => this.suggested().length > MIN_SUGGESTED);
+  private readonly kidFriendlySuggested = computed(() => {
+    const suggested = this.suggested();
+    return this.recipes
+      .all()
+      .filter((recipe) => suggested.includes(recipe.name) && isKidFriendly(recipe))
+      .map((recipe) => recipe.name);
+  });
+  readonly canBeKidFriendly = computed(() => this.kidFriendlySuggested().length >= MIN_SUGGESTED);
   private readonly state = signal<Plan>(this.load());
   readonly plan = this.state.asReadonly();
+  readonly kidFriendly = computed(() => this.plan().kidFriendly && this.canBeKidFriendly());
+  private readonly candidates = computed(() => this.candidatesOf(this.kidFriendly()));
+  readonly canRemove = computed(() => this.candidates().length > MIN_SUGGESTED);
 
   setDays(days: number): void {
-    this.update((plan) => setDays(plan, days, this.suggested(), this.random));
+    this.update((plan) => setDays(plan, days, this.candidates(), this.random));
   }
 
   setPeople(people: number): void {
     this.update((plan) => setPeople(plan, people));
   }
 
+  setKidFriendly(on: boolean): void {
+    if (on && !this.canBeKidFriendly()) {
+      return;
+    }
+    this.update((plan) => setKidFriendly(plan, on, this.candidatesOf(on), this.random));
+  }
+
   pick(meal: MealRef, recipe: string): void {
-    this.update((plan) => pickRecipe(plan, meal, recipe, this.suggested(), this.random));
+    this.update((plan) => pickRecipe(plan, meal, recipe, this.candidates(), this.random));
   }
 
   eatOut(meal: MealRef): void {
@@ -78,15 +100,15 @@ export class PlanStore {
   }
 
   clear(meal: MealRef): void {
-    this.update((plan) => clearMeal(plan, meal, this.suggested(), this.random));
+    this.update((plan) => clearMeal(plan, meal, this.candidates(), this.random));
   }
 
   otherSuggestions(meal: MealRef): void {
-    this.update((plan) => otherSuggestions(plan, meal, this.suggested(), this.random));
+    this.update((plan) => otherSuggestions(plan, meal, this.candidates(), this.random));
   }
 
   setCookExtra(day: number, on: boolean): void {
-    this.update((plan) => setCookExtra(plan, day, on, this.suggested(), this.random));
+    this.update((plan) => setCookExtra(plan, day, on, this.candidates(), this.random));
   }
 
   accept(): void {
@@ -110,18 +132,16 @@ export class PlanStore {
       return;
     }
     this.setRemoved([...this.removed(), name]);
-    this.update((plan) => dropSuggestion(plan, name, this.suggested(), this.random));
+    this.update((plan) => dropSuggestion(plan, name, this.candidates(), this.random));
   }
 
-  // Called once RecipeStore holds the recipe under its new name
-  renameRecipe(from: string, to: string): void {
-    if (from === to) {
-      return;
-    }
-    if (this.removed().includes(from)) {
+  // Called after every edit, once RecipeStore holds the edited recipe under its new name
+  recipeEdited(from: string, to: string): void {
+    if (from !== to && this.removed().includes(from)) {
       this.setRemoved(this.removed().map((name) => (name === from ? to : name)));
     }
-    this.update((plan) => renameRecipe(plan, from, to));
+    // An edited own recipe can stop being kid-friendly
+    this.update((plan) => this.withinCandidates(renameRecipe(plan, from, to)));
   }
 
   deleteRecipe(name: string): void {
@@ -133,8 +153,8 @@ export class PlanStore {
     }
     // The plan goes first: a write failing after it leaves a plan without the recipe, which loads
     // whether the recipe and its removal are still saved or not
-    const suggested = this.suggested().filter((other) => other !== name);
-    this.update((plan) => forgetRecipe(plan, name, suggested, this.random));
+    const candidates = this.candidates().filter((other) => other !== name);
+    this.update((plan) => forgetRecipe(plan, name, candidates, this.random));
     this.recipes.remove(name);
     this.restoreRecipe(name);
   }
@@ -155,7 +175,17 @@ export class PlanStore {
   }
 
   newPlan(): void {
-    this.update((plan) => setPeople(this.createPlan(), plan.people));
+    // Drawn from the current plan's candidates, which already match the kid-friendly value the new
+    // plan keeps, so setKidFriendly has nothing left to replace
+    const candidates = this.candidates();
+    this.update((plan) =>
+      setKidFriendly(
+        setPeople(createPlan(this.today(), candidates, this.random), plan.people),
+        this.kidFriendly(),
+        candidates,
+        this.random,
+      ),
+    );
   }
 
   private load(): Plan {
@@ -163,23 +193,35 @@ export class PlanStore {
     const stored = parsePlan(readStored(STORAGE_KEY), this.recipeNames());
     if (stored) {
       // A saved plan can still suggest a removed recipe, e.g. one another tab saved, or when saving
-      // the plan failed after the removal was saved
-      const plan = this.removed().reduce(
-        (next, name) => dropSuggestion(next, name, this.suggested(), this.random),
-        stored,
-      );
+      // the plan failed after the removal was saved, and a kid-friendly one a recipe that isn't
+      // kid-friendly, e.g. an own recipe edited since, or be left with too few to stay kid-friendly
+      const plan = this.withinCandidates(stored);
       if (plan !== stored) {
         writeStored(STORAGE_KEY, plan);
       }
       return plan;
     }
-    const plan = this.createPlan();
+    const plan = createPlan(this.today(), this.suggested(), this.random);
     writeStored(STORAGE_KEY, plan);
     return plan;
   }
 
-  private createPlan(): Plan {
-    return createPlan(this.today(), this.suggested(), this.random);
+  // Every draw comes from at least MIN_SUGGESTED candidates, so that each meal gets its three
+  // suggestions: with fewer kid-friendly recipes suggested, an unaccepted plan stops being
+  // kid-friendly
+  private withinCandidates(plan: Plan): Plan {
+    const kept = this.canBeKidFriendly()
+      ? plan
+      : setKidFriendly(plan, false, this.suggested(), this.random);
+    return dropSuggestionsOutside(
+      kept,
+      this.candidatesOf(kept.kidFriendly && this.canBeKidFriendly()),
+      this.random,
+    );
+  }
+
+  private candidatesOf(kidFriendly: boolean): string[] {
+    return kidFriendly ? this.kidFriendlySuggested() : this.suggested();
   }
 
   private update(change: (plan: Plan) => Plan): void {

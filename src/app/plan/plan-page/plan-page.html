@@ -3,7 +3,8 @@
   @if (plan().accepted) {
     <p class="summary">
       {{ plan().days.length }} {{ plan().days.length === 1 ? 'day' : 'days' }} for
-      {{ plan().people }} {{ plan().people === 1 ? 'person' : 'people' }}
+      {{ plan().people }} {{ plan().people === 1 ? 'person' : 'people'
+      }}{{ plan().kidFriendly ? ', kid-friendly' : '' }}
     </p>
   } @else {
     <!-- The arrow keys step the value also at a limit, where nothing changes, so that they never
@@ -74,6 +75,18 @@
         <span aria-hidden="true">▲</span>
       </button>
     </span>
+    <label class="kid-friendly">
+      <input
+        #kidFriendlyInput
+        type="checkbox"
+        id="kid-friendly"
+        [checked]="plan().kidFriendly"
+        [disabled]="kidFriendlyDisabled()"
+        [attr.aria-describedby]="kidFriendlyDisabled() ? 'kid-friendly-note' : null"
+        (change)="store.setKidFriendly(kidFriendlyInput.checked)"
+      />
+      Kid-friendly
+    </label>
   }
   <button
     #newPlanButton
@@ -84,6 +97,13 @@
     New plan
   </button>
 </div>
+
+@if (!plan().accepted && kidFriendlyDisabled()) {
+  <p id="kid-friendly-note" class="note">
+    Fewer than {{ minSuggested }} kid-friendly recipes are suggested, so the plan can't be
+    kid-friendly.
+  </p>
+}
 
 <div class="days">
   @for (day of plan().days; track day.date; let dayIndex = $index, lastDay = $last) {
@@ -224,7 +244,8 @@
   </p>
   <p id="new-plan-next">
     The new plan starts today, for {{ defaultDays }} days and {{ plan().people }}
-    {{ plan().people === 1 ? 'person' : 'people' }}.
+    {{ plan().people === 1 ? 'person' : 'people'
+    }}{{ store.kidFriendly() ? ', kid-friendly' : '' }}.
   </p>
   <div class="actions">
     <button #keepButton type="button" class="secondary" autofocus (click)="newPlanDialog.close()">

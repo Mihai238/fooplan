@@ -1,3 +1,5 @@
+import { MIN_SUGGESTED } from '../plan/plan';
+import { isKidFriendly } from './kid-friendly';
 import { Recipe, UNITS, Unit } from './recipe';
 import { RECIPES } from './recipes';
 
@@ -213,6 +215,21 @@ const REMOVED_NAMES = [
   'Sweet and sour pork with rice',
 ];
 
+// #31's list, with #29's "Avocado toast with fried egg"
+const NOT_KID_FRIENDLY = [
+  'Chicken fajitas',
+  'Chicken Caesar salad',
+  'Penne arrabbiata',
+  'Spaghetti aglio e olio',
+  'Chicken quesadillas',
+  'Pad thai with chicken',
+  'Thai green curry with prawns',
+  'Bean burritos',
+  'Sweet potato and black bean chili',
+  'Niçoise salad',
+  'Avocado toast with fried egg',
+];
+
 const SOUP_INGREDIENTS = ['chive', 'cream', 'leek', 'pumpkin', 'pumpkin seed', 'red lentil'];
 
 describe('RECIPES', () => {
@@ -256,6 +273,16 @@ describe('RECIPES', () => {
 
   it('holds the 5 easy recipes of #29 after the first 29, in their order, each with exactly its servings, minutes, workMinutes, ingredients and steps', () => {
     expect(RECIPES.slice(EASY_START)).toEqual(EASY_RECIPES);
+  });
+
+  it('has exactly the 11 recipes of #31 and #29 that are not kid-friendly, the other 23 kid-friendly, at least MIN_SUGGESTED of them', () => {
+    expect(RECIPES.filter((recipe) => !isKidFriendly(recipe)).map((recipe) => recipe.name)).toEqual(
+      SPEC_NAMES.filter((name) => NOT_KID_FRIENDLY.includes(name)),
+    );
+    const kidFriendly = RECIPES.filter(isKidFriendly).map((recipe) => recipe.name);
+    expect(kidFriendly).toEqual(SPEC_NAMES.filter((name) => !NOT_KID_FRIENDLY.includes(name)));
+    expect(kidFriendly).toHaveLength(23);
+    expect(kidFriendly.length).toBeGreaterThanOrEqual(MIN_SUGGESTED);
   });
 
   it('uses "canned white beans" and "hummus" as the only ingredient names in the 5 easy recipes that the first 29 recipes do not use', () => {

@@ -12,6 +12,7 @@ import {
   MealKind,
   MIN_DAYS,
   MIN_PEOPLE,
+  MIN_SUGGESTED,
 } from '../plan';
 import { PlanStore, TODAY } from '../plan-store';
 
@@ -41,9 +42,11 @@ export class PlanPage {
   protected readonly minDays = MIN_DAYS;
   protected readonly maxDays = MAX_DAYS;
   protected readonly minPeople = MIN_PEOPLE;
+  protected readonly minSuggested = MIN_SUGGESTED;
   protected readonly fewestDays = computed(() => this.plan().days.length <= MIN_DAYS);
   protected readonly mostDays = computed(() => this.plan().days.length >= MAX_DAYS);
   protected readonly fewestPeople = computed(() => this.plan().people <= MIN_PEOPLE);
+  protected readonly kidFriendlyDisabled = computed(() => !this.store.canBeKidFriendly());
   protected readonly recipeSlug = recipeSlug;
   protected readonly meals: readonly { kind: MealKind; label: string }[] = [
     { kind: 'lunch', label: 'Lunch' },

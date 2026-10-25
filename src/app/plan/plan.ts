@@ -32,6 +32,7 @@ export interface Plan {
   // Recipe names, least recently shown first; a recipe drawn again, or whose pick is undone or
   // dropped, moves to the end
   shown: string[];
+  kidFriendly: boolean;
 }
 
 export interface MealRef {
@@ -57,6 +58,7 @@ export function createPlan(startDate: string, recipes: readonly string[], random
     ticked: [],
     added: [],
     shown: [],
+    kidFriendly: false,
   };
   return openDays(plan, startDate, DEFAULT_DAYS, recipes, random);
 }
@@ -190,6 +192,20 @@ export function setCookExtra(
   });
 }
 
+// The recipes are the candidates with the new value
+export function setKidFriendly(
+  plan: Plan,
+  on: boolean,
+  recipes: readonly string[],
+  random: Random,
+): Plan {
+  if (plan.accepted || plan.kidFriendly === on) {
+    return plan;
+  }
+  const set = { ...plan, kidFriendly: on };
+  return on ? dropSuggestionsOutside(set, recipes, random) : set;
+}
+
 export function renameRecipe(plan: Plan, from: string, to: string): Plan {
   if (from === to || !holdsRecipe(plan, from)) {
     return plan;
@@ -223,6 +239,15 @@ export function forgetRecipe(
     return rest;
   });
   return { ...forgotten, shown: forgotten.shown.filter((other) => other !== name) };
+}
+
+export function dropSuggestionsOutside(
+  plan: Plan,
+  recipes: readonly string[],
+  random: Random,
+): Plan {
+  const outside = new Set(suggestionsOf(plan).filter((name) => !recipes.includes(name)));
+  return [...outside].reduce((next, name) => dropSuggestion(next, name, recipes, random), plan);
 }
 
 export function dropSuggestion(
@@ -295,15 +320,24 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
     return null;
   }
   // Plans saved before the grocery list existed have no ticks, those saved before shown recipes
-  // were recorded have no shown recipes, and those saved before items could be added have none
-  const { days, people, accepted, ticked = [], added = [], shown = [] } = value;
+  // were recorded have no shown recipes, those saved before items could be added have none, and
+  // those saved before kid-friendly plans aren't kid-friendly
+  const {
+    days,
+    people,
+    accepted,
+    ticked = [],
+    added = [],
+    shown = [],
+    kidFriendly = false,
+  } = value;
   if (!Array.isArray(days) || days.length < MIN_DAYS || days.length > MAX_DAYS) {
     return null;
   }
   if (typeof people !== 'number' || !Number.isInteger(people) || people < MIN_PEOPLE) {
     return null;
   }
-  if (typeof accepted !== 'boolean') {
+  if (typeof accepted !== 'boolean' || typeof kidFriendly !== 'boolean') {
     return null;
   }
   if (!isStringList(ticked) || !isItemList(added)) {
@@ -323,6 +357,7 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
     ticked,
     added,
     shown,
+    kidFriendly,
   };
   // A record missing what a meal shows or showed before its pick (an old or hand-edited save) still
   // counts it as shown
@@ -553,6 +588,11 @@ function withoutSuggestion(
   }
   const others = meal.suggestions.filter((name) => name !== recipe);
   const [[replacement], drawn] = drawSuggestions(plan, 1, others, recipes, random);
+  // With nothing left to draw the meal keeps the recipe: a gap would be saved as null, and the
+  // saved plan thrown away when loaded
+  if (replacement === undefined) {
+    return plan;
+  }
   return withMeal(drawn, ref, {
     ...meal,
     suggestions: meal.suggestions.map((name) => (name === recipe ? replacement : name)),

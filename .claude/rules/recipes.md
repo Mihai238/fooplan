@@ -16,3 +16,4 @@ paths:
 - `workMinutes` is the hands-on time (preparing, chopping, stirring, frying, assembling), without unattended oven, boiling, simmering, soaking or resting time; a multiple of 5, from 5 up to `minutes`. A recipe takes at most 30 minutes of work and at most 45 minutes in total.
 - Parts home cooks normally buy are one ingredient (naan, tortilla, gnocchi, curry paste, hummus); the part the dish is about is made from its ingredients (pizza dough, falafel, fish batter, meatballs).
 - Recipe names and their order are pinned by `recipes.spec.ts`, and saved plans refer to recipes by name: renaming one breaks both.
+- A recipe is kid-friendly unless it uses one of the strong flavours in `STRONG_FLAVOURS` (`src/app/recipes/kid-friendly.ts`); at least 15 built-in recipes stay kid-friendly.

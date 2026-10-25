@@ -533,7 +533,7 @@ describe('groceries', () => {
   }
 
   function planFor(people: number, ...days: PlanDay[]): Plan {
-    return { days, people, accepted: false, ticked: [], added: [], shown: [] };
+    return { days, people, accepted: false, ticked: [], added: [], shown: [], kidFriendly: false };
   }
 
   function withAdded(plan: Plan, ...texts: string[]): Plan {
