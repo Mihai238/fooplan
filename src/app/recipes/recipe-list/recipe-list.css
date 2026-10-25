@@ -36,9 +36,14 @@ input:focus-visible {
   outline-offset: 2px;
 }
 
-.empty {
+.status {
   margin: 0;
   color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.status:not(:empty) + .grid {
+  margin-top: 1rem;
 }
 
 .grid {

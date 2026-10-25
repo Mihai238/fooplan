@@ -144,6 +144,142 @@ describe('RecipeList', () => {
     expect(nameLinkOf('Niçoise salad').getAttribute('href')).toBe('/recipes/nicoise-salad');
   });
 
+  describe('match status', () => {
+    it('shows one empty status element without tabindex or hidden attribute and all recipes when the page opens', () => {
+      expectAllRecipesRendered();
+      expect(element.querySelectorAll('[role="status"]'), 'status elements').toHaveLength(1);
+      const status = statusElement();
+      expect(statusText()).toBe('');
+      expect(status.hasAttribute('tabindex'), 'tabindex').toBe(false);
+      expect(status.hasAttribute('hidden'), 'hidden attribute').toBe(false);
+    });
+
+    it('keeps the focus in the search field while typing and does not take it on focus()', async () => {
+      const field = searchField();
+      field.focus();
+      expect(document.activeElement, 'field not focused before typing').toBe(field);
+      await search('spag');
+      expect(statusText(), 'count not shown').toBe('4 recipes match "spag".');
+      expect(document.activeElement, 'focus after typing').toBe(field);
+      statusElement().focus();
+      expect(document.activeElement, 'status element took the focus').toBe(field);
+    });
+
+    it('never hides the empty status element with the hidden attribute, display: none or visibility: hidden', async () => {
+      expectStatusShownAndEmpty('on open');
+      await search('xyzzy');
+      await search('');
+      expectStatusShownAndEmpty('after clearing a search that matched nothing');
+      await search('   ');
+      expectStatusShownAndEmpty('with a search of only spaces');
+    });
+
+    it('says "4 recipes match "spaghetti"." and lists 4 recipes when the user types "spaghetti"', async () => {
+      await search('spaghetti');
+      expect(statusText()).toBe('4 recipes match "spaghetti".');
+      expect(articles()).toHaveLength(4);
+    });
+
+    it('places the status element after the search field and before the first card', async () => {
+      await search('spaghetti');
+      const status = statusElement();
+      expect(
+        searchField().compareDocumentPosition(status) & Node.DOCUMENT_POSITION_FOLLOWING,
+        'status not after the search field',
+      ).toBeTruthy();
+      expect(
+        status.compareDocumentPosition(articles()[0]) & Node.DOCUMENT_POSITION_FOLLOWING,
+        'status not before the first card',
+      ).toBeTruthy();
+      expect(status.contains(articles()[0]), 'cards inside the status element').toBe(false);
+    });
+
+    it('uses the plural for a search matching exactly 2 recipes', async () => {
+      await search('goulash');
+      expect(statusText()).toBe('2 recipes match "goulash".');
+      expect(listedNames()).toEqual(['Goulash with bread', 'Potato goulash']);
+    });
+
+    it('says "1 recipe matches "carbonara"." and lists 1 recipe when the user types "carbonara"', async () => {
+      await search('carbonara');
+      expect(statusText()).toBe('1 recipe matches "carbonara".');
+      expect(listedNames()).toEqual(['Spaghetti carbonara']);
+    });
+
+    it('says "60 recipes match "s"." and lists all recipes when the user types "s"', async () => {
+      await search('s');
+      expect(statusText()).toBe(`${RECIPES.length} recipes match "s".`);
+      expect(RECIPES.length, 'recipes loaded').toBe(60);
+      expectAllRecipesRendered();
+    });
+
+    it('quotes the search without its surrounding spaces and with its case in the count', async () => {
+      await search('  Spaghetti  ');
+      expect(statusText()).toBe('4 recipes match "Spaghetti".');
+    });
+
+    it('says "No recipe matches "xyzzy"." in the status element, once on the page, without listing any recipe', async () => {
+      await search('xyzzy');
+      expect(statusText()).toBe('No recipe matches "xyzzy".');
+      expect(articles()).toEqual([]);
+      expect(element.querySelector('.grid'), 'empty grid shown').toBeNull();
+      expect(
+        (element.textContent ?? '').match(/No recipe matches/g) ?? [],
+        'occurrences of the no-match text',
+      ).toHaveLength(1);
+    });
+
+    it('quotes a search that matches nothing without its surrounding spaces', async () => {
+      await search('  xyzzy  ');
+      expect(statusText()).toBe('No recipe matches "xyzzy".');
+    });
+
+    it('keeps both inner spaces of "feta  quiche" in the no-match text', async () => {
+      await search('feta  quiche');
+      expect(statusText()).toBe('No recipe matches "feta  quiche".');
+    });
+
+    it('updates the count to "6 recipes match "spa"." and lists 6 recipes when the user deletes the "g" of "spag"', async () => {
+      await search('spag');
+      expect(statusText(), 'count before deleting').toBe('4 recipes match "spag".');
+      await search('spa');
+      expect(statusText()).toBe('6 recipes match "spa".');
+      expect(articles()).toHaveLength(6);
+    });
+
+    it('replaces the no-match text with the count when a deletion makes recipes match again', async () => {
+      await search('spaghettix');
+      expect(statusText(), 'no-match text before deleting').toBe('No recipe matches "spaghettix".');
+      await search('spaghetti');
+      expect(statusText()).toBe('4 recipes match "spaghetti".');
+      expect(articles()).toHaveLength(4);
+    });
+
+    it('empties the status element and lists all recipes when the user empties the field or types only spaces', async () => {
+      await search('spaghetti');
+      expect(statusText(), 'count not shown').toBe('4 recipes match "spaghetti".');
+      await search('');
+      expectAllRecipesRendered();
+      expect(statusText(), 'status after emptying the field').toBe('');
+      await search('   ');
+      expectAllRecipesRendered();
+      expect(statusText(), 'status with only spaces').toBe('');
+    });
+
+    it('keeps the same status element while the count, the no-match text and the empty search follow each other', async () => {
+      const status = statusElement();
+      await search('spaghetti');
+      expect(statusElement(), 'element after "spaghetti"').toBe(status);
+      expect(statusText()).toBe('4 recipes match "spaghetti".');
+      await search('xyzzy');
+      expect(statusElement(), 'element after "xyzzy"').toBe(status);
+      expect(statusText()).toBe('No recipe matches "xyzzy".');
+      await search('');
+      expect(statusElement(), 'element after emptying the field').toBe(status);
+      expect(statusText()).toBe('');
+    });
+  });
+
   async function search(text: string) {
     const field = searchField();
     field.value = text;
@@ -161,6 +297,26 @@ describe('RecipeList', () => {
     );
     expect(field, 'no search field labelled "Search recipes"').toBeDefined();
     return field!;
+  }
+
+  function expectStatusShownAndEmpty(when: string) {
+    const status = statusElement();
+    expect(statusText(), `status text ${when}`).toBe('');
+    expect(status.hasAttribute('hidden'), `hidden attribute ${when}`).toBe(false);
+    const style = getComputedStyle(status);
+    expect(style.display, `display ${when}`).not.toBe('none');
+    expect(style.visibility, `visibility ${when}`).not.toBe('hidden');
+  }
+
+  function statusText(): string {
+    return (statusElement().textContent ?? '').trim();
+  }
+
+  function statusElement(): HTMLElement {
+    const found = element.querySelectorAll<HTMLElement>('[role="status"]');
+    expect(found, 'status elements').toHaveLength(1);
+    expect(found[0].tagName, 'status element').toBe('P');
+    return found[0];
   }
 
   function ingredientLinesOf(name: string): string[] {

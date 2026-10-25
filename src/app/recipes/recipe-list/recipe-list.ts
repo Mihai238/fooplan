@@ -13,7 +13,21 @@ import { RECIPES } from '../recipes';
 })
 export class RecipeList {
   protected readonly query = signal('');
-  protected readonly recipes = computed(() => searchRecipes(RECIPES, this.query()));
+  private readonly search = computed(() => this.query().trim());
+  protected readonly recipes = computed(() => searchRecipes(RECIPES, this.search()));
+  protected readonly matchStatus = computed(() =>
+    matchStatusText(this.search(), this.recipes().length),
+  );
   protected readonly displayAmount = displayAmount;
   protected readonly recipeSlug = recipeSlug;
+}
+
+function matchStatusText(search: string, count: number): string {
+  if (search === '') {
+    return '';
+  }
+  if (count === 0) {
+    return `No recipe matches "${search}".`;
+  }
+  return count === 1 ? `1 recipe matches "${search}".` : `${count} recipes match "${search}".`;
 }

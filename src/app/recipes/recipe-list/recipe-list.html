@@ -3,6 +3,9 @@
   <label for="search">Search recipes</label>
   <input #searchInput type="search" id="search" (input)="query.set(searchInput.value)" />
 </div>
+<!-- Screen readers announce changes inside a live region already on the page, not a region
+     added along with its text, so this one stays, empty while the search is -->
+<p class="status" role="status">{{ matchStatus() }}</p>
 @if (recipes().length > 0) {
   <div class="grid">
     @for (recipe of recipes(); track recipe.name) {
@@ -20,6 +23,4 @@
       </article>
     }
   </div>
-} @else {
-  <p class="empty">No recipe matches "{{ query().trim() }}".</p>
 }
