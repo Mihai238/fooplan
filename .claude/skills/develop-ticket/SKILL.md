@@ -43,6 +43,8 @@ The argument is the issue number (`12` or `#12`).
 2. Read the issue with `gh issue view <number> --comments`. If `gh` can't resolve the repository or the
    issue, stop and ask. The spec and the acceptance criteria come from the issue body and its comments,
    plus whatever the user adds in the chat; the chat wins where they differ.
+   If the issue depends on others (`Depends on #2 and #3.`) and any of them is still open
+   (`gh issue view <n> --json state`), stop and ask: the work it builds on isn't there yet.
 3. Create `.ticket.md` from the template. Set `Ticket:` to the issue's URL and `Start:` to
    `git rev-parse HEAD`. Put the spec into `## Spec` and each criterion as Given / When / Then into the
    criteria table, with the level of the one test that proves it most cheaply:
