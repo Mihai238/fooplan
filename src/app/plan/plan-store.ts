@@ -27,6 +27,7 @@ import {
   setPeople,
   toggleTicked,
 } from './plan';
+import { scoreWith } from './ranking';
 
 export const RANDOM = new InjectionToken<Random>('RANDOM', {
   providedIn: 'root',
@@ -51,9 +52,9 @@ export class PlanStore {
   private readonly random = inject(RANDOM);
   private readonly today = inject(TODAY);
   private readonly recipes = inject(RecipeStore);
-  // Declared before the plan down to canBeKidFriendly, since loading it reads them all: it draws
-  // from the recipes not removed, and from the kid-friendly ones among them for a kid-friendly
-  // plan while enough of them are suggested
+  // Declared before the plan down to score, since loading it reads them all: it draws from the
+  // recipes not removed, and from the kid-friendly ones among them for a kid-friendly plan while
+  // enough of them are suggested, ranked by the score
   private readonly removedState = signal<string[]>(
     parseRemoved(readStored(REMOVED_KEY), this.recipeNames()),
   );
@@ -70,6 +71,7 @@ export class PlanStore {
       .map((recipe) => recipe.name);
   });
   readonly canBeKidFriendly = computed(() => this.kidFriendlySuggested().length >= MIN_SUGGESTED);
+  private readonly score = computed(() => scoreWith(this.recipes.all()));
   private readonly state = signal<Plan>(this.load());
   readonly plan = this.state.asReadonly();
   readonly kidFriendly = computed(() => this.plan().kidFriendly && this.canBeKidFriendly());
@@ -77,7 +79,7 @@ export class PlanStore {
   readonly canRemove = computed(() => this.candidates().length > MIN_SUGGESTED);
 
   setDays(days: number): void {
-    this.update((plan) => setDays(plan, days, this.candidates(), this.random));
+    this.update((plan) => setDays(plan, days, this.candidates(), this.random, this.score()));
   }
 
   setPeople(people: number): void {
@@ -88,11 +90,15 @@ export class PlanStore {
     if (on && !this.canBeKidFriendly()) {
       return;
     }
-    this.update((plan) => setKidFriendly(plan, on, this.candidatesOf(on), this.random));
+    this.update((plan) =>
+      setKidFriendly(plan, on, this.candidatesOf(on), this.random, this.score()),
+    );
   }
 
   pick(meal: MealRef, recipe: string): void {
-    this.update((plan) => pickRecipe(plan, meal, recipe, this.candidates(), this.random));
+    this.update((plan) =>
+      pickRecipe(plan, meal, recipe, this.candidates(), this.random, this.score()),
+    );
   }
 
   eatOut(meal: MealRef): void {
@@ -100,15 +106,19 @@ export class PlanStore {
   }
 
   clear(meal: MealRef): void {
-    this.update((plan) => clearMeal(plan, meal, this.candidates(), this.random));
+    this.update((plan) => clearMeal(plan, meal, this.candidates(), this.random, this.score()));
   }
 
   otherSuggestions(meal: MealRef): void {
-    this.update((plan) => otherSuggestions(plan, meal, this.candidates(), this.random));
+    this.update((plan) =>
+      otherSuggestions(plan, meal, this.candidates(), this.random, this.score()),
+    );
   }
 
   setCookExtra(day: number, on: boolean): void {
-    this.update((plan) => setCookExtra(plan, day, on, this.candidates(), this.random));
+    this.update((plan) =>
+      setCookExtra(plan, day, on, this.candidates(), this.random, this.score()),
+    );
   }
 
   accept(): void {
@@ -132,7 +142,7 @@ export class PlanStore {
       return;
     }
     this.setRemoved([...this.removed(), name]);
-    this.update((plan) => dropSuggestion(plan, name, this.candidates(), this.random));
+    this.update((plan) => dropSuggestion(plan, name, this.candidates(), this.random, this.score()));
   }
 
   // Called after every edit, once RecipeStore holds the edited recipe under its new name
@@ -154,7 +164,7 @@ export class PlanStore {
     // The plan goes first: a write failing after it leaves a plan without the recipe, which loads
     // whether the recipe and its removal are still saved or not
     const candidates = this.candidates().filter((other) => other !== name);
-    this.update((plan) => forgetRecipe(plan, name, candidates, this.random));
+    this.update((plan) => forgetRecipe(plan, name, candidates, this.random, this.score()));
     this.recipes.remove(name);
     this.restoreRecipe(name);
   }
@@ -180,10 +190,11 @@ export class PlanStore {
     const candidates = this.candidates();
     this.update((plan) =>
       setKidFriendly(
-        setPeople(createPlan(this.today(), candidates, this.random), plan.people),
+        setPeople(createPlan(this.today(), candidates, this.random, this.score()), plan.people),
         this.kidFriendly(),
         candidates,
         this.random,
+        this.score(),
       ),
     );
   }
@@ -201,7 +212,7 @@ export class PlanStore {
       }
       return plan;
     }
-    const plan = createPlan(this.today(), this.suggested(), this.random);
+    const plan = createPlan(this.today(), this.suggested(), this.random, this.score());
     writeStored(STORAGE_KEY, plan);
     return plan;
   }
@@ -212,11 +223,12 @@ export class PlanStore {
   private withinCandidates(plan: Plan): Plan {
     const kept = this.canBeKidFriendly()
       ? plan
-      : setKidFriendly(plan, false, this.suggested(), this.random);
+      : setKidFriendly(plan, false, this.suggested(), this.random, this.score());
     return dropSuggestionsOutside(
       kept,
       this.candidatesOf(kept.kidFriendly && this.canBeKidFriendly()),
       this.random,
+      this.score(),
     );
   }
 

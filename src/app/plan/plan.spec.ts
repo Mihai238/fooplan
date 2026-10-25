@@ -15,6 +15,7 @@ import {
   leftoversOf,
   Meal,
   MealRef,
+  NO_SCORE,
   otherSuggestions,
   parsePlan,
   pickRecipe,
@@ -22,6 +23,8 @@ import {
   removeItem,
   renameRecipe,
   sameItem,
+  Score,
+  ScoreContext,
   setCookExtra,
   setDays,
   setKidFriendly,
@@ -913,6 +916,125 @@ describe('plan', () => {
     });
   });
 
+  describe('ranked draw', () => {
+    const LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+    // D to H are the candidates not shown yet
+    const lettersPlan = () => oneDayPlan(open('A', 'B', 'C'), picked('I'), ['A', 'B', 'C', 'I']);
+
+    it('draws the highest-scored recipes not shown yet first, the random draw breaking ties among them in the order of the recipes, and counts all three as shown', () => {
+      const score: Score = (name) => (name === 'E' || name === 'G' ? 5 : 0);
+      const plan = lettersPlan();
+      for (const [random, expected] of [
+        [() => 0, ['E', 'G', 'D']],
+        [() => 0.99, ['G', 'E', 'H']],
+      ] as const) {
+        const result = otherSuggestions(plan, LUNCH, LETTERS, random, score);
+        expect(result.days[0].lunch.suggestions, `random ${random()}`).toEqual(expected);
+        expect(result.shown, `random ${random()}`).toEqual([...plan.shown, ...expected]);
+      }
+    });
+
+    it('scores each next choice with the recipes chosen before it for the meal alongside', () => {
+      const score: Score = (name, { alongside }) =>
+        (name === 'F' && alongside.length === 0) || (name === 'H' && alongside.join() === 'F')
+          ? 5
+          : 0;
+      for (const [random, expected] of [
+        [() => 0, ['F', 'H', 'D']],
+        [() => 0.99, ['F', 'H', 'G']],
+      ] as const) {
+        const result = otherSuggestions(lettersPlan(), LUNCH, LETTERS, random, score);
+        expect(result.days[0].lunch.suggestions, `random ${random()}`).toEqual(expected);
+      }
+    });
+
+    // The random draw of the code before ranking, with this plan and seed
+    const RANDOM_DRAW = ['Lasagne', 'Pesto', 'Risotto'];
+
+    it('draws the same suggestions as the random draw with a score of 0 for every recipe', () => {
+      const plan = oneDayPlan(open('Chili', 'Curry', 'Dal'), picked('Fajitas'));
+      const result = otherSuggestions(plan, LUNCH, RECIPES, seededRandom(1), NO_SCORE);
+      expect(result.days[0].lunch.suggestions).toEqual(RANDOM_DRAW);
+    });
+
+    it('draws the same suggestions as the random draw without a score', () => {
+      const plan = oneDayPlan(open('Chili', 'Curry', 'Dal'), picked('Fajitas'));
+      const result = otherSuggestions(plan, LUNCH, RECIPES, seededRandom(1));
+      expect(result.days[0].lunch.suggestions).toEqual(RANDOM_DRAW);
+    });
+
+    describe('edge cases', () => {
+      it('fills the slots left once the recipes not shown yet run out with the recipes shown longest ago, whatever their score', () => {
+        // D and H are the only ones not shown yet; G was shown longest ago, E most recently
+        const plan = oneDayPlan(open('A', 'B', 'C'), picked('I'), [
+          'G',
+          'F',
+          'E',
+          'A',
+          'B',
+          'C',
+          'I',
+        ]);
+        const score: Score = (name) => ({ E: 10, F: 5, H: 1 })[name] ?? 0;
+        for (const seed of SEEDS) {
+          const result = otherSuggestions(plan, LUNCH, LETTERS, seededRandom(seed), score);
+          expect(result.days[0].lunch.suggestions, `seed ${seed}`).toEqual(['H', 'D', 'G']);
+        }
+      });
+
+      it("scores the replacement of a suggestion picked for another meal or dropped with the meal's other suggestions alongside", () => {
+        const recipes = LETTERS.slice(0, 8);
+        const contexts: ScoreContext[] = [];
+        const score: Score = (name, context) => {
+          contexts.push(context);
+          return name === 'H' && [...context.alongside].sort().join() === 'A,C' ? 5 : 0;
+        };
+        for (const seed of SEEDS) {
+          contexts.length = 0;
+          const plan = oneDayPlan(open('A', 'B', 'C'), open('B', 'D', 'E'), [
+            'A',
+            'B',
+            'C',
+            'D',
+            'E',
+          ]);
+          const withPick = pickRecipe(plan, DINNER, 'B', recipes, seededRandom(seed), score);
+          expect(withPick.days[0].lunch.suggestions, `seed ${seed}, pick`).toEqual(['A', 'H', 'C']);
+          expect(contexts.length, `seed ${seed}, pick: contexts`).toBeGreaterThan(0);
+          for (const { meal, alongside } of contexts) {
+            expect(meal, `seed ${seed}, pick`).toEqual(LUNCH);
+            expect([...alongside].sort(), `seed ${seed}, pick`).toEqual(['A', 'C']);
+          }
+
+          contexts.length = 0;
+          const shown = ['A', 'B', 'C', 'D', 'E', 'F'];
+          const dropped = dropSuggestion(
+            oneDayPlan(open('A', 'B', 'C'), open('D', 'E', 'F'), shown),
+            'B',
+            recipes,
+            seededRandom(seed),
+            score,
+          );
+          expect(dropped.days[0].lunch.suggestions, `seed ${seed}, drop`).toEqual(['A', 'H', 'C']);
+          expect(contexts.length, `seed ${seed}, drop: contexts`).toBeGreaterThan(0);
+          for (const { alongside } of contexts.filter(({ meal }) => meal.kind === 'lunch')) {
+            expect([...alongside].sort(), `seed ${seed}, drop`).toEqual(['A', 'C']);
+          }
+        }
+      });
+
+      it('restores the suggestions a meal showed when picked in their order on "Undo", whatever their score, and scores only the replacement of one picked since', () => {
+        const recipes = LETTERS.slice(0, 8);
+        const plan = oneDayPlan(picked('A', ['A', 'B', 'C']), picked('B'), ['A', 'B', 'C']);
+        const score: Score = (name) => ({ A: -10, C: 10, G: 5 })[name] ?? 0;
+        for (const seed of SEEDS) {
+          const undone = clearMeal(plan, LUNCH, recipes, seededRandom(seed), score);
+          expect(undone.days[0].lunch, `seed ${seed}`).toEqual(open('A', 'G', 'C'));
+        }
+      });
+    });
+  });
+
   describe('dropSuggestionsOutside', () => {
     const RECIPES_LEFT = [
       'Spaghetti pomodoro',
@@ -1174,6 +1296,28 @@ describe('plan', () => {
       expectUnchanged(accepted, (unchanged) =>
         setKidFriendly(unchanged, true, KID_FRIENDLY, seededRandom(1)),
       );
+    });
+
+    it('replaces "Penne arrabbiata" with the highest-scored kid-friendly recipe not shown yet when turned on with a score', () => {
+      const plan = planOf(
+        [
+          day(
+            '2026-10-24',
+            open('Penne arrabbiata', 'Spaghetti pomodoro', 'Mac and cheese'),
+            picked('Pad thai with chicken'),
+          ),
+        ],
+        { kidFriendly: false },
+      );
+      const score: Score = (name) => (name === 'Fish tacos' ? 5 : 0);
+      for (const seed of SEEDS) {
+        const on = setKidFriendly(plan, true, KID_FRIENDLY, seededRandom(seed), score);
+        expect(on.days[0].lunch.suggestions, `seed ${seed}`).toEqual([
+          'Fish tacos',
+          'Spaghetti pomodoro',
+          'Mac and cheese',
+        ]);
+      }
     });
 
     describe('edge cases', () => {

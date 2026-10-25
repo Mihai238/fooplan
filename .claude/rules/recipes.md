@@ -17,3 +17,4 @@ paths:
 - Parts home cooks normally buy are one ingredient (naan, tortilla, gnocchi, curry paste, hummus); the part the dish is about is made from its ingredients (pizza dough, falafel, fish batter, meatballs).
 - Recipe names and their order are pinned by `recipes.spec.ts`, and saved plans refer to recipes by name: renaming one breaks both.
 - A recipe is kid-friendly unless it uses one of the strong flavours in `STRONG_FLAVOURS` (`src/app/recipes/kid-friendly.ts`); at least 15 built-in recipes stay kid-friendly.
+- A recipe's base (pasta, rice, potato, bread) and protein (chicken, meat, fish) are derived from its ingredient names by `src/app/plan/ranking.ts`; a new ingredient of one of these kinds goes into its list there.

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { RecipeStore } from '../recipes/recipe-store';
+import { Recipe } from '../recipes/recipe';
 import { RECIPES } from '../recipes/recipes';
 import { Meal, MealRef, Plan, PlanDay, Random } from './plan';
 import { PlanStore } from './plan-store';
@@ -29,6 +30,13 @@ export const KID_FRIENDLY = RECIPES.map((recipe) => recipe.name).filter(
 
 export function suggestionsOf(plan: Plan): string[] {
   return plan.days.flatMap((day) => [...day.lunch.suggestions, ...day.dinner.suggestions]);
+}
+
+export function mealRefs(plan: Plan): MealRef[] {
+  return plan.days.flatMap((_, i): MealRef[] => [
+    { day: i, kind: 'lunch' },
+    { day: i, kind: 'dinner' },
+  ]);
 }
 
 // A linear congruential generator, so every run draws the same numbers
@@ -118,4 +126,13 @@ export function eatingOut(offered?: string[]): Meal {
   return offered === undefined
     ? { recipe: null, suggestions: [], eatOut: true }
     : { recipe: null, suggestions: [], offered, eatOut: true };
+}
+
+export function R(name: string, ingredients: string[], minutes?: number): Recipe {
+  const recipe: Recipe = {
+    name,
+    servings: 2,
+    ingredients: ingredients.map((ingredient) => ({ name: ingredient, amount: 1, unit: 'g' })),
+  };
+  return minutes === undefined ? recipe : { ...recipe, minutes };
 }

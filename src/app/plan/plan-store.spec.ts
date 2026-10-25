@@ -7,6 +7,7 @@ import { RECIPES } from '../recipes/recipes';
 import { ownRecipe, PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../recipes/testing';
 import { addedKey, DEFAULT_DAYS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
+import { scoreWith } from './ranking';
 import {
   acceptOneDayPlan,
   covered,
@@ -15,10 +16,12 @@ import {
   KID_FRIENDLY,
   leaveSuggested,
   LUNCH,
+  mealRefs,
   NOT_KID_FRIENDLY,
   open,
   picked,
   planOf,
+  R,
   seededRandom,
   suggestionsOf,
 } from './testing';
@@ -97,6 +100,90 @@ describe('PlanStore', () => {
         NAMES.filter((name) => !suggestions.includes(name)),
         `draw ${draw}: unshown`,
       ).toHaveLength(14);
+    }
+  });
+
+  it('suggests for each meal of a new 5-day plan from a Monday, and for the first dinner on "Other suggestions" after its lunch is picked, three different recipes, each one scoring highest among the recipes not shown yet with the ones chosen before it alongside', () => {
+    localStorage.clear();
+    today = '2026-10-26';
+    seed = 1;
+    store = reload();
+    const score = scoreWith(RECIPES);
+    const scores: number[] = [];
+
+    // shown lists the suggestions in the order they were drawn, three per meal
+    const fresh = store.plan();
+    expect(fresh.shown, 'shown').toHaveLength(30);
+    for (let i = 0; i < fresh.shown.length; i += 3) {
+      const drawn = fresh.shown.slice(i, i + 3);
+      const ref = mealRefs(fresh).find(
+        (meal) => fresh.days[meal.day][meal.kind].suggestions[0] === drawn[0],
+      );
+      expect(ref, `no meal suggests ${drawn.join(', ')}`).toBeDefined();
+      expect(fresh.days[ref!.day][ref!.kind].suggestions, `${drawn[0]}'s meal`).toEqual(drawn);
+      // The plan as the draw saw it: the meals drawn before this one and nothing else
+      const shownBefore = fresh.shown.slice(0, i);
+      const before: Plan = {
+        ...fresh,
+        days: fresh.days.map((planDay) => ({
+          ...planDay,
+          lunch: drawnOrEmpty(planDay.lunch.suggestions, shownBefore),
+          dinner: drawnOrEmpty(planDay.dinner.suggestions, shownBefore),
+        })),
+        shown: shownBefore,
+      };
+      scores.push(...expectBestScored(before, ref!, drawn, shownBefore));
+    }
+
+    pickFirstSuggestion(LUNCH);
+    const afterPick = store.plan();
+    store.otherSuggestions(DINNER);
+    const other = store.plan().days[0].dinner.suggestions;
+    expect(store.plan().shown.slice(-3), 'shown after "Other suggestions"').toEqual(other);
+    scores.push(...expectBestScored(afterPick, DINNER, other, afterPick.shown));
+
+    expect(
+      scores.some((value) => value !== 0),
+      'every fresh candidate scored 0',
+    ).toBe(true);
+
+    // Returns the scores of every fresh candidate considered
+    function expectBestScored(
+      plan: Plan,
+      meal: MealRef,
+      suggestions: readonly string[],
+      shown: readonly string[],
+    ): number[] {
+      const name = `${plan.days[meal.day].date} ${meal.kind}`;
+      expect(new Set(suggestions).size, `${name}: ${suggestions.join(', ')}`).toBe(3);
+      const picks = plan.days.flatMap((planDay) => [planDay.lunch.recipe, planDay.dinner.recipe]);
+      const considered: number[] = [];
+      suggestions.forEach((suggestion, i) => {
+        const alongside = suggestions.slice(0, i);
+        const candidates = NAMES.filter(
+          (other) => !shown.includes(other) && !alongside.includes(other) && !picks.includes(other),
+        );
+        const context = `${name}, suggestion ${i + 1} "${suggestion}"`;
+        expect(candidates, `${context}: no fresh candidate`).not.toEqual([]);
+        expect(candidates, `${context}: not fresh`).toContain(suggestion);
+        const ranked = candidates.map((other) => ({
+          other,
+          value: score(other, { plan, meal, alongside }),
+        }));
+        considered.push(...ranked.map(({ value }) => value));
+        const best = ranked.reduce((top, next) => (next.value > top.value ? next : top));
+        const own = ranked.find(({ other }) => other === suggestion)!.value;
+        expect(own, `${context} scores ${own}, missing ${best.value} of "${best.other}"`).toBe(
+          best.value,
+        );
+      });
+      return considered;
+    }
+
+    function drawnOrEmpty(suggestions: string[], shownBefore: readonly string[]) {
+      return suggestions.every((other) => shownBefore.includes(other))
+        ? { recipe: null, suggestions }
+        : { recipe: null, suggestions: [] };
     }
   });
 
@@ -475,6 +562,48 @@ describe('PlanStore', () => {
       expect(reload().removed()).toEqual(removals);
     });
 
+    it('ranks the next draw with the own recipe "Own pasta" as soon as it is added, and once it is deleted with the recipe added under its name since', () => {
+      localStorage.clear();
+      today = '2026-10-26';
+      // Only "Pesto pasta with cherry tomatoes" and "Greek salad with feta and bread" are not shown yet
+      const fresh = ['Pesto pasta with cherry tomatoes', 'Greek salad with feta and bread'];
+      const saved: Plan = {
+        ...planOf([
+          day(
+            '2026-10-26',
+            picked('Chickpea and spinach curry'),
+            open('Spaghetti carbonara', 'Niçoise salad', 'Bean burritos'),
+          ),
+        ]),
+        shown: NAMES.filter((name) => !fresh.includes(name)),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      store = reload();
+      expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+
+      recipes().add(R('Own pasta', ['spaghetti', 'onion']));
+      // "Own pasta" shares onion with the curry; "Pesto pasta with cherry tomatoes" then has its base
+      store.otherSuggestions(DINNER);
+      expect(store.plan().days[0].dinner.suggestions, 'with "Own pasta" added').toEqual([
+        'Own pasta',
+        'Greek salad with feta and bread',
+        'Pesto pasta with cherry tomatoes',
+      ]);
+
+      store.deleteRecipe('Own pasta');
+      expect(recipes().own(), 'not deleted').toEqual([]);
+      recipes().add(R('Own pasta', ['rice', 'onion']));
+      recipes().add(R('Own penne', ['penne']));
+      recipes().add(R('Own risotto', ['rice']));
+      // Now rice like the curry, so "Own penne" comes first and "Own risotto" last
+      store.otherSuggestions(DINNER);
+      expect(store.plan().days[0].dinner.suggestions, 'after deleting "Own pasta"').toEqual([
+        'Own penne',
+        'Own pasta',
+        'Own risotto',
+      ]);
+    });
+
     describe('editing and deleting', () => {
       it('changes nothing on deleteRecipe("Quick Dal") and tells "picked" from deleteBlock while it is picked in an unaccepted plan or as a dinner cooked extra there, null once the pick is undone, and "accepted" while it is picked in an accepted plan', () => {
         storeOwnRecipes(QUICK_DAL);
@@ -830,7 +959,7 @@ describe('PlanStore', () => {
     it('draws only kid-friendly recipes while kid-friendly is on, for "Other suggestions", the days, picks, "Cook extra" turned off and the replacement of a removed recipe, and from every suggested recipe again for a new plan once it is off', () => {
       store.setKidFriendly(true);
       expectKidFriendly('turned on');
-      for (const meal of mealRefs()) {
+      for (const meal of mealRefs(store.plan())) {
         for (let click = 1; click <= 3; click++) {
           store.otherSuggestions(meal);
           expectKidFriendly(`day ${meal.day} ${meal.kind}, "Other suggestions" ${click}`);
@@ -839,7 +968,7 @@ describe('PlanStore', () => {
       store.setDays(1);
       store.setDays(5);
       expectKidFriendly('5 days again');
-      for (const meal of mealRefs().slice(0, -1)) {
+      for (const meal of mealRefs(store.plan()).slice(0, -1)) {
         pickFirstSuggestion(meal);
         expectKidFriendly(`picked day ${meal.day} ${meal.kind}`);
       }
@@ -975,7 +1104,7 @@ describe('PlanStore', () => {
       leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 14), PLAIN_RICE.name, ...NOT_KID_FRIENDLY);
       store.setKidFriendly(true);
       expect(store.plan().kidFriendly, 'not turned on').toBe(true);
-      for (const meal of mealRefs().slice(0, -1)) {
+      for (const meal of mealRefs(store.plan()).slice(0, -1)) {
         const { suggestions } = store.plan().days[meal.day][meal.kind];
         store.pick(meal, suggestions.filter((name) => name !== PLAIN_RICE.name)[0]);
       }
@@ -984,7 +1113,7 @@ describe('PlanStore', () => {
       store.recipeEdited(PLAIN_RICE.name, PLAIN_RICE.name);
       expect(store.plan().kidFriendly, 'still kid-friendly').toBe(false);
 
-      const openMeals = mealRefs().filter(
+      const openMeals = mealRefs(store.plan()).filter(
         (meal) => store.plan().days[meal.day][meal.kind].recipe === null,
       );
       expect(openMeals, 'open meals').toHaveLength(1);
@@ -1193,13 +1322,6 @@ describe('PlanStore', () => {
         step,
       ).toEqual([]);
     }
-
-    function mealRefs(): MealRef[] {
-      return store.plan().days.flatMap((_, i): MealRef[] => [
-        { day: i, kind: 'lunch' },
-        { day: i, kind: 'dinner' },
-      ]);
-    }
   });
 
   describe('recipes not suggested', () => {
@@ -1217,7 +1339,7 @@ describe('PlanStore', () => {
 
       store.newPlan();
       expectOnlySuggested('new plan');
-      for (const meal of mealRefs()) {
+      for (const meal of mealRefs(store.plan())) {
         for (let click = 1; click <= 5; click++) {
           store.otherSuggestions(meal);
           expectOnlySuggested(`day ${meal.day} ${meal.kind}, "Other suggestions" ${click}`);
@@ -1227,7 +1349,7 @@ describe('PlanStore', () => {
       expectOnlySuggested('1 day');
       store.setDays(5);
       expectOnlySuggested('5 days again');
-      for (const meal of mealRefs().slice(0, -1)) {
+      for (const meal of mealRefs(store.plan()).slice(0, -1)) {
         pickFirstSuggestion(meal);
         expectOnlySuggested(`picked day ${meal.day} ${meal.kind}`);
       }
@@ -1537,13 +1659,6 @@ describe('PlanStore', () => {
       expect(lunch.suggestions[0]).not.toBe(removed);
       expect(NAMES).toContain(lunch.suggestions[0]);
       expect(store.removed()).not.toContain(lunch.suggestions[0]);
-    }
-
-    function mealRefs(): MealRef[] {
-      return store.plan().days.flatMap((_, i): MealRef[] => [
-        { day: i, kind: 'lunch' },
-        { day: i, kind: 'dinner' },
-      ]);
     }
 
     function load(plan: Plan) {

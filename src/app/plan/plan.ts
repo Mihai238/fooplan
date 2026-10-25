@@ -42,6 +42,16 @@ export interface MealRef {
 
 export type Random = () => number;
 
+export interface ScoreContext {
+  plan: Plan;
+  meal: MealRef;
+  alongside: readonly string[];
+}
+
+export type Score = (recipe: string, context: ScoreContext) => number;
+
+export const NO_SCORE: Score = () => 0;
+
 export const MIN_DAYS = 1;
 export const MAX_DAYS = 5;
 export const MIN_PEOPLE = 1;
@@ -50,7 +60,12 @@ export const DEFAULT_PEOPLE = 2;
 export const MIN_SUGGESTED = 15;
 const SUGGESTIONS = 3;
 
-export function createPlan(startDate: string, recipes: readonly string[], random: Random): Plan {
+export function createPlan(
+  startDate: string,
+  recipes: readonly string[],
+  random: Random,
+  score: Score = NO_SCORE,
+): Plan {
   const plan: Plan = {
     days: [],
     people: DEFAULT_PEOPLE,
@@ -60,7 +75,7 @@ export function createPlan(startDate: string, recipes: readonly string[], random
     shown: [],
     kidFriendly: false,
   };
-  return openDays(plan, startDate, DEFAULT_DAYS, recipes, random);
+  return openDays(plan, startDate, DEFAULT_DAYS, recipes, random, score);
 }
 
 export function setDays(
@@ -68,6 +83,7 @@ export function setDays(
   days: number,
   recipes: readonly string[],
   random: Random,
+  score: Score = NO_SCORE,
 ): Plan {
   if (
     plan.accepted ||
@@ -85,7 +101,7 @@ export function setDays(
     return withDay(kept, days - 1, { cookExtra: false });
   }
   const nextDate = addDays(plan.days[plan.days.length - 1].date, 1);
-  return openDays(plan, nextDate, days - plan.days.length, recipes, random);
+  return openDays(plan, nextDate, days - plan.days.length, recipes, random, score);
 }
 
 export function setPeople(plan: Plan, people: number): Plan {
@@ -101,6 +117,7 @@ export function pickRecipe(
   recipe: string,
   recipes: readonly string[],
   random: Random,
+  score: Score = NO_SCORE,
 ): Plan {
   const current = mealAt(plan, meal);
   if (
@@ -113,7 +130,7 @@ export function pickRecipe(
   }
   const withPick = withMeal(plan, meal, { recipe, suggestions: [], offered: current.suggestions });
   return mealRefsOf(withPick).reduce(
-    (next, ref) => withoutSuggestion(next, ref, recipe, recipes, random),
+    (next, ref) => withoutSuggestion(next, ref, recipe, recipes, random, score),
     withPick,
   );
 }
@@ -136,6 +153,7 @@ export function clearMeal(
   meal: MealRef,
   recipes: readonly string[],
   random: Random,
+  score: Score = NO_SCORE,
 ): Plan {
   const current = mealAt(plan, meal);
   if (plan.accepted || isCovered(plan, meal) || current === undefined || !isFilled(current)) {
@@ -146,10 +164,10 @@ export function clearMeal(
   ]);
   const opened =
     current.offered === undefined
-      ? openMeal(cleared, meal, recipes, random)
-      : reopenMeal(cleared, meal, current.offered, recipes, random);
+      ? openMeal(cleared, meal, recipes, random, score)
+      : reopenMeal(cleared, meal, current.offered, recipes, random, score);
   return meal.kind === 'dinner' && plan.days[meal.day].cookExtra
-    ? turnCookExtraOff(opened, meal.day, recipes, random)
+    ? turnCookExtraOff(opened, meal.day, recipes, random, score)
     : opened;
 }
 
@@ -158,12 +176,13 @@ export function otherSuggestions(
   meal: MealRef,
   recipes: readonly string[],
   random: Random,
+  score: Score = NO_SCORE,
 ): Plan {
   const current = mealAt(plan, meal);
   if (plan.accepted || isCovered(plan, meal) || current === undefined || isFilled(current)) {
     return plan;
   }
-  return openMeal(plan, meal, recipes, random, current.suggestions);
+  return openMeal(plan, meal, recipes, random, score, current.suggestions);
 }
 
 export function setCookExtra(
@@ -172,6 +191,7 @@ export function setCookExtra(
   on: boolean,
   recipes: readonly string[],
   random: Random,
+  score: Score = NO_SCORE,
 ): Plan {
   const current = plan.days[day];
   if (
@@ -184,7 +204,7 @@ export function setCookExtra(
     return plan;
   }
   if (!on) {
-    return turnCookExtraOff(plan, day, recipes, random);
+    return turnCookExtraOff(plan, day, recipes, random, score);
   }
   const unpicked = markUnpicked(plan, [plan.days[day + 1].lunch.recipe]);
   return withDay(withDay(unpicked, day, { cookExtra: true }), day + 1, {
@@ -198,12 +218,13 @@ export function setKidFriendly(
   on: boolean,
   recipes: readonly string[],
   random: Random,
+  score: Score = NO_SCORE,
 ): Plan {
   if (plan.accepted || plan.kidFriendly === on) {
     return plan;
   }
   const set = { ...plan, kidFriendly: on };
-  return on ? dropSuggestionsOutside(set, recipes, random) : set;
+  return on ? dropSuggestionsOutside(set, recipes, random, score) : set;
 }
 
 export function renameRecipe(plan: Plan, from: string, to: string): Plan {
@@ -225,13 +246,14 @@ export function forgetRecipe(
   name: string,
   recipes: readonly string[],
   random: Random,
+  score: Score = NO_SCORE,
 ): Plan {
   if (isPicked(plan, name) || !holdsRecipe(plan, name)) {
     return plan;
   }
   // A meal that loses its remembered suggestions draws fresh ones when it is undone (a pick or
   // eating out), as one picked before they were kept
-  const forgotten = withMeals(dropSuggestion(plan, name, recipes, random), (meal) => {
+  const forgotten = withMeals(dropSuggestion(plan, name, recipes, random, score), (meal) => {
     if (!meal.offered?.includes(name)) {
       return meal;
     }
@@ -245,9 +267,13 @@ export function dropSuggestionsOutside(
   plan: Plan,
   recipes: readonly string[],
   random: Random,
+  score: Score = NO_SCORE,
 ): Plan {
   const outside = new Set(suggestionsOf(plan).filter((name) => !recipes.includes(name)));
-  return [...outside].reduce((next, name) => dropSuggestion(next, name, recipes, random), plan);
+  return [...outside].reduce(
+    (next, name) => dropSuggestion(next, name, recipes, random, score),
+    plan,
+  );
 }
 
 export function dropSuggestion(
@@ -255,13 +281,14 @@ export function dropSuggestion(
   recipe: string,
   recipes: readonly string[],
   random: Random,
+  score: Score = NO_SCORE,
 ): Plan {
   if (plan.accepted) {
     return plan;
   }
   const candidates = recipes.filter((name) => name !== recipe);
   return mealRefsOf(plan).reduce(
-    (next, ref) => withoutSuggestion(next, ref, recipe, candidates, random),
+    (next, ref) => withoutSuggestion(next, ref, recipe, candidates, random, score),
     plan,
   );
 }
@@ -519,6 +546,7 @@ function openDays(
   count: number,
   recipes: readonly string[],
   random: Random,
+  score: Score,
 ): Plan {
   const added: PlanDay[] = Array.from({ length: count }, (_, i) => ({
     date: addDays(startDate, i),
@@ -529,7 +557,7 @@ function openDays(
   const withAdded = { ...plan, days: [...plan.days, ...added] };
   return mealRefsOf(withAdded)
     .filter((ref) => ref.day >= plan.days.length)
-    .reduce((next, ref) => openMeal(next, ref, recipes, random), withAdded);
+    .reduce((next, ref) => openMeal(next, ref, recipes, random, score), withAdded);
 }
 
 function addDays(date: string, days: number): string {
@@ -543,9 +571,10 @@ function turnCookExtraOff(
   day: number,
   recipes: readonly string[],
   random: Random,
+  score: Score,
 ): Plan {
   const off = withDay(plan, day, { cookExtra: false });
-  return openMeal(off, { day: day + 1, kind: 'lunch' }, recipes, random);
+  return openMeal(off, { day: day + 1, kind: 'lunch' }, recipes, random, score);
 }
 
 function openMeal(
@@ -553,9 +582,19 @@ function openMeal(
   ref: MealRef,
   recipes: readonly string[],
   random: Random,
+  score: Score,
   excluded: readonly string[] = [],
 ): Plan {
-  const [suggestions, drawn] = drawSuggestions(plan, SUGGESTIONS, excluded, recipes, random);
+  const [suggestions, drawn] = drawSuggestions(
+    plan,
+    ref,
+    [],
+    SUGGESTIONS,
+    excluded,
+    recipes,
+    random,
+    score,
+  );
   return withMeal(drawn, ref, { recipe: null, suggestions });
 }
 
@@ -567,12 +606,13 @@ function reopenMeal(
   offered: readonly string[],
   recipes: readonly string[],
   random: Random,
+  score: Score,
 ): Plan {
   const reopened = withMeal(plan, ref, { recipe: null, suggestions: [...offered] });
   const picked = pickedRecipes(reopened);
   return offered
     .filter((name) => picked.has(name) || !recipes.includes(name))
-    .reduce((next, name) => withoutSuggestion(next, ref, name, recipes, random), reopened);
+    .reduce((next, name) => withoutSuggestion(next, ref, name, recipes, random, score), reopened);
 }
 
 function withoutSuggestion(
@@ -581,13 +621,23 @@ function withoutSuggestion(
   recipe: string,
   recipes: readonly string[],
   random: Random,
+  score: Score,
 ): Plan {
   const meal = mealAt(plan, ref);
   if (!meal?.suggestions.includes(recipe)) {
     return plan;
   }
   const others = meal.suggestions.filter((name) => name !== recipe);
-  const [[replacement], drawn] = drawSuggestions(plan, 1, others, recipes, random);
+  const [[replacement], drawn] = drawSuggestions(
+    plan,
+    ref,
+    others,
+    1,
+    others,
+    recipes,
+    random,
+    score,
+  );
   // With nothing left to draw the meal keeps the recipe: a gap would be saved as null, and the
   // saved plan thrown away when loaded
   if (replacement === undefined) {
@@ -647,17 +697,26 @@ function withDay(plan: Plan, index: number, patch: Partial<PlanDay>): Plan {
 
 function drawSuggestions(
   plan: Plan,
+  meal: MealRef,
+  alongside: readonly string[],
   count: number,
   excluded: readonly string[],
   recipes: readonly string[],
   random: Random,
+  score: Score,
 ): [string[], Plan] {
   const picked = pickedRecipes(plan);
   const candidates = recipes.filter((name) => !picked.has(name) && !excluded.includes(name));
   const fresh = candidates.filter((name) => !plan.shown.includes(name));
   const drawn: string[] = [];
   while (drawn.length < count && fresh.length > 0) {
-    drawn.push(...fresh.splice(Math.floor(random() * fresh.length), 1));
+    const context = { plan, meal, alongside: [...alongside, ...drawn] };
+    const scores = fresh.map((name) => score(name, context));
+    const best = Math.max(...scores);
+    const ties = fresh.filter((_, i) => scores[i] === best);
+    const chosen = ties[Math.floor(random() * ties.length)];
+    fresh.splice(fresh.indexOf(chosen), 1);
+    drawn.push(chosen);
   }
   // Other meals' suggestions come last, so two meals share one only when nothing else is left
   const showing = new Set(suggestionsOf(plan));
