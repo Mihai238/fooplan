@@ -42,6 +42,17 @@ h1 {
   font-size: 0.875rem;
 }
 
+.suggest,
+.note {
+  margin: 0 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.suggest span {
+  margin-right: 0.5rem;
+}
+
 ul {
   margin: 0;
   padding-left: 1.25rem;
@@ -126,6 +137,17 @@ button {
 .secondary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.link {
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 0.875rem;
+}
+
+.link:hover {
+  text-decoration: underline;
 }
 
 a:focus-visible,

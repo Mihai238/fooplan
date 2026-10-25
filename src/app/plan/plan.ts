@@ -41,6 +41,7 @@ export const MAX_DAYS = 5;
 export const MIN_PEOPLE = 1;
 export const DEFAULT_DAYS = 5;
 export const DEFAULT_PEOPLE = 2;
+export const MIN_SUGGESTED = 15;
 const SUGGESTIONS = 3;
 
 export function createPlan(startDate: string, recipes: readonly string[], random: Random): Plan {
@@ -169,6 +170,22 @@ export function setCookExtra(
   return withDay(withDay(unpicked, day, { cookExtra: true }), day + 1, {
     lunch: { recipe: null, suggestions: [] },
   });
+}
+
+export function dropSuggestion(
+  plan: Plan,
+  recipe: string,
+  recipes: readonly string[],
+  random: Random,
+): Plan {
+  if (plan.accepted) {
+    return plan;
+  }
+  const candidates = recipes.filter((name) => name !== recipe);
+  return mealRefsOf(plan).reduce(
+    (next, ref) => withoutSuggestion(next, ref, recipe, candidates, random),
+    plan,
+  );
 }
 
 export function acceptPlan(plan: Plan): Plan {
@@ -438,7 +455,7 @@ function openMeal(
 }
 
 // Restoring a meal's own suggestions isn't suggesting them again, so only those picked for another
-// meal since are replaced
+// meal since, or no longer among the recipes, are replaced
 function reopenMeal(
   plan: Plan,
   ref: MealRef,
@@ -449,7 +466,7 @@ function reopenMeal(
   const reopened = withMeal(plan, ref, { recipe: null, suggestions: [...offered] });
   const picked = pickedRecipes(reopened);
   return offered
-    .filter((name) => picked.has(name))
+    .filter((name) => picked.has(name) || !recipes.includes(name))
     .reduce((next, name) => withoutSuggestion(next, ref, name, recipes, random), reopened);
 }
 

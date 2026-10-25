@@ -171,8 +171,8 @@ button {
   color: var(--text);
 }
 
-/* The smaller gap and the link's negative margins make up for its larger touch target, so at the
-   default font size the text and the rows' spacing stay as they were */
+/* The smaller gap and the negative margins of the link and the "×" make up for their larger touch
+   targets, so at the default font size the text and the rows' spacing stay as they were */
 .option {
   display: flex;
   align-items: center;
@@ -196,14 +196,29 @@ button {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  margin: -0.25rem -0.5rem -0.25rem 0;
+  margin: -0.25rem 0;
   padding: 0 0.5rem;
   color: var(--muted);
   font-size: 0.875rem;
   white-space: nowrap;
 }
 
-.recipe-link:hover {
+.dont-suggest {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: -0.25rem -0.5rem -0.25rem 0;
+  padding: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.recipe-link:hover,
+.dont-suggest:hover {
   color: var(--accent);
 }
 

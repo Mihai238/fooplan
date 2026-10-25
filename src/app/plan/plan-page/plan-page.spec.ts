@@ -3,9 +3,17 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { groceryList, itemKey } from '../../groceries/groceries';
 import { RECIPES } from '../../recipes/recipes';
-import { Plan, PlanDay } from '../plan';
+import { Plan } from '../plan';
 import { PlanStore, RANDOM, TODAY } from '../plan-store';
-import { covered, day as planDay, open, picked, seededRandom } from '../testing';
+import {
+  covered,
+  day as planDay,
+  leaveSuggested,
+  open,
+  picked,
+  planOf,
+  seededRandom,
+} from '../testing';
 import { PlanPage } from './plan-page';
 
 const TABBABLE =
@@ -865,25 +873,6 @@ describe('PlanPage', () => {
       );
     }
 
-    // Lists every recipe of the days as shown, as loading the plan would
-    function planOf(planDays: PlanDay[], { people = 2, accepted = false } = {}): Plan {
-      const shown = planDays.flatMap((planDay) =>
-        [planDay.lunch, planDay.dinner].flatMap((meal) => [
-          ...(meal.recipe === null ? [] : [meal.recipe]),
-          ...meal.suggestions,
-          ...(meal.offered ?? []),
-        ]),
-      );
-      return {
-        days: planDays,
-        people,
-        accepted,
-        ticked: [],
-        added: [],
-        shown: [...new Set(shown)],
-      };
-    }
-
     function childrenAfterHeading(article: HTMLElement): [string, string][] {
       const children = Array.from(article.children);
       expect(children[0]?.tagName, 'first child of the meal').toBe('H3');
@@ -896,6 +885,107 @@ describe('PlanPage', () => {
       }
       const classes = Array.from(node.classList).map((name) => `.${name}`);
       return [node.tagName.toLowerCase() + classes.join(''), textOf(node)];
+    }
+  });
+
+  describe('"×" to stop suggesting a recipe', () => {
+    const LENTIL_SOUP_LUNCH = planOf([
+      planDay(
+        '2026-10-24',
+        open('Lentil soup', 'Niçoise salad', 'Pumpkin soup'),
+        picked('Spaghetti carbonara'),
+      ),
+    ]);
+
+    it('shows the suggestion button, the "Recipe" link and a "×" button named "Don\'t suggest Lentil soup" with the title "Don\'t suggest", in this order, in the row of a suggested "Lentil soup"', async () => {
+      await openWith(LENTIL_SOUP_LUNCH);
+      const row = suggestionsOf(meal(0))[0].closest<HTMLElement>('div.option');
+      expect(row, 'no div.option around the "Lentil soup" suggestion').not.toBeNull();
+      expect(
+        Array.from(row!.children).map((child) => [child.tagName.toLowerCase(), nameOf(child)]),
+      ).toEqual([
+        ['button', 'Lentil soup 35 minutes'],
+        ['a', 'Recipe for Lentil soup'],
+        ['button', "Don't suggest Lentil soup"],
+      ]);
+      const cross = row!.children[2];
+      expect(cross.getAttribute('title')).toBe("Don't suggest");
+      const hidden = Array.from(cross.querySelectorAll('[aria-hidden="true"]'));
+      expect(hidden.map(textOf)).toEqual(['×']);
+    });
+
+    it('gives every suggestion row of an open meal one "×" named after its recipe, and none to a picked meal or a leftovers lunch', async () => {
+      await openWith(
+        planOf([
+          planDay('2026-10-24', picked('Pumpkin soup'), picked('Potato goulash'), true),
+          planDay('2026-10-25', covered(), open('Niçoise salad', 'Lentil soup', 'Fish tacos')),
+        ]),
+      );
+      for (const index of [0, 1, 2]) {
+        expect(crossesOf(meal(index)), `"×" buttons of meal ${index}`).toEqual([]);
+      }
+      const rows = Array.from(meal(3).querySelectorAll<HTMLElement>('div.option'));
+      expect(rows.map((row) => crossesOf(row).map(nameOf))).toEqual([
+        ["Don't suggest Niçoise salad"],
+        ["Don't suggest Lentil soup"],
+        ["Don't suggest Fish tacos"],
+      ]);
+      expect(crossesOf(element)).toHaveLength(3);
+    });
+
+    it('shows another recipe in the row, removes "Lentil soup" and keeps the focus on the same "×", named after the new suggestion, when the user clicks the focused "Don\'t suggest Lentil soup"', async () => {
+      await openWith(LENTIL_SOUP_LUNCH);
+      const cross = dontSuggest(meal(0), 'Lentil soup');
+      cross.focus();
+      await click(cross);
+
+      const recipes = suggestionsOf(meal(0)).map(recipeOf);
+      expect(recipes[0]).not.toBe('Lentil soup');
+      expect(recipes.slice(1)).toEqual(['Niçoise salad', 'Pumpkin soup']);
+      expect(store.removed()).toEqual(['Lentil soup']);
+      expect(document.activeElement, 'focus after the click').toBe(cross);
+      expect(nameOf(cross)).toBe(`Don't suggest ${recipes[0]}`);
+    });
+
+    it('removes every "×" and moves the focus to the row\'s suggestion when the focused "×" leaves exactly 15 recipes suggested, and leaves the focus alone when the "×" clicked was not focused', async () => {
+      leaveSuggested(store, 16);
+      await fixture.whenStable();
+      const cross = crossesOf(element)[0];
+      expect(cross, 'no "×" button at 16 recipes suggested').toBeDefined();
+      const row = cross.closest('div.option')!;
+      cross.focus();
+      await click(cross);
+      expect(crossesOf(element), '"×" buttons at 15').toEqual([]);
+      expect(document.activeElement).toBe(row.querySelector('button.suggestion'));
+
+      store.restoreRecipe(store.removed().at(-1)!);
+      await fixture.whenStable();
+      const unfocused = crossesOf(element)[0];
+      expect(unfocused, 'no "×" button at 16 recipes suggested again').toBeDefined();
+      (document.activeElement as HTMLElement | null)?.blur();
+      expect(document.activeElement, 'focus before the click').toBe(document.body);
+      await click(unfocused);
+      expect(crossesOf(element), '"×" buttons at 15 again').toEqual([]);
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it('shows "×" buttons while planning and no "Don\'t suggest" button once the plan is accepted', async () => {
+      expect(crossesOf(element).length, '"×" buttons while planning').toBeGreaterThan(0);
+      await acceptOneDayPlan();
+      expect(store.plan().accepted, 'plan not accepted').toBe(true);
+      expect(crossesOf(element)).toEqual([]);
+    });
+
+    function crossesOf(root: HTMLElement): HTMLButtonElement[] {
+      return Array.from(root.querySelectorAll('button')).filter((candidate) =>
+        nameOf(candidate).startsWith("Don't suggest"),
+      );
+    }
+
+    function dontSuggest(root: HTMLElement, recipe: string): HTMLButtonElement {
+      const found = crossesOf(root).filter((cross) => nameOf(cross) === `Don't suggest ${recipe}`);
+      expect(found, `"Don't suggest ${recipe}" buttons`).toHaveLength(1);
+      return found[0];
     }
   });
 
@@ -1412,12 +1502,14 @@ describe('PlanPage', () => {
     );
   }
 
-  // The accessible name, as far as these links can get one
+  // The accessible name, as far as these links and buttons can get one
   function nameOf(node: Element): string {
     if (node.hasAttribute('aria-labelledby')) {
       return labelOf(node);
     }
-    return node.getAttribute('aria-label')?.trim() || textOf(node);
+    const shown = node.cloneNode(true) as Element;
+    shown.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
+    return node.getAttribute('aria-label')?.trim() || textOf(shown);
   }
 
   function labelOf(node: Element): string {

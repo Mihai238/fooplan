@@ -3,6 +3,35 @@
 <article>
   <h1>{{ recipe.name }}</h1>
   <p class="servings">{{ recipe.servings }} servings</p>
+  @let removed = store.removed().includes(recipe.name);
+  @if (removed || store.canRemove()) {
+    <p class="suggest">
+      @if (removed) {
+        <span>Not suggested</span>
+        <button
+          #suggestAgainButton
+          type="button"
+          class="link"
+          (click)="suggestAgain(recipe.name, suggestAgainButton)"
+        >
+          Suggest again
+        </button>
+      } @else {
+        <button
+          #dontSuggestButton
+          type="button"
+          class="link"
+          (click)="dontSuggest(recipe.name, dontSuggestButton)"
+        >
+          Don't suggest
+        </button>
+      }
+    </p>
+  } @else {
+    <p class="note">
+      At least {{ minSuggested }} recipes stay suggested, so no more can be removed.
+    </p>
+  }
   <ul>
     @for (ingredient of recipe.ingredients; track ingredient.name) {
       @let shown = displayAmount(ingredient);

@@ -11,6 +11,8 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, UrlTree } from '@angular/router';
 import { map } from 'rxjs';
+import { MIN_SUGGESTED } from '../../plan/plan';
+import { PlanStore } from '../../plan/plan-store';
 import { displayAmount } from '../amount';
 import { recipeBySlug } from '../recipe-slug';
 
@@ -22,6 +24,7 @@ import { recipeBySlug } from '../recipe-slug';
 })
 export class RecipePage {
   private readonly router = inject(Router);
+  protected readonly store = inject(PlanStore);
   private readonly injector = inject(Injector);
   // The router reuses this page for another slug, and the route's guard lets only a known one in
   protected readonly page = toSignal(
@@ -33,8 +36,13 @@ export class RecipePage {
   protected readonly step = linkedSignal({ source: this.page, computation: () => 0 });
   protected readonly last = computed(() => this.step() === this.page().recipe.steps.length - 1);
   protected readonly displayAmount = displayAmount;
+  protected readonly minSuggested = MIN_SUGGESTED;
   private readonly nextButton = viewChild<ElementRef<HTMLButtonElement>>('nextButton');
   private readonly doneLink = viewChild<ElementRef<HTMLAnchorElement>>('doneLink');
+  private readonly dontSuggestButton =
+    viewChild<ElementRef<HTMLButtonElement>>('dontSuggestButton');
+  private readonly suggestAgainButton =
+    viewChild<ElementRef<HTMLButtonElement>>('suggestAgainButton');
 
   // A button disabled while it has the focus drops the focus to the page, so on the first step the
   // focus moves on to "Next". In a recipe of two steps "Next" replaces "Done" there, so it exists
@@ -52,6 +60,26 @@ export class RecipePage {
     this.step.update((step) => step + 1);
     if (this.last() && document.activeElement === next) {
       afterNextRender(() => this.doneLink()?.nativeElement.focus(), { injector: this.injector });
+    }
+  }
+
+  // "Don't suggest" and "Suggest again" replace each other, so the focus would drop to the page along
+  // with the clicked one; the button replacing it exists only once the page is rendered
+  protected dontSuggest(name: string, dontSuggest: HTMLButtonElement): void {
+    this.store.removeRecipe(name);
+    if (document.activeElement === dontSuggest) {
+      afterNextRender(() => this.suggestAgainButton()?.nativeElement.focus(), {
+        injector: this.injector,
+      });
+    }
+  }
+
+  protected suggestAgain(name: string, suggestAgain: HTMLButtonElement): void {
+    this.store.restoreRecipe(name);
+    if (document.activeElement === suggestAgain) {
+      afterNextRender(() => this.dontSuggestButton()?.nativeElement.focus(), {
+        injector: this.injector,
+      });
     }
   }
 

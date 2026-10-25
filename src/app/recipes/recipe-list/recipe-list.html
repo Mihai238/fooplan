@@ -6,6 +6,9 @@
 <!-- Screen readers announce changes inside a live region already on the page, not a region
      added along with its text, so this one stays, empty while the search is -->
 <p class="status" role="status">{{ matchStatus() }}</p>
+@if (!store.canRemove()) {
+  <p class="note">At least {{ minSuggested }} recipes stay suggested, so no more can be removed.</p>
+}
 @if (recipes().length > 0) {
   <div class="grid">
     @for (recipe of recipes(); track recipe.name) {
@@ -14,6 +17,33 @@
           <a [routerLink]="['/recipes', recipeSlug(recipe.name)]">{{ recipe.name }}</a>
         </h2>
         <p class="servings">{{ recipe.servings }} servings</p>
+        @let removed = store.removed().includes(recipe.name);
+        @if (removed || store.canRemove()) {
+          <p class="suggest">
+            @if (removed) {
+              <span>Not suggested</span>
+              <button
+                #suggestAgainButton
+                type="button"
+                class="link"
+                [attr.aria-label]="'Suggest again: ' + recipe.name"
+                (click)="suggestAgain(recipe.name, suggestAgainButton)"
+              >
+                Suggest again
+              </button>
+            } @else {
+              <button
+                #dontSuggestButton
+                type="button"
+                class="link"
+                [attr.aria-label]="'Don\'t suggest ' + recipe.name"
+                (click)="dontSuggest(recipe.name, dontSuggestButton)"
+              >
+                Don't suggest
+              </button>
+            }
+          </p>
+        }
         <ul>
           @for (ingredient of recipe.ingredients; track ingredient.name) {
             @let shown = displayAmount(ingredient);

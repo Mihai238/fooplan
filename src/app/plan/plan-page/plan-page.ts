@@ -56,6 +56,15 @@ export class PlanPage {
     }
   }
 
+  // The row keeps its elements when its recipe changes, so a focused "×" keeps the focus; only at
+  // the limit, where the "×" buttons go away and would drop the focus to the page, does it move on
+  // to the row's suggestion
+  protected keepFocusInRow(dontSuggest: HTMLButtonElement, suggestion: HTMLButtonElement): void {
+    if (!this.store.canRemove() && document.activeElement === dontSuggest) {
+      suggestion.focus();
+    }
+  }
+
   protected leftovers(kind: MealKind, day: number): string | null {
     return kind === 'lunch' ? leftoversOf(this.plan(), day) : null;
   }

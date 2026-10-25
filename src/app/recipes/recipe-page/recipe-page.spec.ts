@@ -3,10 +3,12 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
-import { seededRandom } from '../../plan/testing';
+import { leaveSuggested, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
 import { RECIPES } from '../recipes';
+
+const LIMIT_NOTE = 'At least 15 recipes stay suggested, so no more can be removed.';
 
 // The recipe page is reached through the app's routes, as its recipe comes from the URL and its
 // "Back" link from the navigation before it
@@ -314,6 +316,61 @@ describe('RecipePage', () => {
     await click(done);
     expect(router().url).toBe('/recipes');
     expect(page().querySelectorAll('article').length).toBe(RECIPES.length);
+  });
+
+  describe('"Don\'t suggest" and "Suggest again"', () => {
+    it('shows a "Don\'t suggest" button in a p.suggest between the servings and the ingredients, which turns into "Not suggested" and a focused "Suggest again", and back into a focused "Don\'t suggest", on clicks', async () => {
+      harness = await RouterTestingHarness.create('/recipes/lentil-soup');
+      const suggest = page().querySelector('p.servings')?.nextElementSibling;
+      expect(suggest?.matches('p.suggest'), 'p.suggest after the servings').toBe(true);
+      expect(suggest!.nextElementSibling?.tagName, 'after p.suggest').toBe('UL');
+      expect(Array.from(suggest!.querySelectorAll('button')).map(textOf)).toEqual([
+        "Don't suggest",
+      ]);
+
+      const dontSuggest = button("Don't suggest");
+      dontSuggest.focus();
+      await click(dontSuggest);
+      expect(
+        Array.from(page().querySelector('p.suggest')!.children).map((child) => [
+          child.tagName,
+          textOf(child),
+        ]),
+      ).toEqual([
+        ['SPAN', 'Not suggested'],
+        ['BUTTON', 'Suggest again'],
+      ]);
+      expect(document.activeElement, 'focus after "Don\'t suggest"').toBe(button('Suggest again'));
+
+      await click(button('Suggest again'));
+      expect(document.activeElement, 'focus after "Suggest again"').toBe(button("Don't suggest"));
+    });
+
+    it('shows that at least 15 recipes stay suggested in a p.note instead of "Don\'t suggest" on the page of a suggested recipe while exactly 15 are suggested', async () => {
+      leaveSuggested(TestBed.inject(PlanStore), 15, 'Lentil soup');
+      harness = await RouterTestingHarness.create('/recipes/lentil-soup');
+
+      const notes = Array.from(page().querySelectorAll('p.note'));
+      expect(notes.map(textOf)).toEqual([LIMIT_NOTE]);
+      expect(page().querySelector('p.servings')?.nextElementSibling, 'after the servings').toBe(
+        notes[0],
+      );
+      expect(page().querySelector('p.suggest')).toBeNull();
+      expect(buttonsLabelled("Don't suggest")).toEqual([]);
+    });
+
+    it('shows "Not suggested" and "Suggest again", without the note, on the page of a removed recipe while exactly 15 are suggested', async () => {
+      leaveSuggested(TestBed.inject(PlanStore), 15);
+      expect(TestBed.inject(PlanStore).removed(), 'Lentil soup not removed').toContain(
+        'Lentil soup',
+      );
+      harness = await RouterTestingHarness.create('/recipes/lentil-soup');
+
+      const suggest = page().querySelector('p.suggest');
+      expect(suggest, 'no p.suggest').not.toBeNull();
+      expect(Array.from(suggest!.children).map(textOf)).toEqual(['Not suggested', 'Suggest again']);
+      expect(textOf(page())).not.toContain(LIMIT_NOTE);
+    });
   });
 
   function configure() {

@@ -1,21 +1,28 @@
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
+import { leaveSuggested, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../amount';
 import { RECIPES } from '../recipes';
 import { RecipeList } from './recipe-list';
+
+const LIMIT_NOTE = 'At least 15 recipes stay suggested, so no more can be removed.';
 
 describe('RecipeList', () => {
   let fixture: ComponentFixture<RecipeList>;
   let element: HTMLElement;
 
   beforeEach(async () => {
+    localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [provideRouter([{ path: '**', component: Blank }])],
+      providers: [
+        provideRouter([{ path: '**', component: Blank }]),
+        { provide: RANDOM, useValue: seededRandom(1) },
+        { provide: TODAY, useValue: () => '2026-10-24' },
+      ],
     });
-    fixture = TestBed.createComponent(RecipeList);
-    await fixture.whenStable();
-    element = fixture.nativeElement as HTMLElement;
+    await openPage();
   });
 
   it('shows each recipe with its name, servings and every ingredient with its displayed amount and name', () => {
@@ -298,6 +305,148 @@ describe('RecipeList', () => {
       expect(statusText()).toBe('');
     });
   });
+
+  describe('"Don\'t suggest" and "Suggest again"', () => {
+    it('shows a "Don\'t suggest <recipe>" button in a p.suggest between the servings and the ingredients of every card, which turns into "Not suggested" and a focused "Suggest again: Lentil soup", and back into a focused "Don\'t suggest", on clicks', async () => {
+      expectAllRecipesRendered();
+      articles().forEach((article, i) => {
+        const name = RECIPES[i].name;
+        const suggest = article.querySelector('p.servings')?.nextElementSibling;
+        expect(suggest?.matches('p.suggest'), `p.suggest after the servings of "${name}"`).toBe(
+          true,
+        );
+        expect(suggest!.nextElementSibling?.tagName, `after p.suggest of "${name}"`).toBe('UL');
+        expect(suggestButtons(article).map((b) => [textOf(b), nameOf(b)])).toEqual([
+          ["Don't suggest", `Don't suggest ${name}`],
+        ]);
+      });
+
+      const card = cardOf('Lentil soup');
+      const dontSuggest = suggestButtons(card)[0];
+      dontSuggest.focus();
+      await click(dontSuggest);
+      const suggest = card.querySelector('p.suggest')!;
+      expect(Array.from(suggest.children).map((child) => [child.tagName, textOf(child)])).toEqual([
+        ['SPAN', 'Not suggested'],
+        ['BUTTON', 'Suggest again'],
+      ]);
+      const suggestAgain = suggestButtons(card)[0];
+      expect(nameOf(suggestAgain)).toBe('Suggest again: Lentil soup');
+      expect(document.activeElement, 'focus after "Don\'t suggest"').toBe(suggestAgain);
+
+      await click(suggestAgain);
+      const back = suggestButtons(card);
+      expect(back.map(textOf)).toEqual(["Don't suggest"]);
+      expect(document.activeElement, 'focus after "Suggest again"').toBe(back[0]);
+      expect(store().removed()).not.toContain('Lentil soup');
+    });
+
+    it('leaves the focus where it was when "Don\'t suggest" is clicked without having it', async () => {
+      const card = cardOf('Lentil soup');
+      const [dontSuggest] = suggestButtons(card);
+      expect(dontSuggest, 'no "Don\'t suggest" button').toBeDefined();
+      expect(document.activeElement, 'focus before the click').toBe(document.body);
+      await click(dontSuggest);
+      expect(suggestButtons(card).map(textOf), 'buttons after the click').toEqual([
+        'Suggest again',
+      ]);
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it('lists a removed recipe in its place and counts it in the search', async () => {
+      store().removeRecipe('Lentil soup');
+      expect(store().removed(), 'Lentil soup not removed').toEqual(['Lentil soup']);
+      await reopenPage();
+
+      expect(listedNames()).toEqual(RECIPES.map((recipe) => recipe.name));
+      await search('lentil');
+      expect(statusText()).toBe('1 recipe matches "lentil".');
+      expect(listedNames()).toEqual(['Lentil soup']);
+    });
+
+    it('says once, in a p.note right after the status line, that at least 15 recipes stay suggested, also when nothing matches, with no "Don\'t suggest" and "Suggest again" on every removed recipe\'s card, while exactly 15 are suggested', async () => {
+      const suggested = leaveSuggested(store(), 15);
+      await reopenPage();
+
+      expectLimitNote('on open');
+      for (const article of articles()) {
+        const name = textOf(article.querySelector('h2')!);
+        if (suggested.includes(name)) {
+          expect(article.querySelector('p.suggest'), `p.suggest of "${name}"`).toBeNull();
+          expect(suggestButtons(article), `buttons of "${name}"`).toEqual([]);
+        } else {
+          expect(suggestButtons(article).map(textOf), `buttons of "${name}"`).toEqual([
+            'Suggest again',
+          ]);
+        }
+      }
+      await search('xyzzy');
+      expect(articles(), 'cards for "xyzzy"').toEqual([]);
+      expectLimitNote('when nothing matches');
+    });
+
+    it('drops the note and shows "Don\'t suggest" on every suggested card again when the user clicks "Suggest again" while exactly 15 recipes are suggested', async () => {
+      const suggested = leaveSuggested(store(), 15);
+      await reopenPage();
+      const brought = store().removed()[0];
+
+      await click(suggestButtons(cardOf(brought))[0]);
+      expect(element.querySelector('p.note')).toBeNull();
+      expect(textOf(element)).not.toContain(LIMIT_NOTE);
+      for (const name of [...suggested, brought]) {
+        expect(suggestButtons(cardOf(name)).map(textOf), `buttons of "${name}"`).toEqual([
+          "Don't suggest",
+        ]);
+      }
+    });
+
+    function expectLimitNote(when: string) {
+      const notes = Array.from(element.querySelectorAll('p.note'));
+      expect(notes.map(textOf), `notes ${when}`).toEqual([LIMIT_NOTE]);
+      expect(statusElement().nextElementSibling, `element after the status ${when}`).toBe(notes[0]);
+      expect(
+        (element.textContent ?? '').split(LIMIT_NOTE).length - 1,
+        `occurrences of the note ${when}`,
+      ).toBe(1);
+    }
+
+    function suggestButtons(article: HTMLElement): HTMLButtonElement[] {
+      return Array.from(article.querySelectorAll('p.suggest button'));
+    }
+
+    function cardOf(name: string): HTMLElement {
+      const article = articles().find(
+        (candidate) => textOf(candidate.querySelector('h2')!) === name,
+      );
+      expect(article, `"${name}" not shown`).toBeDefined();
+      return article!;
+    }
+
+    function nameOf(node: Element): string {
+      return node.getAttribute('aria-label')?.trim() || textOf(node);
+    }
+
+    function store(): PlanStore {
+      return TestBed.inject(PlanStore);
+    }
+  });
+
+  async function openPage() {
+    fixture = TestBed.createComponent(RecipeList);
+    await fixture.whenStable();
+    element = fixture.nativeElement as HTMLElement;
+  }
+
+  // The page opened again on the same store, as when the user comes back to it
+  async function reopenPage() {
+    fixture.destroy();
+    await openPage();
+  }
+
+  async function click(target: HTMLElement) {
+    target.click();
+    await fixture.whenStable();
+  }
 
   async function search(text: string) {
     const field = searchField();

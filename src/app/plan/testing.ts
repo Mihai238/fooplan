@@ -1,3 +1,4 @@
+import { RECIPES } from '../recipes/recipes';
 import { Meal, MealRef, Plan, PlanDay, Random } from './plan';
 import { PlanStore } from './plan-store';
 
@@ -27,6 +28,38 @@ export function acceptOneDayPlan(store: PlanStore): void {
   if (!store.plan().accepted) {
     throw new Error('plan not accepted');
   }
+}
+
+// Removes recipes until exactly `count` stay suggested: the given ones and the first others in
+// RECIPES order, which it returns in RECIPES order
+export function leaveSuggested(store: PlanStore, count: number, ...kept: string[]): string[] {
+  const names = RECIPES.map((recipe) => recipe.name);
+  const suggested = [...kept, ...names.filter((name) => !kept.includes(name))].slice(0, count);
+  const removals = names.filter((name) => !suggested.includes(name));
+  removals.forEach((name) => store.removeRecipe(name));
+  if (store.removed().length !== removals.length) {
+    throw new Error(`${store.removed().length} of ${removals.length} recipes removed`);
+  }
+  return names.filter((name) => suggested.includes(name));
+}
+
+// Lists every recipe of the days as shown, as loading the plan would
+export function planOf(planDays: PlanDay[], { people = 2, accepted = false } = {}): Plan {
+  const shown = planDays.flatMap((planDay) =>
+    [planDay.lunch, planDay.dinner].flatMap((meal) => [
+      ...(meal.recipe === null ? [] : [meal.recipe]),
+      ...meal.suggestions,
+      ...(meal.offered ?? []),
+    ]),
+  );
+  return {
+    days: planDays,
+    people,
+    accepted,
+    ticked: [],
+    added: [],
+    shown: [...new Set(shown)],
+  };
 }
 
 export function day(date: string, lunch: Meal, dinner: Meal, cookExtra = false): PlanDay {

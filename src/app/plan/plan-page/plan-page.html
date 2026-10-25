@@ -133,7 +133,12 @@
           } @else if (!plan().accepted) {
             @for (recipe of current.suggestions; track $index) {
               <div class="option">
-                <button type="button" class="suggestion" (click)="store.pick(ref, recipe)">
+                <button
+                  #suggestion
+                  type="button"
+                  class="suggestion"
+                  (click)="store.pick(ref, recipe)"
+                >
                   <span class="name">{{ recipe }}</span
                   >{{ ' ' }}<span class="minutes">{{ minutes(recipe) }} minutes</span>
                 </button>
@@ -144,6 +149,18 @@
                 >
                   Recipe
                 </a>
+                @if (store.canRemove()) {
+                  <button
+                    #dontSuggest
+                    type="button"
+                    class="dont-suggest"
+                    title="Don't suggest"
+                    [attr.aria-label]="'Don\'t suggest ' + recipe"
+                    (click)="store.removeRecipe(recipe); keepFocusInRow(dontSuggest, suggestion)"
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
+                }
               </div>
             }
             <button type="button" class="link" (click)="store.otherSuggestions(ref)">

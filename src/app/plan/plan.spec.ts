@@ -6,6 +6,7 @@ import {
   createPlan,
   DEFAULT_DAYS,
   DEFAULT_PEOPLE,
+  dropSuggestion,
   filledMeals,
   isComplete,
   leftoversOf,
@@ -783,6 +784,109 @@ describe('plan', () => {
     });
   });
 
+  describe('dropSuggestion', () => {
+    it("puts the unpicked recipe shown longest ago that the meal isn't showing in the dropped recipe's place, never the dropped recipe itself, keeps the other two in their places and changes no meal without it, and replaces it in every open meal showing it", () => {
+      const plan: Plan = {
+        days: [
+          day(
+            '2026-10-24',
+            open('Spaghetti carbonara', 'Lentil soup', 'Niçoise salad'),
+            open('Pumpkin soup', 'Fish tacos', 'Bean burritos'),
+          ),
+          day(
+            '2026-10-25',
+            picked('Chicken fajitas'),
+            open('Potato goulash', 'Pumpkin soup', 'Pad thai'),
+          ),
+        ],
+        people: 2,
+        accepted: false,
+        ticked: [],
+        added: [],
+        shown: [
+          'Lentil soup',
+          'Pumpkin soup',
+          'Spaghetti carbonara',
+          'Niçoise salad',
+          'Fish tacos',
+          'Bean burritos',
+          'Chicken fajitas',
+          'Potato goulash',
+          'Pad thai',
+        ],
+      };
+      // Lentil soup and Pumpkin soup are the only candidates, and Lentil soup was shown longest ago
+      const recipes = ['Lentil soup', 'Spaghetti carbonara', 'Niçoise salad', 'Pumpkin soup'];
+      for (const seed of SEEDS) {
+        const result = dropSuggestion(plan, 'Lentil soup', recipes, seededRandom(seed));
+        expect(result.days[0].lunch, `seed ${seed}`).toEqual(
+          open('Spaghetti carbonara', 'Pumpkin soup', 'Niçoise salad'),
+        );
+        expect(result.days[0].dinner, `seed ${seed}`).toEqual(plan.days[0].dinner);
+        expect(result.days[1], `seed ${seed}`).toEqual(plan.days[1]);
+      }
+
+      const twice = oneDayPlan(
+        open('Spaghetti carbonara', 'Lentil soup', 'Niçoise salad'),
+        open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
+        ['Spaghetti carbonara', 'Lentil soup', 'Niçoise salad', 'Pumpkin soup', 'Fish tacos'],
+      );
+      const more = [...twice.shown, ...RECIPES];
+      for (const seed of SEEDS) {
+        const result = dropSuggestion(twice, 'Lentil soup', more, seededRandom(seed));
+        const { lunch, dinner } = result.days[0];
+        expect(lunch.suggestions[0], `seed ${seed}: ${lunch.suggestions.join(', ')}`).toBe(
+          'Spaghetti carbonara',
+        );
+        expect(lunch.suggestions[2], `seed ${seed}: ${lunch.suggestions.join(', ')}`).toBe(
+          'Niçoise salad',
+        );
+        expect(
+          dinner.suggestions.slice(1),
+          `seed ${seed}: ${dinner.suggestions.join(', ')}`,
+        ).toEqual(['Pumpkin soup', 'Fish tacos']);
+        expectNoneOf(
+          [lunch.suggestions[1], dinner.suggestions[0]],
+          ['Lentil soup'],
+          `seed ${seed}`,
+        );
+        expectValidSuggestions(lunch, result, more, seed);
+        expectValidSuggestions(dinner, result, more, seed);
+      }
+    });
+
+    it('replaces the dropped recipe in two open meals with two different recipes not shown yet, counted as shown', () => {
+      const plan = oneDayPlan(
+        open('Spaghetti carbonara', 'Lentil soup', 'Niçoise salad'),
+        open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
+        ['Spaghetti carbonara', 'Lentil soup', 'Niçoise salad', 'Pumpkin soup', 'Fish tacos'],
+      );
+      const recipes = [...plan.shown, 'Bean burritos', 'Potato goulash', 'Pad thai'];
+      // Always takes the first fresh candidate, so drawing the second replacement before the first
+      // is recorded in shown would repeat it
+      const result = dropSuggestion(plan, 'Lentil soup', recipes, () => 0);
+      const replacements = [
+        result.days[0].lunch.suggestions[1],
+        result.days[0].dinner.suggestions[0],
+      ];
+      expectNoneOf(replacements, plan.shown);
+      expect(new Set(replacements).size, replacements.join(', ')).toBe(2);
+      expect(result.shown).toEqual(expect.arrayContaining(replacements));
+    });
+
+    it("leaves a picked meal's pick and a lunch covered by the leftovers of a dropped recipe as they are", () => {
+      for (const name of ['Chili', 'Curry']) {
+        const recipes = RECIPES.filter((other) => other !== name);
+        expectUnchanged(cookExtraPlan(), (plan) =>
+          dropSuggestion(plan, name, recipes, seededRandom(1)),
+        );
+      }
+      expect(
+        leftoversOf(dropSuggestion(cookExtraPlan(), 'Curry', RECIPES, seededRandom(1)), 1),
+      ).toBe('Curry');
+    });
+  });
+
   describe('clearMeal', () => {
     it('opens the meal again with the suggestions it showed when picked, in the same order, whichever of them was picked', () => {
       const shown = ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne'];
@@ -914,6 +1018,31 @@ describe('plan', () => {
         expect(lunch.suggestions[0], `${label}: ${lunch.suggestions.join(', ')}`).toBe('Chili');
         expectValidSuggestions(lunch, result, FOURTEEN_RECIPES);
         expectNoneOf(lunch.suggestions.slice(1), plan.shown, `${label}, replacements:`);
+      }
+    });
+
+    it('brings back the suggestions it showed when picked in their places, except one no longer among the recipes, its own pick included, which is replaced by another of the recipes', () => {
+      const offered = ['Chili', 'Curry', 'Dal'];
+      for (const seed of SEEDS) {
+        for (const [place, removed] of offered.entries()) {
+          const context = `seed ${seed}, ${removed} not among the recipes`;
+          const recipes = RECIPES.filter((name) => name !== removed);
+          const plan = oneDayPlan(
+            picked('Chili', [...offered]),
+            open('Fajitas', 'Goulash', 'Lasagne'),
+            [...offered, 'Fajitas', 'Goulash', 'Lasagne'],
+          );
+
+          const result = clearMeal(plan, LUNCH, recipes, seededRandom(seed));
+          const lunch = result.days[0].lunch;
+          expect(lunch.recipe, context).toBeNull();
+          expect(
+            lunch.suggestions.filter((_, i) => i !== place),
+            `${context}: ${lunch.suggestions.join(', ')}`,
+          ).toEqual(offered.filter((_, i) => i !== place));
+          expectValidSuggestions(lunch, result, recipes, seed);
+          expect(result.days[0].dinner, context).toEqual(open('Fajitas', 'Goulash', 'Lasagne'));
+        }
       }
     });
 
