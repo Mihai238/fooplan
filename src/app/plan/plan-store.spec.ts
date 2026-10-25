@@ -79,7 +79,10 @@ describe('PlanStore', () => {
         {
           date: '2026-10-20',
           lunch: { recipe: 'Pizza Hawaii', suggestions: [] },
-          dinner: { recipe: null, suggestions: [RECIPES[0].name, RECIPES[1].name] },
+          dinner: {
+            recipe: null,
+            suggestions: [RECIPES[0].name, RECIPES[1].name, RECIPES[2].name],
+          },
           cookExtra: false,
         },
       ],
@@ -146,7 +149,7 @@ describe('PlanStore', () => {
     for (const day of plan.days) {
       for (const meal of [day.lunch, day.dinner]) {
         expect(meal.recipe, day.date).toBeNull();
-        expect(meal.suggestions, day.date).toHaveLength(2);
+        expect(meal.suggestions, day.date).toHaveLength(3);
       }
     }
   }

@@ -30,6 +30,7 @@ export const MIN_DAYS = 1;
 export const MAX_DAYS = 5;
 export const DEFAULT_DAYS = 5;
 export const DEFAULT_PEOPLE = 2;
+const SUGGESTIONS = 3;
 
 export function createPlan(startDate: string, recipes: readonly string[], random: Random): Plan {
   const plan: Plan = { days: [], people: DEFAULT_PEOPLE, accepted: false };
@@ -123,7 +124,7 @@ export function otherSuggestions(
   }
   return withMeal(plan, meal, {
     recipe: null,
-    suggestions: drawUnpicked(plan, 2, current.suggestions, recipes, random),
+    suggestions: drawUnpicked(plan, SUGGESTIONS, current.suggestions, recipes, random),
   });
 }
 
@@ -232,8 +233,9 @@ function parseMeal(value: unknown, recipes: readonly string[]): Meal | null {
   }
   if (recipe === null) {
     // An empty meal must be a covered lunch, which parseDay and hasValidLeftovers check
-    const isPair = suggestions.length === 2 && suggestions[0] !== suggestions[1];
-    return isPair || suggestions.length === 0
+    const isFullSet =
+      suggestions.length === SUGGESTIONS && new Set(suggestions).size === SUGGESTIONS;
+    return isFullSet || suggestions.length === 0
       ? { recipe, suggestions: suggestions as string[] }
       : null;
   }
@@ -304,7 +306,7 @@ function turnCookExtraOff(
 }
 
 function openMeal(plan: Plan, recipes: readonly string[], random: Random): Meal {
-  return { recipe: null, suggestions: drawUnpicked(plan, 2, [], recipes, random) };
+  return { recipe: null, suggestions: drawUnpicked(plan, SUGGESTIONS, [], recipes, random) };
 }
 
 function mealAt(plan: Plan, meal: MealRef): Meal | undefined {

@@ -55,28 +55,28 @@ describe('PlanPage', () => {
     expect(input('people').value).toBe('2');
   });
 
-  it('shows the picked recipe and no suggestions for a meal once the user picks one of its two suggestions', async () => {
-    expect(suggestionsOf(meal(0)), 'suggestions of the first meal').toHaveLength(2);
+  it('shows the picked recipe and no suggestions for a meal once the user picks one of its three suggestions', async () => {
+    expect(suggestionsOf(meal(0)), 'suggestions of the first meal').toHaveLength(3);
     const recipe = textOf(suggestionsOf(meal(0))[1]);
     await click(suggestionsOf(meal(0))[1]);
     expect(textOf(meal(0).querySelector('p.recipe'))).toBe(recipe);
     expect(suggestionsOf(meal(0))).toEqual([]);
   });
 
-  it('shows a different pair of suggestions when the user clicks "Other suggestions"', async () => {
+  it('shows three other suggestions when the user clicks "Other suggestions"', async () => {
     const before = suggestionsOf(meal(0)).map(textOf);
-    expect(before, 'suggestions of the first meal').toHaveLength(2);
+    expect(before, 'suggestions of the first meal').toHaveLength(3);
     await click(button(meal(0), 'Other suggestions'));
     const after = suggestionsOf(meal(0)).map(textOf);
-    expect(after).toHaveLength(2);
+    expect(after).toHaveLength(3);
     expect(after.filter((name) => before.includes(name))).toEqual([]);
   });
 
-  it('opens a picked meal again with two suggestions when the user clicks "Clear"', async () => {
+  it('opens a picked meal again with three suggestions when the user clicks "Clear"', async () => {
     await pickFirstSuggestion(0);
     await click(button(meal(0), 'Clear'));
     expect(meal(0).querySelector('p.recipe')).toBeNull();
-    expect(suggestionsOf(meal(0))).toHaveLength(2);
+    expect(suggestionsOf(meal(0))).toHaveLength(3);
   });
 
   it('disables "Accept plan" while a meal is open and enables it once every meal has a recipe', async () => {
@@ -173,7 +173,7 @@ describe('PlanPage', () => {
     expect(days()).toHaveLength(5);
     expect(element.querySelectorAll('p.recipe')).toHaveLength(0);
     for (const article of Array.from(element.querySelectorAll<HTMLElement>('article.meal'))) {
-      expect(suggestionsOf(article)).toHaveLength(2);
+      expect(suggestionsOf(article)).toHaveLength(3);
     }
   });
 
@@ -196,7 +196,7 @@ describe('PlanPage', () => {
     expect(days().length).toBeGreaterThan(0);
     expect(element.querySelectorAll('p.recipe')).toHaveLength(0);
     for (const article of Array.from(element.querySelectorAll<HTMLElement>('article.meal'))) {
-      expect(suggestionsOf(article)).toHaveLength(2);
+      expect(suggestionsOf(article)).toHaveLength(3);
     }
     expect(element.querySelector('input#days')).not.toBeNull();
     expect(button(element, 'Accept plan').disabled).toBe(true);
