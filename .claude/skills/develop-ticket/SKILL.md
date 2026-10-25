@@ -1,6 +1,6 @@
 ---
 name: develop-ticket
-description: Develop a GitHub issue from its spec and acceptance criteria - tests first, implementation, quality gate (tests + browser check + review by agents), one squashed commit. Also resumes a ticket in progress. Use when asked to work on, implement, develop or continue an issue or ticket.
+description: Develop a GitHub issue from its spec and acceptance criteria - tests first, implementation, quality gate (tests + browser check + review by agents), one squashed commit, merged into main. Also resumes a ticket in progress. Use when asked to work on, implement, develop or continue an issue or ticket.
 argument-hint: <issue number>
 ---
 
@@ -23,11 +23,11 @@ The user has created this worktree for the ticket. Never create, switch or remov
 - Everything the flow produces lives in `.ticket.md`, never only in the scratchpad: the scratchpad is
   under `/tmp` and gone after a machine restart. That includes criteria written retroactively for work
   that was committed without them.
-- There is one stop: step 4 when the gate hasn't passed after three rounds. Unclear criteria at step 1
-  are decided, and the plan at step 3 is published but approved automatically. Otherwise work without
-  asking unless something blocks you.
-- Commit `wip: <slice>` freely as checkpoints; step 5 squashes them into one commit. Never push, never
-  force anything.
+- There are two stops: step 4 when the gate hasn't passed after three rounds, and step 6 when a
+  conflict with `main` is unclear. Unclear criteria at step 1 are decided, and the plan at step 3 is
+  published but approved automatically. Otherwise work without asking unless something blocks you.
+- Commit `wip: <slice>` freely as checkpoints; step 5 squashes them into one commit. Push only in
+  step 6, and only to `main`; never force anything.
 - The GitHub issue is read only: read it with `gh issue view <number> --comments`, never comment, label,
   assign, close or edit it unless the user asks.
 - Follow CLAUDE.md, in particular: delegate implementing, browser testing and the quality gate to agents;
@@ -146,11 +146,24 @@ on as they decide.
 
 ## 5. Commit
 
-1. `git reset --soft <Start>`, then commit everything as one commit in the CLAUDE.md format, ending in
-   the issue reference. The `wip:` commits are gone; don't push.
-2. Stop any dev server the flow started, and set `Step: done` in `.ticket.md`, so the next ticket in
+`git reset --soft <Start>`, then commit everything as one commit in the CLAUDE.md format, ending in the
+issue reference. The `wip:` commits are gone.
+
+## 6. Merge into main
+
+`main` has a linear history of one commit per ticket, so the ticket's commit goes on top of it instead
+of in a merge commit. `main` may be checked out in another worktree, so don't switch to it here.
+
+1. `git fetch origin main` and `git rebase origin/main`. Resolve a conflict when the intent of both
+   sides is clear; when it isn't, `git rebase --abort` and **STOP**.
+2. If the rebase brought in new commits, rerun the gate runner (tests and build) on the result.
+3. `git push origin HEAD:main`. If it's rejected because `main` moved meanwhile, go back to 1.
+4. The push deploys (`.github/workflows/deploy.yml`): find the run with
+   `gh run list --workflow deploy.yml --commit <the pushed commit>` and wait for it with
+   `gh run watch <id> --exit-status`.
+5. Stop any dev server the flow started, and set `Step: done` in `.ticket.md`, so the next ticket in
    this worktree starts fresh.
-3. Show the user, in a few lines:
+6. Show the user, in a few lines:
    - what changed and the criteria table with results,
    - the rounds the gate took and the review findings counted by outcome, with every Important one
      not fixed and every Pre-existing one listed, so the user can decide whether it needs an issue,
@@ -158,6 +171,7 @@ on as they decide.
      to check,
    - the readings of unclear criteria decided at step 1,
    - the open edge-case questions from the plan, which no test covers yet,
-   - the commit.
+   - the commit on `main` and whether the deployment succeeded.
 
-Fix corrections the user brings later in a new commit and rerun the affected part of the gate.
+Fix a failed deployment, and corrections the user brings later, in a new commit: rerun the affected
+part of the gate, then this step.
