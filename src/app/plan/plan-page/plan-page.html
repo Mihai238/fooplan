@@ -101,7 +101,9 @@
                 {{ current.recipe }}
               </a>
             </p>
-            <p class="minutes">{{ minutes(current.recipe) }} minutes</p>
+            @if (minutes(current.recipe); as recipeMinutes) {
+              <p class="minutes">{{ recipeMinutes }} minutes</p>
+            }
             @if (meal.kind === 'dinner') {
               @if (plan().accepted) {
                 @if (day.cookExtra) {
@@ -139,8 +141,11 @@
                   class="suggestion"
                   (click)="store.pick(ref, recipe)"
                 >
-                  <span class="name">{{ recipe }}</span
-                  >{{ ' ' }}<span class="minutes">{{ minutes(recipe) }} minutes</span>
+                  <span class="name">{{ recipe }}</span>
+                  <!-- On a line of its own, as Prettier would put it, the space would follow the line
+                       break, which Angular keeps as a second space -->
+                  <!-- prettier-ignore -->
+                  @if (minutes(recipe); as recipeMinutes) {{{ ' ' }}<span class="minutes">{{ recipeMinutes }} minutes</span>}
                 </button>
                 <a
                   class="recipe-link"

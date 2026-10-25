@@ -10,7 +10,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { PlanStore } from '../../plan/plan-store';
 import { displayAmount } from '../../recipes/amount';
-import { RECIPES } from '../../recipes/recipes';
+import { RecipeStore } from '../../recipes/recipe-store';
 import { AddedItem, addFeedback, itemKey, ListItem, listItems, shoppingView } from '../groceries';
 
 @Component({
@@ -21,13 +21,14 @@ import { AddedItem, addFeedback, itemKey, ListItem, listItems, shoppingView } fr
 })
 export class GroceryList {
   private readonly store = inject(PlanStore);
+  private readonly recipes = inject(RecipeStore);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
   protected readonly plan = this.store.plan;
   protected readonly key = itemKey;
   protected readonly displayAmount = displayAmount;
   protected readonly view = computed(() =>
-    shoppingView(listItems(this.plan(), RECIPES), this.plan().ticked),
+    shoppingView(listItems(this.plan(), this.recipes.all()), this.plan().ticked),
   );
   protected readonly feedback = signal('');
 

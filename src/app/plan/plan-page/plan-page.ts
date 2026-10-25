@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { recipeSlug } from '../../recipes/recipe-slug';
-import { RECIPES } from '../../recipes/recipes';
+import { RecipeStore } from '../../recipes/recipe-store';
 import {
   DEFAULT_DAYS,
   filledMeals,
@@ -23,6 +23,7 @@ import { PlanStore } from '../plan-store';
 })
 export class PlanPage {
   protected readonly store = inject(PlanStore);
+  private readonly recipes = inject(RecipeStore);
   protected readonly plan = this.store.plan;
   protected readonly complete = computed(() => isComplete(this.plan()));
   protected readonly filled = computed(() => filledMeals(this.plan()));
@@ -38,6 +39,9 @@ export class PlanPage {
     { kind: 'lunch', label: 'Lunch' },
     { kind: 'dinner', label: 'Dinner' },
   ];
+  private readonly minutesByRecipe = computed(
+    () => new Map(this.recipes.all().map((recipe) => [recipe.name, recipe.minutes])),
+  );
   private pressedOnBackdrop = false;
 
   protected stepDays(delta: number): void {
@@ -69,8 +73,8 @@ export class PlanPage {
     return kind === 'lunch' ? leftoversOf(this.plan(), day) : null;
   }
 
-  protected minutes(recipe: string): number {
-    return MINUTES_BY_RECIPE.get(recipe)!;
+  protected minutes(recipe: string): number | undefined {
+    return this.minutesByRecipe().get(recipe);
   }
 
   protected newPlan(dialog: HTMLDialogElement): void {
@@ -128,5 +132,3 @@ export class PlanPage {
     );
   }
 }
-
-const MINUTES_BY_RECIPE = new Map(RECIPES.map((recipe) => [recipe.name, recipe.minutes]));

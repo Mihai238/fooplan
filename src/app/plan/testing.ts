@@ -1,4 +1,5 @@
-import { RECIPES } from '../recipes/recipes';
+import { TestBed } from '@angular/core/testing';
+import { RecipeStore } from '../recipes/recipe-store';
 import { Meal, MealRef, Plan, PlanDay, Random } from './plan';
 import { PlanStore } from './plan-store';
 
@@ -30,10 +31,12 @@ export function acceptOneDayPlan(store: PlanStore): void {
   }
 }
 
-// Removes recipes until exactly `count` stay suggested: the given ones and the first others in
-// RECIPES order, which it returns in RECIPES order
+// Removes recipes until exactly `count` stay suggested: the given ones and the first others in the
+// order of all recipes, built-in and own, which it returns in that order
 export function leaveSuggested(store: PlanStore, count: number, ...kept: string[]): string[] {
-  const names = RECIPES.map((recipe) => recipe.name);
+  const names = TestBed.inject(RecipeStore)
+    .all()
+    .map((recipe) => recipe.name);
   const suggested = [...kept, ...names.filter((name) => !kept.includes(name))].slice(0, count);
   const removals = names.filter((name) => !suggested.includes(name));
   removals.forEach((name) => store.removeRecipe(name));

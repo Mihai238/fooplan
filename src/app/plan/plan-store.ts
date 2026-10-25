@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
-import { RECIPES } from '../recipes/recipes';
+import { RecipeStore } from '../recipes/recipe-store';
+import { readStored, writeStored } from '../storage';
 import {
   acceptPlan,
   addItem,
@@ -37,18 +38,20 @@ export const TODAY = new InjectionToken<() => string>('TODAY', {
 
 const STORAGE_KEY = 'fooplan.plan';
 const REMOVED_KEY = 'fooplan.removed';
-const RECIPE_NAMES = RECIPES.map((recipe) => recipe.name);
 
 @Injectable({ providedIn: 'root' })
 export class PlanStore {
   private readonly random = inject(RANDOM);
   private readonly today = inject(TODAY);
+  private readonly recipes = inject(RecipeStore);
   // Declared before the plan, since a new plan is drawn from the recipes not removed
-  private readonly removedState = signal<string[]>(parseRemoved(readStored(REMOVED_KEY)));
+  private readonly removedState = signal<string[]>(
+    parseRemoved(readStored(REMOVED_KEY), this.recipeNames()),
+  );
   readonly removed = this.removedState.asReadonly();
   private readonly suggested = computed(() => {
     const removed = this.removed();
-    return RECIPE_NAMES.filter((name) => !removed.includes(name));
+    return this.recipeNames().filter((name) => !removed.includes(name));
   });
   readonly canRemove = computed(() => this.suggested().length > MIN_SUGGESTED);
   private readonly state = signal<Plan>(this.load());
@@ -95,7 +98,7 @@ export class PlanStore {
   }
 
   removeRecipe(name: string): void {
-    if (!RECIPE_NAMES.includes(name) || this.removed().includes(name) || !this.canRemove()) {
+    if (!this.recipeNames().includes(name) || this.removed().includes(name) || !this.canRemove()) {
       return;
     }
     this.setRemoved([...this.removed(), name]);
@@ -115,7 +118,7 @@ export class PlanStore {
 
   private load(): Plan {
     // A plan can hold recipes picked or suggested before they were removed
-    const stored = parsePlan(readStored(STORAGE_KEY), RECIPE_NAMES);
+    const stored = parsePlan(readStored(STORAGE_KEY), this.recipeNames());
     if (stored) {
       // A saved plan can still suggest a removed recipe, e.g. one another tab saved, or when saving
       // the plan failed after the removal was saved
@@ -149,28 +152,16 @@ export class PlanStore {
     this.removedState.set(removed);
     writeStored(REMOVED_KEY, removed);
   }
+
+  private recipeNames(): string[] {
+    return this.recipes.all().map((recipe) => recipe.name);
+  }
 }
 
-function parseRemoved(value: unknown): string[] {
+function parseRemoved(value: unknown, names: readonly string[]): string[] {
   if (!Array.isArray(value) || !value.every((name) => typeof name === 'string')) {
     return [];
   }
-  const removed = [...new Set(value.filter((name) => RECIPE_NAMES.includes(name)))];
-  return RECIPE_NAMES.length - removed.length >= MIN_SUGGESTED ? removed : [];
-}
-
-function readStored(key: string): unknown {
-  try {
-    return JSON.parse(localStorage.getItem(key) ?? 'null');
-  } catch {
-    return null;
-  }
-}
-
-function writeStored(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    // Storage can be blocked or full; the change then lives until the page is reloaded
-  }
+  const removed = [...new Set(value.filter((name) => names.includes(name)))];
+  return names.length - removed.length >= MIN_SUGGESTED ? removed : [];
 }

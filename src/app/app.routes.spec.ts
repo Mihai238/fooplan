@@ -4,6 +4,7 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from './app.routes';
 import { RECIPES } from './recipes/recipes';
+import { QUICK_DAL, storeOwnRecipes } from './recipes/testing';
 
 describe('routes', () => {
   beforeEach(() => {
@@ -69,6 +70,21 @@ describe('routes', () => {
     expect(recipePage.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
       'Niçoise salad',
     );
+  });
+
+  it('shows the recipe page of the own recipe "Quick Dal" at /recipes/quick-dal opened directly, and the Recipes page for /recipes/no-such-dal', async () => {
+    storeOwnRecipes(QUICK_DAL);
+    const recipePage = await RouterTestingHarness.create('/recipes/quick-dal');
+    expect(TestBed.inject(Router).url).toBe('/recipes/quick-dal');
+    expect(recipePage.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+      'Quick Dal',
+    );
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+    const harness = await RouterTestingHarness.create('/recipes/no-such-dal');
+    expect(TestBed.inject(Router).url).toBe('/recipes');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Recipes');
   });
 
   it('redirects a recipe slug in another case to /recipes', async () => {

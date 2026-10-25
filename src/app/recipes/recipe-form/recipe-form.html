@@ -1,0 +1,117 @@
+<h1>Add a recipe</h1>
+<form novalidate (submit)="save($event)">
+  <div class="field">
+    <label for="recipe-name">Name</label>
+    <input
+      #nameInput
+      type="text"
+      id="recipe-name"
+      class="name"
+      autocomplete="off"
+      [attr.aria-invalid]="problems().name ? true : null"
+      [attr.aria-describedby]="problems().name ? 'recipe-name-error' : null"
+      (input)="name.set(nameInput.value)"
+    />
+    @if (problems().name; as problem) {
+      <p class="error" id="recipe-name-error">{{ problem }}</p>
+    }
+  </div>
+  <div class="field">
+    <label for="recipe-servings">Servings</label>
+    <input
+      #servingsInput
+      type="text"
+      id="recipe-servings"
+      class="servings"
+      inputmode="numeric"
+      autocomplete="off"
+      value="2"
+      [attr.aria-invalid]="problems().servings ? true : null"
+      [attr.aria-describedby]="problems().servings ? 'recipe-servings-error' : null"
+      (input)="servings.set(servingsInput.value)"
+    />
+    @if (problems().servings; as problem) {
+      <p class="error" id="recipe-servings-error">{{ problem }}</p>
+    }
+  </div>
+  <fieldset>
+    <legend>Ingredients</legend>
+    @if (problems().ingredients; as problem) {
+      <p class="error" id="ingredients-error">{{ problem }}</p>
+    }
+    <div class="rows">
+      <div class="row head" aria-hidden="true">
+        <span>Amount</span>
+        <span>Unit</span>
+        <span>Ingredient</span>
+      </div>
+      @for (row of rows(); track row.id; let i = $index, first = $first) {
+        @let problem = problems().rows.get(row.id);
+        @let noIngredients = first && problems().ingredients;
+        <div class="row">
+          <input
+            #amountInput
+            type="text"
+            class="amount"
+            inputmode="decimal"
+            autocomplete="off"
+            [id]="'amount-' + row.id"
+            [attr.aria-label]="'Amount ' + (i + 1)"
+            [attr.aria-invalid]="problem?.amount || noIngredients ? true : null"
+            [attr.aria-describedby]="
+              problem?.amount
+                ? 'amount-' + row.id + '-error'
+                : noIngredients
+                  ? 'ingredients-error'
+                  : null
+            "
+            (input)="edit(row, { amount: amountInput.value })"
+          />
+          <select
+            #unitSelect
+            [attr.aria-label]="'Unit ' + (i + 1)"
+            (change)="chooseUnit(row, unitSelect)"
+          >
+            @for (unit of units; track unit) {
+              <option [value]="unit">{{ unit }}</option>
+            }
+          </select>
+          <input
+            #ingredientInput
+            type="text"
+            class="ingredient"
+            autocomplete="off"
+            [attr.aria-label]="'Ingredient ' + (i + 1)"
+            [attr.aria-invalid]="problem?.name ? true : null"
+            [attr.aria-describedby]="problem?.name ? 'ingredient-' + row.id + '-error' : null"
+            (input)="edit(row, { name: ingredientInput.value })"
+          />
+          @if (rows().length > 1) {
+            <button
+              #removeButton
+              type="button"
+              class="link"
+              [attr.aria-label]="'Remove ingredient ' + (i + 1)"
+              (click)="remove(i, removeButton)"
+            >
+              Remove
+            </button>
+          }
+        </div>
+        @if (problem?.amount; as message) {
+          <p class="error" [id]="'amount-' + row.id + '-error'">{{ message }}</p>
+        }
+        @if (problem?.name; as message) {
+          <p class="error" [id]="'ingredient-' + row.id + '-error'">{{ message }}</p>
+        }
+      }
+    </div>
+    @if (rows().length < maxRows) {
+      <button type="button" class="link add" (click)="addRow()">Add ingredient</button>
+    }
+  </fieldset>
+  <div class="actions">
+    <button type="submit" class="primary">Save recipe</button>
+    <a class="secondary" routerLink="/recipes">Cancel</a>
+  </div>
+</form>

@@ -7,6 +7,7 @@ import { leaveSuggested, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
 import { RECIPES } from '../recipes';
+import { ownRecipe, QUICK_DAL, RECIPES_KEY } from '../testing';
 
 const LIMIT_NOTE = 'At least 15 recipes stay suggested, so no more can be removed.';
 
@@ -113,6 +114,31 @@ describe('RecipePage', () => {
     expect(headings().map(textOf)).toEqual(['Niçoise salad']);
     expect(backLink().getAttribute('href')).toBe('/recipes');
     expect(TestBed.inject(PlanStore).plan()).toEqual(before);
+  });
+
+  it('links "Back", and "Done" on the last step, to the Recipes page rather than the form when opened from /add-recipe, for an own recipe and a built-in one', async () => {
+    const { name, servings, ingredients } = QUICK_DAL;
+    localStorage.setItem(RECIPES_KEY, JSON.stringify([{ name, servings, ingredients }]));
+    harness = await RouterTestingHarness.create('/add-recipe');
+    await harness.navigateByUrl('/recipes/quick-dal');
+    expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
+    expect(backLink().getAttribute('href'), '"Back" of Quick Dal').toBe('/recipes');
+    await click(backLink());
+    expect(router().url).toBe('/recipes');
+    expect(textOf(page().querySelector('h1'))).toBe('Recipes');
+
+    await harness.navigateByUrl('/add-recipe');
+    await harness.navigateByUrl('/recipes/spaghetti-carbonara');
+    expect(headings().map(textOf), 'Spaghetti carbonara not shown').toEqual([
+      'Spaghetti carbonara',
+    ]);
+    expect(backLink().getAttribute('href'), '"Back" of Spaghetti carbonara').toBe('/recipes');
+    await stepToLast(stepsOf('Spaghetti carbonara'));
+    const done = doneLink();
+    expect(done.getAttribute('href')).toBe('/recipes');
+    await click(done);
+    expect(router().url).toBe('/recipes');
+    expect(textOf(page().querySelector('h1'))).toBe('Recipes');
   });
 
   it('shows "Step 1 of N" with the first step below the ingredients when opened, with "Previous" disabled', async () => {
@@ -318,6 +344,48 @@ describe('RecipePage', () => {
     expect(page().querySelectorAll('article').length).toBe(RECIPES.length);
   });
 
+  describe('own recipes', () => {
+    it('shows a stored own recipe saved with an extra `steps` key as "Back", its name, servings, "Your recipe" in a p.own, its p.suggest and its ingredients, with no steps, "Previous", "Next" or "Done"', async () => {
+      const { name, servings, ingredients } = QUICK_DAL;
+      localStorage.setItem(
+        RECIPES_KEY,
+        JSON.stringify([{ name, servings, ingredients, steps: ['Cook the dal.', 'Serve it.'] }]),
+      );
+      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+
+      expect(router().url).toBe('/recipes/quick-dal');
+      expect(backLink().getAttribute('href')).toBe('/recipes');
+      expect(headings().map(textOf)).toEqual(['Quick Dal']);
+      const servingsLine = page().querySelector('p.servings');
+      expect(textOf(servingsLine)).toBe('4 servings');
+      const own = servingsLine?.nextElementSibling ?? null;
+      expect(own?.matches('p.own'), 'p.own after the servings').toBe(true);
+      expect(textOf(own)).toBe('Your recipe');
+      expect(own?.nextElementSibling?.matches('p.suggest'), 'p.suggest after p.own').toBe(true);
+      expect(ingredientLines()).toEqual(linesOf(QUICK_DAL));
+      expect(page().querySelector('.steps'), 'steps block').toBeNull();
+      expect(stepCounters()).toEqual([]);
+      expect(textOf(page())).not.toContain('Cook the dal.');
+      expect(buttonsLabelled('Previous')).toEqual([]);
+      expect(buttonsLabelled('Next')).toEqual([]);
+      expect(controlsLabelled('Done')).toEqual([]);
+    });
+
+    it('shows "1 serving" on the page of an own recipe for 1 and "4 servings" on one for 4', async () => {
+      const stored = [ownRecipe('Single Soup', 1), ownRecipe('Family Stew', 4)].map(
+        ({ name, servings, ingredients }) => ({ name, servings, ingredients }),
+      );
+      localStorage.setItem(RECIPES_KEY, JSON.stringify(stored));
+
+      harness = await RouterTestingHarness.create('/recipes/single-soup');
+      expect(headings().map(textOf), 'Single Soup not shown').toEqual(['Single Soup']);
+      expect(textOf(page().querySelector('p.servings'))).toBe('1 serving');
+      await harness.navigateByUrl('/recipes/family-stew');
+      expect(headings().map(textOf), 'Family Stew not shown').toEqual(['Family Stew']);
+      expect(textOf(page().querySelector('p.servings'))).toBe('4 servings');
+    });
+  });
+
   describe('"Don\'t suggest" and "Suggest again"', () => {
     it('shows a "Don\'t suggest" button in a p.suggest between the servings and the ingredients, which turns into "Not suggested" and a focused "Suggest again", and back into a focused "Don\'t suggest", on clicks', async () => {
       harness = await RouterTestingHarness.create('/recipes/lentil-soup');
@@ -430,7 +498,7 @@ describe('RecipePage', () => {
   function stepsOf(name: string): string[] {
     const steps = recipeNamed(name).steps;
     expect(steps?.length ?? 0, `steps of "${name}"`).toBeGreaterThanOrEqual(3);
-    return steps;
+    return steps!;
   }
 
   function recipeNamed(name: string): Recipe {

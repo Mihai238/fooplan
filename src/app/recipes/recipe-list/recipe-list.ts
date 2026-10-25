@@ -3,9 +3,10 @@ import { RouterLink } from '@angular/router';
 import { MIN_SUGGESTED } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
 import { displayAmount } from '../amount';
+import { servingsText } from '../recipe';
 import { searchRecipes } from '../recipe-search';
 import { recipeSlug } from '../recipe-slug';
-import { RECIPES } from '../recipes';
+import { RecipeStore } from '../recipe-store';
 
 @Component({
   imports: [RouterLink],
@@ -16,14 +17,16 @@ import { RECIPES } from '../recipes';
 export class RecipeList {
   protected readonly store = inject(PlanStore);
   private readonly injector = inject(Injector);
+  private readonly recipeStore = inject(RecipeStore);
   protected readonly query = signal('');
   private readonly search = computed(() => this.query().trim());
-  protected readonly recipes = computed(() => searchRecipes(RECIPES, this.search()));
+  protected readonly recipes = computed(() => searchRecipes(this.recipeStore.all(), this.search()));
   protected readonly matchStatus = computed(() =>
     matchStatusText(this.search(), this.recipes().length),
   );
   protected readonly displayAmount = displayAmount;
   protected readonly recipeSlug = recipeSlug;
+  protected readonly servingsText = servingsText;
   protected readonly minSuggested = MIN_SUGGESTED;
 
   protected dontSuggest(name: string, button: HTMLButtonElement): void {

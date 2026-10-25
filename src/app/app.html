@@ -7,8 +7,8 @@
     </a>
     <a
       routerLink="/recipes"
-      routerLinkActive="active"
-      [ariaCurrentWhenActive]="onRecipesPage() ? 'page' : true"
+      [class.active]="inRecipes()"
+      [attr.aria-current]="onRecipesPage() ? 'page' : inRecipes() ? true : null"
     >
       Recipes
     </a>

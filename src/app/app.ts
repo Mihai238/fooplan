@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { isActive, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 @Component({
@@ -8,6 +8,12 @@ import { isActive, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@a
   templateUrl: './app.html',
 })
 export class App {
-  // A recipe page belongs to Recipes, so the link stays current there, but it isn't that page
-  protected readonly onRecipesPage = isActive('/recipes', inject(Router), { paths: 'exact' });
+  private readonly router = inject(Router);
+  // A recipe page and the form to add one belong to Recipes, so the link stays current there, but
+  // they aren't that page. RouterLinkActive can't do this: it would take the class and aria-current
+  // off again on /add-recipe, which isn't under /recipes
+  protected readonly onRecipesPage = isActive('/recipes', this.router, { paths: 'exact' });
+  protected readonly inRecipes = computed(() => this.underRecipes() || this.onAddRecipe());
+  private readonly underRecipes = isActive('/recipes', this.router);
+  private readonly onAddRecipe = isActive('/add-recipe', this.router);
 }

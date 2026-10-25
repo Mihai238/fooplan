@@ -3,6 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { groceryList, itemKey } from '../../groceries/groceries';
 import { RECIPES } from '../../recipes/recipes';
+import { QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
 import { Plan } from '../plan';
 import { PlanStore, RANDOM, TODAY } from '../plan-store';
 import {
@@ -848,6 +849,28 @@ describe('PlanPage', () => {
       await click(arrow('One more person'));
       expect(textOf(stepper('People'))).toBe('3');
       expect(textOf(meal(0).querySelector('.minutes'))).toBe('35 minutes');
+    });
+
+    it('shows a suggestion of the own recipe "Quick Dal" as its span.name alone, read as "Quick Dal", and no time once picked', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      await openWith(
+        planOf([
+          planDay(
+            '2026-10-24',
+            open('Quick Dal', 'Lentil soup', 'Niçoise salad'),
+            picked('Spaghetti carbonara'),
+          ),
+        ]),
+      );
+      const dal = suggestionsOf(meal(0))[0];
+      expect(Array.from(dal.children).map(partOf)).toEqual([['span.name', 'Quick Dal']]);
+      expect(dal.textContent).toBe('Quick Dal');
+
+      await click(dal);
+      expect(store.plan().days[0].lunch.recipe, '"Quick Dal" not picked').toBe('Quick Dal');
+      expect(textOf(meal(0).querySelector('p.recipe'))).toBe('Quick Dal');
+      expect(meal(0).querySelector('p.minutes')).toBeNull();
+      expect(textOf(meal(0))).not.toMatch(/minutes/);
     });
 
     // The first day's dinner, "Potato goulash", isn't on the last day; cooked extra, it covers

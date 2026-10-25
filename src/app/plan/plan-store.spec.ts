@@ -1,6 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { groceryList, itemKey } from '../groceries/groceries';
+import { RecipeStore } from '../recipes/recipe-store';
 import { RECIPES } from '../recipes/recipes';
+import { PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../recipes/testing';
 import { addedKey, DEFAULT_DAYS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
 import {
@@ -45,9 +47,9 @@ describe('PlanStore', () => {
     }
     const suggestions = suggestionsOf(plan);
     expect(new Set(suggestions).size, 'different recipes suggested').toBe(30);
-    const quick = RECIPES.filter((recipe) => recipe.workMinutes <= 30 && recipe.minutes <= 45).map(
-      (recipe) => recipe.name,
-    );
+    const quick = RECIPES.filter(
+      (recipe) => recipe.workMinutes! <= 30 && recipe.minutes! <= 45,
+    ).map((recipe) => recipe.name);
     expect(suggestions.filter((name) => !quick.includes(name))).toEqual([]);
     expect(quick, 'quick recipes').toHaveLength(33);
   });
@@ -308,6 +310,89 @@ describe('PlanStore', () => {
     expect(store.plan().added).toEqual([]);
     acceptOneDayPlan(store);
     expect(store.plan().added).toEqual([]);
+  });
+
+  describe('own recipes', () => {
+    it('suggests the own recipe "Quick Dal" on the next "Other suggestions" once added, leaving an unaccepted plan that has shown every built-in recipe unchanged until then, and an accepted plan unchanged', () => {
+      const saved: Plan = {
+        ...planOf([
+          day(
+            '2026-10-24',
+            open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
+            open('Spaghetti carbonara', 'Niçoise salad', 'Bean burritos'),
+          ),
+        ]),
+        shown: NAMES,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      store = reload();
+      expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+
+      recipes().add(QUICK_DAL);
+      expect(store.plan(), 'after adding "Quick Dal"').toEqual(saved);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(saved);
+      store.otherSuggestions(LUNCH);
+      expect(store.plan().days[0].lunch.suggestions).toContain('Quick Dal');
+
+      localStorage.clear();
+      store = reload();
+      acceptOneDayPlan(store);
+      const accepted = store.plan();
+      const stored = localStorage.getItem(STORAGE_KEY);
+      recipes().add(PLAIN_RICE);
+      expect(store.plan(), 'accepted plan after adding "Plain Rice"').toEqual(accepted);
+      expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
+    });
+
+    it('loads a saved plan that picked the own recipe "Quick Dal" with the pick after a reload', () => {
+      storeOwnRecipes(QUICK_DAL);
+      const saved = planOf([
+        day(
+          '2026-10-24',
+          picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+          open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
+        ),
+      ]);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+
+      expect(reload().plan()).toEqual(saved);
+    });
+
+    it('changes nothing on removeRecipe("Quick Dal") while it is one of exactly 15 recipes suggested, and lets it be removed once another own recipe is added', () => {
+      recipes().add(QUICK_DAL);
+      leaveSuggested(store, 15, 'Quick Dal');
+      expect(store.canRemove(), 'can remove at 15 suggested').toBe(false);
+      const before = snapshot();
+
+      store.removeRecipe('Quick Dal');
+      expect(snapshot()).toEqual(before);
+
+      recipes().add(PLAIN_RICE);
+      expect(store.canRemove(), 'can remove after adding "Plain Rice"').toBe(true);
+      store.removeRecipe('Quick Dal');
+      expect(store.removed()).toContain('Quick Dal');
+    });
+
+    it('reads a saved list of removed recipes that leaves 14 built-in recipes and the own recipe "Quick Dal" suggested', () => {
+      storeOwnRecipes(QUICK_DAL);
+      const removals = NAMES.slice(14);
+      localStorage.setItem(REMOVED_KEY, JSON.stringify(removals));
+
+      expect(reload().removed()).toEqual(removals);
+    });
+
+    function recipes(): RecipeStore {
+      return TestBed.inject(RecipeStore);
+    }
+
+    function snapshot() {
+      return {
+        plan: store.plan(),
+        removed: store.removed(),
+        storedPlan: localStorage.getItem(STORAGE_KEY),
+        storedRemoved: localStorage.getItem(REMOVED_KEY),
+      };
+    }
   });
 
   describe('recipes not suggested', () => {

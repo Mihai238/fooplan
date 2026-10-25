@@ -4,7 +4,9 @@ import { provideRouter, Router } from '@angular/router';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
 import { leaveSuggested, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../amount';
+import { RecipeStore } from '../recipe-store';
 import { RECIPES } from '../recipes';
+import { ownRecipe, PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../testing';
 import { RecipeList } from './recipe-list';
 
 const LIMIT_NOTE = 'At least 15 recipes stay suggested, so no more can be removed.';
@@ -15,13 +17,7 @@ describe('RecipeList', () => {
 
   beforeEach(async () => {
     localStorage.clear();
-    TestBed.configureTestingModule({
-      providers: [
-        provideRouter([{ path: '**', component: Blank }]),
-        { provide: RANDOM, useValue: seededRandom(1) },
-        { provide: TODAY, useValue: () => '2026-10-24' },
-      ],
-    });
+    configure();
     await openPage();
   });
 
@@ -150,6 +146,67 @@ describe('RecipeList', () => {
     await search('nicoise');
     expect(listedNames()).toEqual(['Niçoise salad']);
     expect(nameLinkOf('Niçoise salad').getAttribute('href')).toBe('/recipes/nicoise-salad');
+  });
+
+  it('shows a link "Add a recipe" to /add-recipe right after the heading, before the search field', () => {
+    const links = Array.from(element.querySelectorAll('a')).filter(
+      (link) => textOf(link) === 'Add a recipe',
+    );
+    expect(links, '"Add a recipe" links').toHaveLength(1);
+    expect(links[0].getAttribute('href')).toBe('/add-recipe');
+    expect(element.querySelector('h1')?.nextElementSibling, 'element after the heading').toBe(
+      links[0],
+    );
+    expect(
+      links[0].compareDocumentPosition(searchField()) & Node.DOCUMENT_POSITION_FOLLOWING,
+      'link not before the search field',
+    ).toBeTruthy();
+  });
+
+  it('lists the own recipes "Grandma\'s Soup" and "Quick Dal" after all built-in recipes in the order added, each with "Your recipe" in a p.own between its servings and its p.suggest, and lists "Quick Dal" for the search "dal"', async () => {
+    recipeStore().add(ownRecipe("Grandma's Soup"));
+    recipeStore().add(QUICK_DAL);
+    await reopenPage();
+
+    expect(listedNames()).toEqual([
+      ...RECIPES.map((recipe) => recipe.name),
+      "Grandma's Soup",
+      'Quick Dal',
+    ]);
+    for (const article of articles()) {
+      const name = textOf(article.querySelector('h2')!);
+      const own = article.querySelector('p.servings')?.nextElementSibling;
+      if (name === "Grandma's Soup" || name === 'Quick Dal') {
+        expect(own?.matches('p.own'), `p.own after the servings of "${name}"`).toBe(true);
+        expect(textOf(own!), `p.own of "${name}"`).toBe('Your recipe');
+        expect(own!.nextElementSibling?.matches('p.suggest'), `after p.own of "${name}"`).toBe(
+          true,
+        );
+      } else {
+        expect(article.querySelector('p.own'), `p.own of "${name}"`).toBeNull();
+      }
+    }
+
+    await search('dal');
+    expect(listedNames()).toEqual(['Quick Dal']);
+    expect(statusText()).toBe('1 recipe matches "dal".');
+  });
+
+  it('shows "1 serving" on the card of an own recipe for 1 and "4 servings" on one for 4', async () => {
+    recipeStore().add(ownRecipe('Single Soup', 1));
+    recipeStore().add(ownRecipe('Family Stew', 4));
+    await reopenPage();
+
+    expect(servingsOf('Single Soup')).toBe('1 serving');
+    expect(servingsOf('Family Stew')).toBe('4 servings');
+
+    function servingsOf(name: string): string {
+      const article = articles().find(
+        (candidate) => textOf(candidate.querySelector('h2')!) === name,
+      );
+      expect(article, `"${name}" not shown`).toBeDefined();
+      return textOf(article!.querySelector('p.servings') ?? article!);
+    }
   });
 
   describe('match status', () => {
@@ -400,6 +457,39 @@ describe('RecipeList', () => {
       }
     });
 
+    it('shows the note and no "Don\'t suggest" on "Quick Dal" while it is one of exactly 15 recipes suggested, and drops the note and shows "Don\'t suggest" on it once another own recipe is added', async () => {
+      recipeStore().add(QUICK_DAL);
+      leaveSuggested(store(), 15, 'Quick Dal');
+      await reopenPage();
+
+      expectLimitNote('at 15 suggested');
+      expect(cardOf('Quick Dal').querySelector('p.suggest'), 'p.suggest of "Quick Dal"').toBeNull();
+
+      recipeStore().add(PLAIN_RICE);
+      await reopenPage();
+      expect(element.querySelector('p.note')).toBeNull();
+      expect(suggestButtons(cardOf('Quick Dal')).map(textOf)).toEqual(["Don't suggest"]);
+    });
+
+    it('shows "Not suggested" on the own recipe "Quick Dal" after "Don\'t suggest" on its card, and again after a reload, with "Quick Dal" kept in fooplan.removed', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      await reload();
+
+      await click(suggestButtons(cardOf('Quick Dal'))[0]);
+      expect(suggestTexts('Quick Dal')).toEqual(['Not suggested', 'Suggest again']);
+
+      await reload();
+      expect(suggestTexts('Quick Dal'), 'after a reload').toEqual([
+        'Not suggested',
+        'Suggest again',
+      ]);
+      expect(JSON.parse(localStorage.getItem('fooplan.removed') ?? 'null')).toEqual(['Quick Dal']);
+    });
+
+    function suggestTexts(name: string): string[] {
+      return Array.from(cardOf(name).querySelector('p.suggest')?.children ?? []).map(textOf);
+    }
+
     function expectLimitNote(when: string) {
       const notes = Array.from(element.querySelectorAll('p.note'));
       expect(notes.map(textOf), `notes ${when}`).toEqual([LIMIT_NOTE]);
@@ -431,6 +521,16 @@ describe('RecipeList', () => {
     }
   });
 
+  function configure() {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: '**', component: Blank }]),
+        { provide: RANDOM, useValue: seededRandom(1) },
+        { provide: TODAY, useValue: () => '2026-10-24' },
+      ],
+    });
+  }
+
   async function openPage() {
     fixture = TestBed.createComponent(RecipeList);
     await fixture.whenStable();
@@ -441,6 +541,18 @@ describe('RecipeList', () => {
   async function reopenPage() {
     fixture.destroy();
     await openPage();
+  }
+
+  // A fresh app on the same localStorage, as a page reload makes
+  async function reload() {
+    fixture.destroy();
+    TestBed.resetTestingModule();
+    configure();
+    await openPage();
+  }
+
+  function recipeStore(): RecipeStore {
+    return TestBed.inject(RecipeStore);
   }
 
   async function click(target: HTMLElement) {

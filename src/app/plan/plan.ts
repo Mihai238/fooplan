@@ -1,3 +1,5 @@
+import { isRecord } from '../storage';
+
 export type MealKind = 'lunch' | 'dinner';
 
 export interface Meal {
@@ -402,10 +404,6 @@ function hasValidLeftovers(plan: Plan): boolean {
 
 function isEmpty(meal: Meal): boolean {
   return meal.recipe === null && meal.suggestions.length === 0;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function openDays(

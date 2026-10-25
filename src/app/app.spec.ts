@@ -76,4 +76,25 @@ describe('App', () => {
       await Promise.resolve();
     }
   });
+
+  it('marks the "Recipes" link as current, and active, on /add-recipe, and no other nav link', async () => {
+    const fixture = TestBed.createComponent(App);
+    const compiled = fixture.nativeElement as HTMLElement;
+    await TestBed.inject(Router).navigateByUrl('/add-recipe');
+    await fixture.whenStable();
+    // RouterLinkActive applies its class and aria-current in a microtask after the navigation
+    await Promise.resolve();
+
+    expect(TestBed.inject(Router).url, 'form not opened').toBe('/add-recipe');
+    const recipes = Array.from(compiled.querySelectorAll('nav a')).find(
+      (a) => a.textContent?.trim() === 'Recipes',
+    );
+    expect(recipes?.getAttribute('aria-current')).toBe('true');
+    expect(recipes?.classList).toContain('active');
+    expect(
+      Array.from(compiled.querySelectorAll('nav a[aria-current]')).map((a) =>
+        a.textContent?.trim(),
+      ),
+    ).toEqual(['Recipes']);
+  });
 });

@@ -147,11 +147,11 @@ describe('RECIPES', () => {
     const problems = RECIPES.filter(
       (recipe) =>
         !Number.isInteger(recipe.workMinutes) ||
-        recipe.workMinutes % 5 !== 0 ||
-        recipe.workMinutes < 5 ||
-        recipe.workMinutes > recipe.minutes ||
-        recipe.workMinutes > 30 ||
-        recipe.minutes > 45,
+        recipe.workMinutes! % 5 !== 0 ||
+        recipe.workMinutes! < 5 ||
+        recipe.workMinutes! > recipe.minutes! ||
+        recipe.workMinutes! > 30 ||
+        recipe.minutes! > 45,
     ).map(
       (recipe) => `"${recipe.name}": workMinutes ${recipe.workMinutes}, minutes ${recipe.minutes}`,
     );
@@ -170,9 +170,9 @@ describe('RECIPES', () => {
     const problems = RECIPES.filter(
       (recipe) =>
         !Number.isInteger(recipe.minutes) ||
-        recipe.minutes % 5 !== 0 ||
-        recipe.minutes < 10 ||
-        recipe.minutes > 240,
+        recipe.minutes! % 5 !== 0 ||
+        recipe.minutes! < 10 ||
+        recipe.minutes! > 240,
     ).map((recipe) => `"${recipe.name}": minutes ${recipe.minutes}`);
     expect(problems).toEqual([]);
   });

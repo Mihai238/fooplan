@@ -11,8 +11,13 @@ export interface Ingredient {
 export interface Recipe {
   name: string;
   servings: number;
-  minutes: number;
-  workMinutes: number;
+  minutes?: number;
+  workMinutes?: number;
   ingredients: Ingredient[];
-  steps: string[];
+  steps?: string[];
+  own?: true;
+}
+
+export function servingsText(servings: number): string {
+  return servings === 1 ? '1 serving' : `${servings} servings`;
 }

@@ -1,4 +1,5 @@
 <h1>Recipes</h1>
+<a class="add" routerLink="/add-recipe">Add a recipe</a>
 <div class="field">
   <label for="search">Search recipes</label>
   <input #searchInput type="search" id="search" (input)="query.set(searchInput.value)" />
@@ -16,7 +17,10 @@
         <h2>
           <a [routerLink]="['/recipes', recipeSlug(recipe.name)]">{{ recipe.name }}</a>
         </h2>
-        <p class="servings">{{ recipe.servings }} servings</p>
+        <p class="servings">{{ servingsText(recipe.servings) }}</p>
+        @if (recipe.own) {
+          <p class="own">Your recipe</p>
+        }
         @let removed = store.removed().includes(recipe.name);
         @if (removed || store.canRemove()) {
           <p class="suggest">

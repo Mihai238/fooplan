@@ -2,9 +2,10 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
 import { addedKey } from '../../plan/plan';
-import { acceptOneDayPlan, seededRandom } from '../../plan/testing';
+import { acceptOneDayPlan, day, picked, planOf, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
+import { PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
 import { byName, bySection, GroceryItem, groceryList, itemKey } from '../groceries';
 import { Section, SECTIONS } from '../sections';
 import { GroceryList } from './grocery-list';
@@ -17,13 +18,7 @@ describe('GroceryList', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({
-      providers: [
-        provideRouter([]),
-        { provide: RANDOM, useValue: seededRandom(1) },
-        { provide: TODAY, useValue: () => '2026-10-24' },
-      ],
-    });
+    configure();
     store = TestBed.inject(PlanStore);
   });
 
@@ -411,6 +406,29 @@ describe('GroceryList', () => {
     addButton();
   });
 
+  it('lists the scaled ingredients of the own recipes "Quick Dal" and "Plain Rice" of an accepted plan for 2 under their sections, and "mystery spice" under "Other"', async () => {
+    storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+    const saved = planOf([day('2026-10-24', picked('Quick Dal'), picked('Plain Rice'))], {
+      accepted: true,
+    });
+    localStorage.setItem('fooplan.plan', JSON.stringify(saved));
+    // A fresh app on this localStorage, as a reload makes
+    TestBed.resetTestingModule();
+    configure();
+    store = TestBed.inject(PlanStore);
+    expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+    await open();
+
+    expect(
+      sections().map((section) => [textOf(section.querySelector('h2')), labelsIn(section)]),
+    ).toEqual([
+      ['Fruit & vegetables', ['1 pc onion']],
+      ['Pasta, rice & grains', ['150 g rice']],
+      ['Cans & jars', ['100 g canned chickpeas']],
+      ['Other', ['1 pc mystery spice']],
+    ]);
+  });
+
   describe('status after "Add"', () => {
     it('shows one empty status element right after the form and before the sections, without tabindex or hidden, and leaves the field without aria-describedby', async () => {
       acceptOneDayPlan(store);
@@ -670,6 +688,16 @@ describe('GroceryList', () => {
       expect(statusText()).toBe('');
     });
   });
+
+  function configure() {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        { provide: RANDOM, useValue: seededRandom(1) },
+        { provide: TODAY, useValue: () => '2026-10-24' },
+      ],
+    });
+  }
 
   async function open() {
     fixture = TestBed.createComponent(GroceryList);

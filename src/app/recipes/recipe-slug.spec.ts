@@ -1,4 +1,4 @@
-import { recipeBySlug, recipeSlug } from './recipe-slug';
+import { recipeSlug } from './recipe-slug';
 import { RECIPES } from './recipes';
 
 describe('recipeSlug', () => {
@@ -45,21 +45,5 @@ describe('recipeSlug', () => {
     expect(RECIPES.length, 'no recipes loaded').toBeGreaterThan(0);
     const shared = slugs.filter((slug, i) => slugs.indexOf(slug) !== i);
     expect(shared).toEqual([]);
-  });
-});
-
-describe('recipeBySlug', () => {
-  it('finds the recipe of every slug made from a recipe name', () => {
-    for (const recipe of RECIPES) {
-      expect(recipeBySlug(recipeSlug(recipe.name)), recipe.name).toBe(recipe);
-    }
-    expect(recipeBySlug('nicoise-salad')?.name).toBe('Niçoise salad');
-  });
-
-  it('finds no recipe for a slug no recipe has or an empty slug', () => {
-    expect(recipeBySlug('pizza-hawaii')).toBeUndefined();
-    expect(recipeBySlug('shepherds-pie')).toBeUndefined();
-    expect(recipeBySlug('spaghetti')).toBeUndefined();
-    expect(recipeBySlug('')).toBeUndefined();
   });
 });
