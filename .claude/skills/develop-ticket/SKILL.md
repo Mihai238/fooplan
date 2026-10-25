@@ -24,9 +24,9 @@ The user has created this worktree for the ticket. Never create, switch or remov
 - Everything the flow produces lives in `.ticket.md`, never only in the scratchpad: the scratchpad is
   under `/tmp` and gone after a machine restart. That includes criteria written retroactively for work
   that was committed without them.
-- There are three stops: unclear criteria at step 1 (only if needed), the plan at step 3 and the hand-off
-  at step 5, plus one at step 4 when the gate hasn't passed after three rounds. Between them, work
-  without asking unless something blocks you.
+- There are two stops: unclear criteria at step 1 (only if needed) and the hand-off at step 5, plus one
+  at step 4 when the gate hasn't passed after three rounds. The plan at step 3 is published but
+  approved automatically. Between the stops, work without asking unless something blocks you.
 - The user reviews the work uncommitted and unstaged. Until the hand-off, commit `wip: <slice>` freely
   as checkpoints; step 5 undoes them. Never push, never force anything.
 - The GitHub issue is read only: read it with `gh issue view <number> --comments`, never comment, label,
@@ -77,10 +77,10 @@ tests they make pass, and which slices can run in parallel. Check CLAUDE.md and 
 constraints. Before the approach names a component, route, input, CSS class or label, check how sibling
 code names the same thing and reuse that name.
 
-**STOP:** publish the plan (spec, criteria with their edge-case rows, open edge-case questions, approach,
-risks) as an HTML artifact and wait until the user approves it. Drop the edge-case tests the user
-rejects. Only read-only preparation, such as a baseline test run, may run before that. Fixes from the
-quality gate and from the user's feedback go ahead without a new approval.
+Publish the plan (spec, criteria with their edge-case rows, open edge-case questions, approach, risks)
+as an HTML artifact and go on without waiting: the plan is approved automatically. If the user objects
+to it while the work runs, adjust the approach and drop the edge-case tests they reject. Fixes from the
+quality gate and from the user's feedback go ahead without a new plan.
 
 Implementer agents work slice by slice. Per slice: write the code, make that slice's tests pass,
 commit `wip: <slice>`, log it. Slices run as parallel agents when they touch different files. Parallel
@@ -151,6 +151,7 @@ on as they decide.
      not fixed and every Pre-existing one listed, so the user can decide whether it needs an issue,
    - what the browser tester could not verify (see the end of the `browser-test` skill), for the user
      to check,
+   - the open edge-case questions from the plan, which no test covers yet,
    - the proposed commit message (CLAUDE.md format, ending in the issue reference).
 
 The user verifies and commits. Corrections they bring go into `## Corrections`; fix them in the
