@@ -1,6 +1,6 @@
 ---
 name: develop-ticket
-description: Develop a GitHub issue from its spec and acceptance criteria - tests first, implementation, quality gate (tests + browser check + review by agents), hand-off of the uncommitted changes for the user to verify, retro. Also resumes a ticket in progress. Use when asked to work on, implement, develop or continue an issue or ticket.
+description: Develop a GitHub issue from its spec and acceptance criteria - tests first, implementation, quality gate (tests + browser check + review by agents), one squashed commit, retro. Also resumes a ticket in progress. Use when asked to work on, implement, develop or continue an issue or ticket.
 argument-hint: <issue number>
 ---
 
@@ -24,11 +24,11 @@ The user has created this worktree for the ticket. Never create, switch or remov
 - Everything the flow produces lives in `.ticket.md`, never only in the scratchpad: the scratchpad is
   under `/tmp` and gone after a machine restart. That includes criteria written retroactively for work
   that was committed without them.
-- There are two stops: unclear criteria at step 1 (only if needed) and the hand-off at step 5, plus one
-  at step 4 when the gate hasn't passed after three rounds. The plan at step 3 is published but
-  approved automatically. Between the stops, work without asking unless something blocks you.
-- The user reviews the work uncommitted and unstaged. Until the hand-off, commit `wip: <slice>` freely
-  as checkpoints; step 5 undoes them. Never push, never force anything.
+- There are two stops: unclear criteria at step 1 (only if needed), and step 4 when the gate hasn't
+  passed after three rounds. The plan at step 3 is published but approved automatically. Between the
+  stops, work without asking unless something blocks you.
+- Commit `wip: <slice>` freely as checkpoints; step 5 squashes them into one commit. Never push, never
+  force anything.
 - The GitHub issue is read only: read it with `gh issue view <number> --comments`, never comment, label,
   assign, close or edit it unless the user asks.
 - Follow CLAUDE.md, in particular: delegate implementing, browser testing and the quality gate to agents;
@@ -133,7 +133,7 @@ give it a row in `## Review findings` with its outcome:
 - Important: `fixed`, or `wrong` / `intentional` with the reason.
 - Nit: `fixed` when cheap, otherwise `not worth it`. Skip a simplification that breaks a pattern the
   neighbouring code follows.
-- Pre-existing: `left`. Not fixed in this ticket; the hand-off lists it.
+- Pre-existing: `left`. Not fixed in this ticket; the summary in step 5 lists it.
 
 Gate failures, failed scenarios and Important findings go back to step 3, then the next round starts.
 
@@ -141,21 +141,21 @@ If round 3 still ends with a failing gate or an open Important finding, **STOP**
 same approach rarely converge. Show the user what is open and whether the approach is the cause, and go
 on as they decide.
 
-## 5. Hand-off
+## 5. Commit
 
-1. `git reset <Start>`: the `wip:` commits are gone and all the work is in the working tree,
-   unstaged. From here on, never commit; edit the working tree only.
-2. **STOP:** show the user, in a few lines:
+1. `git reset --soft <Start>`, then commit everything as one commit in the CLAUDE.md format, ending in
+   the issue reference. The `wip:` commits are gone; don't push.
+2. Show the user, in a few lines, and go on to the retro without waiting:
    - what changed and the criteria table with results,
    - the rounds the gate took and the review findings counted by outcome, with every Important one
      not fixed and every Pre-existing one listed, so the user can decide whether it needs an issue,
    - what the browser tester could not verify (see the end of the `browser-test` skill), for the user
      to check,
    - the open edge-case questions from the plan, which no test covers yet,
-   - the proposed commit message (CLAUDE.md format, ending in the issue reference).
+   - the commit.
 
-The user verifies and commits. Corrections they bring go into `## Corrections`; fix them in the
-working tree and rerun the affected part of the gate. When the user says the ticket is done, go on.
+Corrections the user brings later go into `## Corrections`; fix them in a new commit and rerun the
+affected part of the gate.
 
 ## 6. Retro
 
@@ -163,7 +163,7 @@ Go through `## Corrections`, `## Decisions` and the session for what the user ha
 explain. Go through `## Review findings` too: many `wrong` or `not worth it` outcomes mean the reviewer
 needs a rule that would have kept them out. Propose concrete changes to CLAUDE.md or this skill, each as
 a one-line rule with its reason.
-Apply the ones the user picks and leave them uncommitted, listed apart from the ticket's changes.
+Apply the ones the user picks and leave them uncommitted.
 Stop any dev server the flow started.
 
 When the retro is over, set `Step: done` in `.ticket.md`, so the next ticket in this worktree starts fresh.
