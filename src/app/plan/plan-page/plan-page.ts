@@ -8,6 +8,7 @@ import {
   MAX_DAYS,
   MealKind,
   MIN_DAYS,
+  MIN_PEOPLE,
 } from '../plan';
 import { PlanStore } from '../plan-store';
 
@@ -25,20 +26,30 @@ export class PlanPage {
   protected readonly defaultDays = DEFAULT_DAYS;
   protected readonly minDays = MIN_DAYS;
   protected readonly maxDays = MAX_DAYS;
+  protected readonly minPeople = MIN_PEOPLE;
+  protected readonly fewestDays = computed(() => this.plan().days.length <= MIN_DAYS);
+  protected readonly mostDays = computed(() => this.plan().days.length >= MAX_DAYS);
+  protected readonly fewestPeople = computed(() => this.plan().people <= MIN_PEOPLE);
   protected readonly meals: readonly { kind: MealKind; label: string }[] = [
     { kind: 'lunch', label: 'Lunch' },
     { kind: 'dinner', label: 'Dinner' },
   ];
   private pressedOnBackdrop = false;
 
-  protected changeDays(input: HTMLInputElement): void {
-    this.store.setDays(Number(input.value));
-    this.resetRejected(input, this.plan().days.length);
+  protected stepDays(delta: number): void {
+    this.store.setDays(this.plan().days.length + delta);
   }
 
-  protected changePeople(input: HTMLInputElement): void {
-    this.store.setPeople(Number(input.value));
-    this.resetRejected(input, this.plan().people);
+  protected stepPeople(delta: number): void {
+    this.store.setPeople(this.plan().people + delta);
+  }
+
+  // A button disabled while it has the focus drops the focus to the page, so the focus moves on to
+  // the value, where the arrow keys go on stepping it
+  protected keepFocus(arrow: HTMLButtonElement, atLimit: boolean, value: HTMLElement): void {
+    if (atLimit && document.activeElement === arrow) {
+      value.focus();
+    }
   }
 
   protected leftovers(kind: MealKind, day: number): string | null {
@@ -98,10 +109,5 @@ export class PlanPage {
       event.clientY < box.top ||
       event.clientY > box.bottom
     );
-  }
-
-  // A rejected value leaves the plan signal unchanged, so the binding alone wouldn't reset the field
-  private resetRejected(input: HTMLInputElement, value: number): void {
-    input.value = String(value);
   }
 }

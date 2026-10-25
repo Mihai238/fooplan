@@ -7,6 +7,7 @@ import { PlanPage } from './plan-page';
 
 const TABBABLE =
   'button:not([disabled]), a[href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+const ARROWS = ['One more day', 'One day fewer', 'One more person', 'One person fewer'] as const;
 const modalDialogs = new WeakSet<HTMLDialogElement>();
 
 describe('PlanPage', () => {
@@ -46,14 +47,14 @@ describe('PlanPage', () => {
 
   it('shows the "Plan" heading and the default 5 days for 2 people on first open', () => {
     expect(textOf(element.querySelector('h1'))).toBe('Plan');
-    expect(input('days').value).toBe('5');
-    expect(input('people').value).toBe('2');
+    expect(textOf(stepper('Days'))).toBe('5');
+    expect(textOf(stepper('People'))).toBe('2');
     expect(days()).toHaveLength(5);
   });
 
-  it('shows 3 days starting today, each with a lunch and a dinner, when the user sets 3 days and 2 people', async () => {
-    await setInput('days', '3');
-    await setInput('people', '2');
+  it('shows 3 days starting today, each with a lunch and a dinner, when the user sets 3 days', async () => {
+    await click(arrow('One day fewer'));
+    await click(arrow('One day fewer'));
     expect(days().map((day) => textOf(day.querySelector('h2')))).toEqual([
       'Sat 24 Oct',
       'Sun 25 Oct',
@@ -63,15 +64,282 @@ describe('PlanPage', () => {
       const meals = Array.from(day.querySelectorAll('article.meal'));
       expect(meals.map((meal) => textOf(meal.querySelector('h3')))).toEqual(['Lunch', 'Dinner']);
     }
-    expect(input('people').value).toBe('2');
+    expect(textOf(stepper('People'))).toBe('2');
   });
 
-  it('resets the days and people fields when the user enters 6 days or 0 people', async () => {
-    await setInput('days', '6');
-    expect(input('days').value).toBe('5');
-    expect(days()).toHaveLength(5);
-    await setInput('people', '0');
-    expect(input('people').value).toBe('2');
+  describe('Days and People steppers', () => {
+    it("shows the days and people values as text that can't be edited, each between a down and an up arrow button, and no text or number field", () => {
+      for (const [name, shown, down, up] of [
+        ['Days', '5', 'One day fewer', 'One more day'],
+        ['People', '2', 'One person fewer', 'One more person'],
+      ] as const) {
+        const value = stepper(name);
+        expect(textOf(value), name).toBe(shown);
+        expect(value.matches('input, textarea, select'), `${name} is a field`).toBe(false);
+        expect(value.closest('[contenteditable]:not([contenteditable="false"])'), name).toBeNull();
+        expect(value.querySelector('input, textarea, select, button'), name).toBeNull();
+        expect(follows(value, arrow(down)), `${name}: down arrow before the value`).toBe(true);
+        expect(follows(arrow(up), value), `${name}: up arrow after the value`).toBe(true);
+      }
+      expect(
+        element.querySelectorAll('input:not([type="checkbox"]), textarea, select'),
+      ).toHaveLength(0);
+      expect(
+        element.querySelectorAll('[contenteditable]:not([contenteditable="false"])'),
+      ).toHaveLength(0);
+    });
+
+    it('makes the plan 4 days when the user clicks "One more day" at 3 days, and 3 again with "One day fewer"', async () => {
+      await setDays(3);
+      await click(arrow('One more day'));
+      expect(store.plan().days).toHaveLength(4);
+      expect(days()).toHaveLength(4);
+      expect(textOf(stepper('Days'))).toBe('4');
+      await click(arrow('One day fewer'));
+      expect(store.plan().days).toHaveLength(3);
+      expect(days()).toHaveLength(3);
+      expect(textOf(stepper('Days'))).toBe('3');
+    });
+
+    it('drops the last day and keeps the picks of the others when the user clicks "One day fewer"', async () => {
+      const first = await pickFirstSuggestion(0);
+      await pickFirstSuggestion(9);
+      await click(arrow('One day fewer'));
+      expect(days().map((day) => textOf(day.querySelector('h2')))).toEqual([
+        'Sat 24 Oct',
+        'Sun 25 Oct',
+        'Mon 26 Oct',
+        'Tue 27 Oct',
+      ]);
+      expect(Array.from(element.querySelectorAll('p.recipe')).map(textOf)).toEqual([first]);
+    });
+
+    it('adds an open day at the end and keeps the picks of the others when the user clicks "One more day"', async () => {
+      await setDays(3);
+      const first = await pickFirstSuggestion(0);
+      await click(arrow('One more day'));
+      expect(days().map((day) => textOf(day.querySelector('h2')))).toEqual([
+        'Sat 24 Oct',
+        'Sun 25 Oct',
+        'Mon 26 Oct',
+        'Tue 27 Oct',
+      ]);
+      expect(Array.from(element.querySelectorAll('p.recipe')).map(textOf)).toEqual([first]);
+      for (const index of [6, 7]) {
+        expect(suggestionsOf(meal(index)), `meal ${index} of the new day`).toHaveLength(3);
+      }
+    });
+
+    it('disables "One more day" at 5 days and "One day fewer" at 1 day', async () => {
+      expect(arrow('One more day').disabled, 'up at 5 days').toBe(true);
+      expect(arrow('One day fewer').disabled, 'down at 5 days').toBe(false);
+      await setDays(1);
+      expect(arrow('One day fewer').disabled, 'down at 1 day').toBe(true);
+      expect(arrow('One more day').disabled, 'up at 1 day').toBe(false);
+    });
+
+    it('changes nothing when the user clicks "One more day" at 5 days or "One day fewer" at 1 day', async () => {
+      let before = store.plan();
+      await click(arrow('One more day'));
+      expect(store.plan(), 'up at 5 days').toBe(before);
+      expect(textOf(stepper('Days'))).toBe('5');
+      await setDays(1);
+      before = store.plan();
+      await click(arrow('One day fewer'));
+      expect(store.plan(), 'down at 1 day').toBe(before);
+      expect(textOf(stepper('Days'))).toBe('1');
+    });
+
+    it('enables "One day fewer" when the user goes from 1 to 2 days, and disables it again on the way back', async () => {
+      await setDays(1);
+      await click(arrow('One more day'));
+      expect(arrow('One day fewer').disabled, 'at 2 days').toBe(false);
+      await click(arrow('One day fewer'));
+      expect(arrow('One day fewer').disabled, 'back at 1 day').toBe(true);
+    });
+
+    it('disables "One more day" when the user goes from 4 to 5 days', async () => {
+      await setDays(4);
+      expect(arrow('One more day').disabled, 'at 4 days').toBe(false);
+      await click(arrow('One more day'));
+      expect(textOf(stepper('Days'))).toBe('5');
+      expect(arrow('One more day').disabled, 'at 5 days').toBe(true);
+    });
+
+    it("moves the focus to the stepper's value when the focused arrow becomes disabled at a limit, and leaves it on the arrow otherwise", async () => {
+      await setDays(3);
+      arrow('One more day').focus();
+      await click(arrow('One more day'));
+      expect(document.activeElement, 'up at 4 days').toBe(arrow('One more day'));
+      await click(arrow('One more day'));
+      expect(document.activeElement, 'up at 5 days').toBe(stepper('Days'));
+
+      await setDays(2);
+      arrow('One day fewer').focus();
+      await click(arrow('One day fewer'));
+      expect(document.activeElement, 'down at 1 day').toBe(stepper('Days'));
+
+      await setPeople(2);
+      arrow('One person fewer').focus();
+      await click(arrow('One person fewer'));
+      expect(document.activeElement, 'down at 1 person').toBe(stepper('People'));
+    });
+
+    it('disables "One person fewer" at 1 person, and makes the plan for 3 people when the user clicks "One more person" at 2', async () => {
+      await setPeople(1);
+      expect(arrow('One person fewer').disabled, 'down at 1 person').toBe(true);
+      await setPeople(2);
+      expect(arrow('One person fewer').disabled, 'down at 2 people').toBe(false);
+      await click(arrow('One more person'));
+      expect(store.plan().people).toBe(3);
+      expect(textOf(stepper('People'))).toBe('3');
+    });
+
+    it('changes nothing when the user clicks "One person fewer" at 1 person', async () => {
+      await setPeople(1);
+      const before = store.plan();
+      await click(arrow('One person fewer'));
+      expect(store.plan()).toBe(before);
+      expect(textOf(stepper('People'))).toBe('1');
+    });
+
+    it('enables "One person fewer" when the user goes from 1 to 2 people, and disables it again on the way back', async () => {
+      await setPeople(1);
+      await click(arrow('One more person'));
+      expect(arrow('One person fewer').disabled, 'at 2 people').toBe(false);
+      await click(arrow('One person fewer'));
+      expect(arrow('One person fewer').disabled, 'back at 1 person').toBe(true);
+    });
+
+    it('keeps "One more person" enabled with no upper limit, making 100 people from 99', async () => {
+      await setPeople(99);
+      expect(arrow('One more person').disabled).toBe(false);
+      await click(arrow('One more person'));
+      expect(store.plan().people).toBe(100);
+      expect(textOf(stepper('People'))).toBe('100');
+      expect(arrow('One more person').disabled).toBe(false);
+    });
+
+    it('raises and lowers the focused days and people values by 1 with ArrowUp and ArrowDown', async () => {
+      await setDays(3);
+      for (const [name, count] of [
+        ['Days', () => store.plan().days.length],
+        ['People', () => store.plan().people],
+      ] as const) {
+        const value = stepper(name);
+        value.focus();
+        const start = count();
+        await keydown(value, 'ArrowUp');
+        expect(count(), `${name} after ArrowUp`).toBe(start + 1);
+        expect(textOf(stepper(name))).toBe(String(start + 1));
+        await keydown(value, 'ArrowDown');
+        expect(count(), `${name} after ArrowDown`).toBe(start);
+        expect(textOf(stepper(name))).toBe(String(start));
+        await keydown(value, 'ArrowDown');
+        expect(count(), `${name} after a second ArrowDown`).toBe(start - 1);
+      }
+    });
+
+    it('changes nothing on ArrowUp at 5 days, ArrowDown at 1 day or ArrowDown at 1 person', async () => {
+      for (const [setup, name, key] of [
+        [() => setDays(5), 'Days', 'ArrowUp'],
+        [() => setDays(1), 'Days', 'ArrowDown'],
+        [() => setPeople(1), 'People', 'ArrowDown'],
+      ] as const) {
+        await setup();
+        const before = store.plan();
+        const value = stepper(name);
+        value.focus();
+        await keydown(value, key);
+        expect(store.plan(), `${key} on ${name} at ${textOf(value)}`).toBe(before);
+      }
+    });
+
+    it('changes nothing on digits, letters, Home, End, PageUp, PageDown or Tab on the value, and leaves those keys to the browser', async () => {
+      await setDays(3);
+      for (const name of ['Days', 'People'] as const) {
+        const before = store.plan();
+        const value = stepper(name);
+        value.focus();
+        for (const key of [
+          '1',
+          '4',
+          '9',
+          'a',
+          'x',
+          '+',
+          '-',
+          'Home',
+          'End',
+          'PageUp',
+          'PageDown',
+          'Tab',
+        ]) {
+          expect(await keydown(value, key), `${key} on ${name} handled by the page`).toBe(false);
+          expect(store.plan(), `${key} on ${name}`).toBe(before);
+        }
+        expect(textOf(stepper(name))).toBe(name === 'Days' ? '3' : '2');
+      }
+    });
+
+    it('keeps ArrowUp and ArrowDown on the value from scrolling the page, also at a limit', async () => {
+      await setDays(3);
+      for (const name of ['Days', 'People'] as const) {
+        const value = stepper(name);
+        value.focus();
+        for (const key of ['ArrowUp', 'ArrowDown']) {
+          expect(await keydown(value, key), `${key} on ${name} left to the browser`).toBe(true);
+        }
+      }
+      await setDays(5);
+      expect(await keydown(stepper('Days'), 'ArrowUp'), 'ArrowUp at 5 days').toBe(true);
+      await setPeople(1);
+      expect(await keydown(stepper('People'), 'ArrowDown'), 'ArrowDown at 1 person').toBe(true);
+    });
+
+    it('makes each stepper a focusable spinbutton named "Days" or "People" with its value and limits, and names every arrow button', () => {
+      const daysValue = stepper('Days');
+      expect(daysValue.getAttribute('tabindex')).toBe('0');
+      expect(daysValue.getAttribute('aria-valuenow')).toBe('5');
+      expect(daysValue.getAttribute('aria-valuemin')).toBe('1');
+      expect(daysValue.getAttribute('aria-valuemax')).toBe('5');
+      const peopleValue = stepper('People');
+      expect(peopleValue.getAttribute('tabindex')).toBe('0');
+      expect(peopleValue.getAttribute('aria-valuenow')).toBe('2');
+      expect(peopleValue.getAttribute('aria-valuemin')).toBe('1');
+      expect(peopleValue.hasAttribute('aria-valuemax'), 'people has a maximum').toBe(false);
+      expect(element.querySelectorAll('[role="spinbutton"]')).toHaveLength(2);
+      for (const name of ARROWS) {
+        expect(element.querySelectorAll(`button[aria-label="${name}"]`), name).toHaveLength(1);
+      }
+    });
+
+    it('updates aria-valuenow when the user changes days or people', async () => {
+      await click(arrow('One day fewer'));
+      expect(stepper('Days').getAttribute('aria-valuenow')).toBe('4');
+      await click(arrow('One more person'));
+      expect(stepper('People').getAttribute('aria-valuenow')).toBe('3');
+      stepper('Days').focus();
+      await keydown(stepper('Days'), 'ArrowDown');
+      expect(stepper('Days').getAttribute('aria-valuenow')).toBe('3');
+      stepper('People').focus();
+      await keydown(stepper('People'), 'ArrowDown');
+      expect(stepper('People').getAttribute('aria-valuenow')).toBe('2');
+    });
+
+    it('shows "1 day for 3 people" and no steppers once the plan is accepted', async () => {
+      expect(
+        element.querySelectorAll('[role="spinbutton"]'),
+        'steppers while planning',
+      ).toHaveLength(2);
+      await click(arrow('One more person'));
+      await acceptOneDayPlan();
+      expect(textOf(element.querySelector('.summary'))).toBe('1 day for 3 people');
+      expect(element.querySelectorAll('[role="spinbutton"]')).toHaveLength(0);
+      for (const name of ARROWS) {
+        expect(element.querySelector(`button[aria-label="${name}"]`), name).toBeNull();
+      }
+    });
   });
 
   it('shows the picked recipe and no suggestions for a meal once the user picks one of its three suggestions', async () => {
@@ -98,7 +366,7 @@ describe('PlanPage', () => {
   });
 
   it('offers "Undo" neither on an open meal nor on any meal once the plan is accepted', async () => {
-    await setInput('days', '1');
+    await setDays(1);
     await pickFirstSuggestion(0);
     expect(buttonTexts(meal(0)), 'picked meal').toContain('Undo');
     expect(buttonTexts(meal(1)), 'open meal').not.toContain('Undo');
@@ -121,7 +389,7 @@ describe('PlanPage', () => {
   });
 
   it('disables "Accept plan" while a meal is open and enables it once every meal has a recipe', async () => {
-    await setInput('days', '1');
+    await setDays(1);
     expect(button(element, 'Accept plan').disabled).toBe(true);
     await pickFirstSuggestion(0);
     expect(button(element, 'Accept plan').disabled).toBe(true);
@@ -130,7 +398,7 @@ describe('PlanPage', () => {
   });
 
   it('shows "Leftovers: <recipe>" without suggestions or buttons for the next lunch when the user turns on "Cook extra for tomorrow\'s lunch"', async () => {
-    await setInput('days', '2');
+    await setDays(2);
     const recipe = await pickFirstSuggestion(1);
     const label = element.querySelector('article.meal label.cook-extra');
     expect(textOf(label)).toBe("Cook extra for tomorrow's lunch");
@@ -145,7 +413,7 @@ describe('PlanPage', () => {
   });
 
   it('offers "Cook extra" only on a picked dinner that is not on the last day', async () => {
-    await setInput('days', '2');
+    await setDays(2);
     await pickFirstSuggestion(0);
     expect(element.querySelector('#cook-extra-0'), 'open dinner').toBeNull();
     await pickFirstSuggestion(1);
@@ -159,7 +427,7 @@ describe('PlanPage', () => {
   });
 
   it('enables "Accept plan" when the only unfilled lunch is covered by leftovers', async () => {
-    await setInput('days', '2');
+    await setDays(2);
     await pickFirstSuggestion(0);
     await pickFirstSuggestion(1);
     await pickFirstSuggestion(3);
@@ -169,7 +437,7 @@ describe('PlanPage', () => {
   });
 
   it('shows "Cook extra" of an accepted plan as a note on its dinner only, without the option', async () => {
-    await setInput('days', '3');
+    await setDays(3);
     await pickFirstSuggestion(0);
     const recipe = await pickFirstSuggestion(1);
     await setCookExtra(0, true);
@@ -232,10 +500,7 @@ describe('PlanPage', () => {
     it('names the dialog "Start a new plan?" after its title', async () => {
       await pickFirstSuggestion(0);
       await click(button(element, 'New plan'));
-      const ids = (openDialog().getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean);
-      expect(ids.map((id) => textOf(document.getElementById(id))).join(' ')).toBe(
-        'Start a new plan?',
-      );
+      expect(labelOf(openDialog())).toBe('Start a new plan?');
     });
 
     it('says the dates and "3 of 10 meals picked" for an unaccepted 5-day plan with 3 picked meals, and nothing about acceptance, ticks or added items', async () => {
@@ -253,7 +518,7 @@ describe('PlanPage', () => {
     });
 
     it('says the single date and "1 of 2 meals picked" for a 1-day plan', async () => {
-      await setInput('days', '1');
+      await setDays(1);
       await pickFirstSuggestion(0);
       await click(button(element, 'New plan'));
       const lost = lostParagraph();
@@ -293,8 +558,8 @@ describe('PlanPage', () => {
     });
 
     it('says the new plan starts today for the default 5 days and the current people, with the focus on "Keep this plan"', async () => {
-      await setInput('days', '3');
-      await setInput('people', '3');
+      await setDays(3);
+      await setPeople(3);
       await pickFirstSuggestion(0);
       await click(button(element, 'New plan'));
       const dialog = openDialog();
@@ -303,7 +568,7 @@ describe('PlanPage', () => {
     });
 
     it('says "1 person" in the singular for a plan for 1 person', async () => {
-      await setInput('people', '1');
+      await setPeople(1);
       await pickFirstSuggestion(0);
       await click(button(element, 'New plan'));
       expect(textOf(openDialog())).toContain('The new plan starts today, for 5 days and 1 person');
@@ -380,7 +645,7 @@ describe('PlanPage', () => {
     });
 
     it('closes and shows an empty 5-day plan from today for the same people, with no ticks or added items, when the user clicks "Start new plan" on an accepted plan', async () => {
-      await setInput('people', '3');
+      await setPeople(3);
       await acceptOneDayPlan();
       store.toggleTicked(itemKey(groceryList(store.plan(), RECIPES)[0]));
       store.addItem('Toilet paper');
@@ -390,26 +655,26 @@ describe('PlanPage', () => {
       await click(button(openDialog(), 'Start new plan'));
       expect(openDialogOrNull()).toBeNull();
       expectEmptyPlanFrom26Oct();
-      expect(input('people').value).toBe('3');
+      expect(textOf(stepper('People'))).toBe('3');
       expect(store.plan()).toMatchObject({ people: 3, accepted: false, ticked: [], added: [] });
       expect(button(element, 'Accept plan').disabled).toBe(true);
     });
 
     it('starts an empty 5-day plan from today for the same people when the user clicks "Start new plan" on a plan in progress', async () => {
-      await setInput('days', '3');
-      await setInput('people', '4');
+      await setDays(3);
+      await setPeople(4);
       await pickFirstSuggestion(0);
       await click(button(element, 'New plan'));
       today = '2026-10-26';
       await click(button(openDialog(), 'Start new plan'));
       expect(openDialogOrNull()).toBeNull();
       expectEmptyPlanFrom26Oct();
-      expect(input('people').value).toBe('4');
+      expect(textOf(stepper('People'))).toBe('4');
     });
 
     it("starts the new plan right away, without the dialog or the browser's confirm box, for an unaccepted plan with no filled meal", async () => {
-      await setInput('days', '3');
-      await setInput('people', '4');
+      await setDays(3);
+      await setPeople(4);
       const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
       const showModal = vi.spyOn(HTMLDialogElement.prototype, 'showModal');
       today = '2026-10-26';
@@ -418,7 +683,7 @@ describe('PlanPage', () => {
       expect(showModal).not.toHaveBeenCalled();
       expect(confirm).not.toHaveBeenCalled();
       expectEmptyPlanFrom26Oct();
-      expect(input('people').value).toBe('4');
+      expect(textOf(stepper('People'))).toBe('4');
     });
 
     it('keeps the focus on the two buttons when the user presses Tab or Shift+Tab repeatedly', async () => {
@@ -477,7 +742,7 @@ describe('PlanPage', () => {
     });
 
     async function expectKept(keep: () => Promise<unknown>) {
-      await setInput('days', '3');
+      await setDays(3);
       await pickFirstSuggestion(0);
       const before = store.plan();
       const shown = textOf(element.querySelector('.days'));
@@ -486,7 +751,7 @@ describe('PlanPage', () => {
       expect(openDialogOrNull()).toBeNull();
       expect(store.plan()).toBe(before);
       expect(textOf(element.querySelector('.days'))).toBe(shown);
-      expect(input('days').value).toBe('3');
+      expect(textOf(stepper('Days'))).toBe('3');
       expect(document.activeElement).toBe(button(element, 'New plan'));
     }
 
@@ -498,7 +763,7 @@ describe('PlanPage', () => {
         'Thu 29 Oct',
         'Fri 30 Oct',
       ]);
-      expect(input('days').value).toBe('5');
+      expect(textOf(stepper('Days'))).toBe('5');
       expect(element.querySelectorAll('p.recipe')).toHaveLength(0);
       for (const article of Array.from(element.querySelectorAll<HTMLElement>('article.meal'))) {
         expect(suggestionsOf(article)).toHaveLength(3);
@@ -600,7 +865,7 @@ describe('PlanPage', () => {
   });
 
   async function acceptOneDayPlan(): Promise<string[]> {
-    await setInput('days', '1');
+    await setDays(1);
     const recipes = [await pickFirstSuggestion(0), await pickFirstSuggestion(1)];
     await click(button(element, 'Accept plan'));
     return recipes;
@@ -621,16 +886,50 @@ describe('PlanPage', () => {
     await fixture.whenStable();
   }
 
-  async function setInput(id: string, value: string) {
-    const field = input(id);
-    field.value = value;
-    field.dispatchEvent(new Event('change'));
+  async function setDays(count: number) {
+    store.setDays(count);
+    await fixture.whenStable();
+  }
+
+  async function setPeople(count: number) {
+    store.setPeople(count);
     await fixture.whenStable();
   }
 
   async function click(target: HTMLElement) {
     target.click();
     await fixture.whenStable();
+  }
+
+  // Resolves to whether the page handled the key itself, keeping the browser from acting on it
+  async function keydown(target: HTMLElement, key: string): Promise<boolean> {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    const handled = !target.dispatchEvent(event);
+    await fixture.whenStable();
+    return handled;
+  }
+
+  function stepper(name: 'Days' | 'People'): HTMLElement {
+    const found = Array.from(element.querySelectorAll<HTMLElement>('[role="spinbutton"]')).find(
+      (candidate) => labelOf(candidate) === name,
+    );
+    expect(found, `no "${name}" spinbutton`).toBeDefined();
+    return found!;
+  }
+
+  function arrow(name: (typeof ARROWS)[number]): HTMLButtonElement {
+    const found = element.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`);
+    expect(found, `no "${name}" button`).not.toBeNull();
+    return found!;
+  }
+
+  function labelOf(node: Element): string {
+    const ids = (node.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean);
+    return ids.map((id) => textOf(document.getElementById(id))).join(' ');
+  }
+
+  function follows(node: Element, other: Element): boolean {
+    return (other.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
   }
 
   function input(id: string): HTMLInputElement {

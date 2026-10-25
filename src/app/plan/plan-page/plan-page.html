@@ -6,28 +6,73 @@
       {{ plan().people }} {{ plan().people === 1 ? 'person' : 'people' }}
     </p>
   } @else {
-    <span class="field">
-      <label for="days">Days</label>
-      <input
-        #daysInput
-        type="number"
-        id="days"
-        [min]="minDays"
-        [max]="maxDays"
-        [value]="plan().days.length"
-        (change)="changeDays(daysInput)"
-      />
+    <!-- The arrow keys step the value also at a limit, where nothing changes, so that they never
+         scroll the page from it -->
+    <span class="stepper">
+      <span id="days-label" class="stepper-label">Days</span>
+      <button
+        #fewerDays
+        type="button"
+        class="step"
+        aria-label="One day fewer"
+        [disabled]="fewestDays()"
+        (click)="stepDays(-1); keepFocus(fewerDays, fewestDays(), daysValue)"
+      >
+        <span aria-hidden="true">▼</span>
+      </button>
+      <span
+        #daysValue
+        role="spinbutton"
+        tabindex="0"
+        class="value"
+        aria-labelledby="days-label"
+        [attr.aria-valuenow]="plan().days.length"
+        [attr.aria-valuemin]="minDays"
+        [attr.aria-valuemax]="maxDays"
+        (keydown.arrowup)="$event.preventDefault(); stepDays(1)"
+        (keydown.arrowdown)="$event.preventDefault(); stepDays(-1)"
+      >
+        {{ plan().days.length }}
+      </span>
+      <button
+        #moreDays
+        type="button"
+        class="step"
+        aria-label="One more day"
+        [disabled]="mostDays()"
+        (click)="stepDays(1); keepFocus(moreDays, mostDays(), daysValue)"
+      >
+        <span aria-hidden="true">▲</span>
+      </button>
     </span>
-    <span class="field">
-      <label for="people">People</label>
-      <input
-        #peopleInput
-        type="number"
-        id="people"
-        min="1"
-        [value]="plan().people"
-        (change)="changePeople(peopleInput)"
-      />
+    <span class="stepper">
+      <span id="people-label" class="stepper-label">People</span>
+      <button
+        #fewerPeople
+        type="button"
+        class="step"
+        aria-label="One person fewer"
+        [disabled]="fewestPeople()"
+        (click)="stepPeople(-1); keepFocus(fewerPeople, fewestPeople(), peopleValue)"
+      >
+        <span aria-hidden="true">▼</span>
+      </button>
+      <span
+        #peopleValue
+        role="spinbutton"
+        tabindex="0"
+        class="value"
+        aria-labelledby="people-label"
+        [attr.aria-valuenow]="plan().people"
+        [attr.aria-valuemin]="minPeople"
+        (keydown.arrowup)="$event.preventDefault(); stepPeople(1)"
+        (keydown.arrowdown)="$event.preventDefault(); stepPeople(-1)"
+      >
+        {{ plan().people }}
+      </span>
+      <button type="button" class="step" aria-label="One more person" (click)="stepPeople(1)">
+        <span aria-hidden="true">▲</span>
+      </button>
     </span>
   }
   <button

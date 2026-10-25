@@ -38,6 +38,7 @@ export type Random = () => number;
 
 export const MIN_DAYS = 1;
 export const MAX_DAYS = 5;
+export const MIN_PEOPLE = 1;
 export const DEFAULT_DAYS = 5;
 export const DEFAULT_PEOPLE = 2;
 const SUGGESTIONS = 3;
@@ -80,7 +81,7 @@ export function setDays(
 }
 
 export function setPeople(plan: Plan, people: number): Plan {
-  if (plan.accepted || people === plan.people || !Number.isInteger(people) || people < 1) {
+  if (plan.accepted || people === plan.people || !Number.isInteger(people) || people < MIN_PEOPLE) {
     return plan;
   }
   return { ...plan, people };
@@ -229,7 +230,7 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
   if (!Array.isArray(days) || days.length < MIN_DAYS || days.length > MAX_DAYS) {
     return null;
   }
-  if (typeof people !== 'number' || !Number.isInteger(people) || people < 1) {
+  if (typeof people !== 'number' || !Number.isInteger(people) || people < MIN_PEOPLE) {
     return null;
   }
   if (typeof accepted !== 'boolean') {
