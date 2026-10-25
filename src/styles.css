@@ -8,6 +8,9 @@
   --hover: #eceee8;
   --accent: #2f7d4f;
   --on-accent: #ffffff;
+  --danger: #b42318;
+  --on-danger: #ffffff;
+  --backdrop: rgb(0 0 0 / 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -20,6 +23,9 @@
     --hover: #2a2f29;
     --accent: #5fb37f;
     --on-accent: #0d140f;
+    --danger: #ef7a6d;
+    --on-danger: #1a0d0b;
+    --backdrop: rgb(0 0 0 / 0.75);
   }
 }
 

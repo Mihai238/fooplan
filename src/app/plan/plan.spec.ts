@@ -6,6 +6,7 @@ import {
   createPlan,
   DEFAULT_DAYS,
   DEFAULT_PEOPLE,
+  filledMeals,
   isComplete,
   leftoversOf,
   Meal,
@@ -989,6 +990,20 @@ describe('plan', () => {
     it('counts a lunch covered by leftovers as filled, but not an open dinner next to it', () => {
       expect(isComplete(completeCookExtraPlan(false))).toBe(true);
       expect(isComplete(cookExtraPlan())).toBe(false);
+    });
+  });
+
+  describe('filledMeals', () => {
+    it('counts the picked meals and a lunch covered by leftovers, but not an open meal', () => {
+      expect(filledMeals(cookExtraPlan())).toBe(3);
+    });
+
+    it('is 0 when every meal is open', () => {
+      expect(
+        filledMeals(
+          oneDayPlan(open('Chili', 'Curry', 'Dal'), open('Fajitas', 'Goulash', 'Lasagne')),
+        ),
+      ).toBe(0);
     });
   });
 

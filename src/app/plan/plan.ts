@@ -263,6 +263,12 @@ export function isComplete(plan: Plan): boolean {
   );
 }
 
+export function filledMeals(plan: Plan): number {
+  return mealRefsOf(plan).filter(
+    (ref) => mealAt(plan, ref)?.recipe !== null || isCovered(plan, ref),
+  ).length;
+}
+
 export function leftoversOf(plan: Plan, day: number): string | null {
   if (plan.days[day] === undefined || !isLunchCovered(plan, day)) {
     return null;

@@ -30,7 +30,12 @@
       />
     </span>
   }
-  <button type="button" [class]="plan().accepted ? 'primary' : 'link'" (click)="newPlan()">
+  <button
+    #newPlanButton
+    type="button"
+    [class]="plan().accepted ? 'primary' : 'link'"
+    (click)="newPlan(dialog)"
+  >
     New plan
   </button>
 </div>
@@ -91,3 +96,48 @@
     Accept plan
   </button>
 }
+
+<!-- On close, the browser returns the focus to where it was before the dialog opened, which is
+     nowhere when the click on "New plan" didn't focus it: Safari and Firefox on macOS don't focus a
+     clicked button. tabindex="-1" keeps the focus in the dialog on a click on its text or padding,
+     where the browser would otherwise move it to the page -->
+<dialog
+  #dialog
+  tabindex="-1"
+  aria-labelledby="new-plan-title"
+  aria-describedby="new-plan-lost new-plan-next"
+  (pointerdown)="pressBackdrop($event, dialog)"
+  (click)="closeOnBackdrop($event, dialog)"
+  (keydown)="trapFocus($event, keepButton, startButton)"
+  (close)="newPlanButton.focus()"
+>
+  @let days = plan().days;
+  @let firstDate = days[0].date | date: 'EEE d MMM';
+  @let lastDate = days[days.length - 1].date | date: 'EEE d MMM';
+  <h2 id="new-plan-title">Start a new plan?</h2>
+  <p id="new-plan-lost">
+    The plan for {{ days.length === 1 ? firstDate : firstDate + ' – ' + lastDate }}, with
+    {{ filled() }} of {{ days.length * 2 }} meals picked, will be discarded.
+    @if (plan().accepted) {
+      This plan is accepted.
+    }
+    @if (plan().ticked.length > 0) {
+      Your grocery list ticks will be cleared.
+    }
+    @if (plan().added.length > 0) {
+      Your added grocery items will be removed.
+    }
+  </p>
+  <p id="new-plan-next">
+    The new plan starts today, for {{ defaultDays }} days and {{ plan().people }}
+    {{ plan().people === 1 ? 'person' : 'people' }}.
+  </p>
+  <div class="actions">
+    <button #keepButton type="button" class="secondary" autofocus (click)="dialog.close()">
+      Keep this plan
+    </button>
+    <button #startButton type="button" class="primary danger" (click)="startNewPlan(dialog)">
+      Start new plan
+    </button>
+  </div>
+</dialog>
