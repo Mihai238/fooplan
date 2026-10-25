@@ -1,22 +1,13 @@
 import { computed, effect, Injectable, signal } from '@angular/core';
 import { Section } from './groceries/sections';
-import { MESSAGES, MessageId } from './i18n';
-import { Amount, displayAmount } from './recipes/amount';
+import { LOCALES, MESSAGES, MessageId } from './i18n';
+import { Amount, formatAmount } from './recipes/amount';
 import { Unit } from './recipes/recipe';
 import { readStoredText, writeStoredText } from './storage';
 
 export type Language = 'en' | 'de';
 
 const STORAGE_KEY = 'fooplan.language';
-
-const LOCALES: Record<Language, string> = { en: 'en-US', de: 'de' };
-
-// Not formatNumber or DecimalPipe: they always group thousands, and amounts are plain digits
-// ("2000 g") apart from the decimal separator. Intl writes the shortest digits, as String() does
-const NUMBERS: Record<Language, Intl.NumberFormat> = {
-  en: new Intl.NumberFormat(LOCALES.en, { useGrouping: false, maximumFractionDigits: 20 }),
-  de: new Intl.NumberFormat(LOCALES.de, { useGrouping: false, maximumFractionDigits: 20 }),
-};
 
 const SECTION_IDS: Record<Section, MessageId> = {
   'Fruit & vegetables': 'section.fruit',
@@ -49,8 +40,7 @@ export class LanguageStore {
   }
 
   amount(item: Amount): string {
-    const shown = displayAmount(item);
-    return `${NUMBERS[this.language()].format(shown.amount)} ${this.unit(shown.unit)}`;
+    return formatAmount(item, this.language());
   }
 
   unit(unit: Unit): string {

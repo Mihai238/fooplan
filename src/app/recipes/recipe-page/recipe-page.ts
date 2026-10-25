@@ -50,13 +50,20 @@ export class RecipePage {
   protected readonly ingredients = computed(() =>
     this.recipes.displayIngredients(this.page().recipe),
   );
-  protected readonly steps = computed(() =>
-    this.recipes
-      .displaySteps(this.page().recipe)
+  // stepParts finds the German names of the stored ingredients itself
+  protected readonly steps = computed(() => {
+    const recipe = this.page().recipe;
+    return this.recipes
+      .displaySteps(recipe)
       ?.map((step) =>
-        stepParts(step, this.ingredients(), (amount) => this.language.amount(amount)),
-      ),
-  );
+        stepParts(
+          step,
+          recipe.ingredients,
+          (amount) => this.language.amount(amount),
+          this.language.language(),
+        ),
+      );
+  });
   protected readonly view = this.stepsView.view;
   protected readonly step = linkedSignal({ source: this.page, computation: () => 0 });
   protected readonly last = computed(() => this.step() === (this.steps()?.length ?? 0) - 1);

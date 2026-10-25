@@ -1688,13 +1688,6 @@ describe('GroceryList', () => {
         expect(statusText()).toBe('„Klopapier“ ist schon im Wagen.');
       });
     });
-
-    async function addInGerman(text: string) {
-      await type(text);
-      const button = buttonsIn(element).find((candidate) => textOf(candidate) === 'Hinzufügen');
-      expect(button, 'no "Hinzufügen" button').toBeDefined();
-      await click(button!);
-    }
   });
 
   describe('German recipes (#36)', () => {
@@ -1771,6 +1764,44 @@ describe('GroceryList', () => {
     function namesIn(section: HTMLElement): string[] {
       return labelsIn(section).map((label) => label.replace(/^\S+ \S+ /, ''));
     }
+  });
+
+  describe('German ingredient names (#37)', () => {
+    it('lists "Zitrone" under "Obst & Gemüse" as typed and says „Zitrone“ zu Obst & Gemüse hinzugefügt., lists "  käse  " under "Sonstiges" as "käse" and "lemon" under "Obst & Gemüse" in German, and lists "Zitrone" under "Other" saying Added "Zitrone" to Other. in English', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
+      await addInGerman('Zitrone');
+      expect(statusText()).toBe('„Zitrone“ zu Obst & Gemüse hinzugefügt.');
+      expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toContain('Zitrone');
+      await addInGerman('  käse  ');
+      expect(statusText()).toBe('„käse“ zu Sonstiges hinzugefügt.');
+      expect(labelsIn(sectionHeaded('Sonstiges'))).toContain('käse');
+      await addInGerman('lemon');
+      expect(statusText()).toBe('„lemon“ zu Obst & Gemüse hinzugefügt.');
+      expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toContain('lemon');
+
+      localStorage.setItem(LANGUAGE_KEY, 'en');
+      await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
+      await add('Zitrone');
+      expect(statusText()).toBe('Added "Zitrone" to Other.');
+      expect(labelsIn(sectionHeaded('Other'))).toContain('Zitrone');
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).not.toContain('Zitrone');
+    });
+
+    describe('edge cases', () => {
+      it('lists "ZITRONE" and "rote zwiebel" under "Obst & Gemüse" as typed in German, quoting them as typed, and not under "Sonstiges"', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
+        await addInGerman('ZITRONE');
+        expect(statusText()).toBe('„ZITRONE“ zu Obst & Gemüse hinzugefügt.');
+        await addInGerman('rote zwiebel');
+        expect(statusText()).toBe('„rote zwiebel“ zu Obst & Gemüse hinzugefügt.');
+        expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual(
+          expect.arrayContaining(['ZITRONE', 'rote zwiebel']),
+        );
+        expect(element.textContent).not.toContain('Sonstiges');
+      });
+    });
   });
 
   function configure() {
@@ -1859,6 +1890,13 @@ describe('GroceryList', () => {
   async function add(text: string) {
     await type(text);
     await click(addButton());
+  }
+
+  async function addInGerman(text: string) {
+    await type(text);
+    const button = buttonsIn(element).find((candidate) => textOf(candidate) === 'Hinzufügen');
+    expect(button, 'no "Hinzufügen" button').toBeDefined();
+    await click(button!);
   }
 
   function addButton(): HTMLButtonElement {

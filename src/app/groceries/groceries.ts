@@ -1,4 +1,6 @@
+import type { Language } from '../language-store';
 import { addedKey, Plan, sameItem } from '../plan/plan';
+import { englishIngredient } from '../recipes/german-names';
 import { Recipe, Unit } from '../recipes/recipe';
 import { PANTRY_STAPLES, Section, SECTIONS, sectionOf } from './sections';
 
@@ -33,8 +35,12 @@ export type AddFeedback =
   | { id: 'groceries.added'; params: { item: string; section: Section } }
   | { id: 'groceries.alreadyInCart' | 'groceries.alreadyOnList'; params: { item: string } };
 
-export function listItems(plan: Plan, recipes: readonly Recipe[]): ListItem[] {
-  return [...groceryList(plan, recipes), ...addedItems(plan)];
+export function listItems(
+  plan: Plan,
+  recipes: readonly Recipe[],
+  language: Language = 'en',
+): ListItem[] {
+  return [...groceryList(plan, recipes), ...addedItems(plan, language)];
 }
 
 export function groceryList(plan: Plan, recipes: readonly Recipe[]): GroceryItem[] {
@@ -58,22 +64,26 @@ export function groceryList(plan: Plan, recipes: readonly Recipe[]): GroceryItem
     .sort((a, b) => SECTIONS.indexOf(a.section) - SECTIONS.indexOf(b.section) || byName(a, b));
 }
 
-export function addedItems(plan: Plan): AddedItem[] {
+export function addedItems(plan: Plan, language: Language = 'en'): AddedItem[] {
   if (!plan.accepted) {
     return [];
   }
-  return plan.added.map((name) => ({ name, section: addedSection(name), added: true }));
+  return plan.added.map((name) => ({ name, section: addedSection(name, language), added: true }));
 }
 
 // Takes the plan as it is before addItem, and finds an item already added the way addItem does
-export function addFeedback(plan: Plan, text: string): AddFeedback | null {
+export function addFeedback(
+  plan: Plan,
+  text: string,
+  language: Language = 'en',
+): AddFeedback | null {
   const item = text.trim();
   if (!plan.accepted || item === '') {
     return null;
   }
   const stored = plan.added.find((other) => sameItem(other, item));
   if (stored === undefined) {
-    return { id: 'groceries.added', params: { item, section: addedSection(item) } };
+    return { id: 'groceries.added', params: { item, section: addedSection(item, language) } };
   }
   return plan.ticked.includes(addedKey(stored))
     ? { id: 'groceries.alreadyInCart', params: { item: stored } }
@@ -140,10 +150,13 @@ function roundUp(amount: number): number {
   return Math.ceil(Number(amount.toFixed(6)));
 }
 
-// Recipes spell ingredient names in lowercase, so this matches the whole text with a name ignoring
-// case, while the item still reads as typed
-function addedSection(name: string): Section {
-  return sectionOf(name.toLowerCase());
+// Recipes spell English ingredient names in lowercase, and englishIngredient ignores case, so the
+// whole text matches an English name, or in German a German one, ignoring case ("LEMON", "ZITRONE",
+// "Rote zwiebel"), while the item still reads as typed
+export function addedSection(name: string, language: Language = 'en'): Section {
+  const typed = name.trim();
+  const english = (language === 'de' && englishIngredient(typed)) || typed.toLowerCase();
+  return sectionOf(english);
 }
 
 function unitOf(item: ListItem): string {

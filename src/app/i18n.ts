@@ -1,5 +1,7 @@
 import type { Language } from './language-store';
 
+export const LOCALES: Record<Language, string> = { en: 'en-US', de: 'de' };
+
 const EN = {
   'nav.plan': 'Plan',
   'nav.groceries': 'Grocery list',

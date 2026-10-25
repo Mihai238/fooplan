@@ -5,6 +5,7 @@ import { RECIPES as BUILT_IN_RECIPES } from '../recipes/recipes';
 import {
   AddedItem,
   addedItems,
+  addedSection,
   addFeedback,
   byName,
   byShownName,
@@ -460,6 +461,52 @@ describe('groceries', () => {
       expect(addFeedback(plan, '')).toBeNull();
       expect(addFeedback(withCoffee, '')).toBeNull();
       expect(addFeedback(withCoffee, '   ')).toBeNull();
+    });
+  });
+
+  describe('addedSection', () => {
+    it('puts "Zitrone" under Fruit & vegetables and "käse" under Other in German, "lemon" still under Fruit & vegetables in German, and "Zitrone" under Other in English', () => {
+      expect(addedSection('Zitrone', 'de')).toBe('Fruit & vegetables');
+      expect(addedSection('käse', 'de')).toBe('Other');
+      expect(addedSection('lemon', 'de')).toBe('Fruit & vegetables');
+      expect(addedSection('Zitrone', 'en')).toBe('Other');
+    });
+
+    describe('edge cases', () => {
+      it('puts the German names "Knoblauchzehe", "rote Zwiebel", "Bratwürste" and "Dosentomaten" under Other in English, and under their sections in German', () => {
+        for (const [name, section] of [
+          ['Knoblauchzehe', 'Fruit & vegetables'],
+          ['rote Zwiebel', 'Fruit & vegetables'],
+          ['Bratwürste', 'Meat & fish'],
+          ['Dosentomaten', 'Cans & jars'],
+        ] as const) {
+          expect(addedSection(name, 'en'), `${name} in English`).toBe('Other');
+          expect(addedSection(name, 'de'), `${name} in German`).toBe(section);
+        }
+      });
+
+      it('puts the English names "garlic clove", "canned tomatoes" and "bratwurst" under the same sections in German as their German names', () => {
+        for (const [english, germanName] of [
+          ['garlic clove', 'Knoblauchzehe'],
+          ['canned tomatoes', 'Dosentomaten'],
+          ['bratwurst', 'Bratwürste'],
+        ]) {
+          expect(addedSection(english, 'de'), english).toBe(addedSection(english, 'en'));
+          expect(addedSection(germanName, 'de'), germanName).toBe(addedSection(english, 'en'));
+        }
+      });
+
+      it('ignores case in German, putting "ZITRONE", "Rote zwiebel" and "LEMON" under Fruit & vegetables', () => {
+        for (const name of ['ZITRONE', 'Rote zwiebel', 'LEMON']) {
+          expect(addedSection(name, 'de'), name).toBe('Fruit & vegetables');
+        }
+      });
+
+      it('puts "Zwiebel" under Fruit & vegetables in German, but the inflected "Zwiebeln" and "Zitronen" under Other, as only a whole German name counts', () => {
+        expect(addedSection('Zwiebel', 'de')).toBe('Fruit & vegetables');
+        expect(addedSection('Zwiebeln', 'de')).toBe('Other');
+        expect(addedSection('Zitronen', 'de')).toBe('Other');
+      });
     });
   });
 

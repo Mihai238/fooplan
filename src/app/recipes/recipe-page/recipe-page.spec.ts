@@ -1375,9 +1375,9 @@ describe('RecipePage', () => {
     });
 
     describe('edge cases', () => {
-      it('shows the units of the step amounts in German, "(2 EL)" for the olive oil keeping "(200 g)" on "Spaghetti Pomodoro" and "Die Paprikaschoten und die rote Zwiebel (1 Stk.) in dünne Streifen schneiden." on "Hähnchen-Fajitas", in the step view and in "Alle Schritte"', async () => {
+      it('shows the units of the step amounts in German, "(2 EL)" for the olive oil keeping "(200 g)" on "Spaghetti Pomodoro" and "Die Paprikaschoten (3 Stk.) und die rote Zwiebel (1 Stk.) in dünne Streifen schneiden." on "Hähnchen-Fajitas" (#37), in the step view and in "Alle Schritte"', async () => {
         const fajitasStep4 =
-          'Die Paprikaschoten und die rote Zwiebel (1 Stk.) in dünne Streifen schneiden.';
+          'Die Paprikaschoten (3 Stk.) und die rote Zwiebel (1 Stk.) in dünne Streifen schneiden.';
         harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
         expect(amountsIn(stepParagraph())).toEqual(['(200 g)']);
         await click(button('Weiter'));
@@ -1389,7 +1389,7 @@ describe('RecipePage', () => {
           await click(button('Weiter'));
         }
         expect(textOf(stepParagraph())).toBe(fajitasStep4);
-        expect(amountsIn(stepParagraph())).toEqual(['(1 Stk.)']);
+        expect(amountsIn(stepParagraph())).toEqual(['(3 Stk.)', '(1 Stk.)']);
 
         const allSteps = Array.from(page().querySelectorAll('div.view button')).find(
           (viewButton) => textOf(viewButton) === 'Alle Schritte',
@@ -1458,6 +1458,7 @@ describe('RecipePage', () => {
 
   describe('German recipes (#36)', () => {
     const POMODORO_STEP_1 = 'Einen großen Topf Salzwasser für die Spaghetti zum Kochen bringen.';
+    const POMODORO_STEP_2 = 'Die Knoblauchzehen (2 Stk.) schälen und in dünne Scheiben schneiden.';
 
     it('shows "Spaghetti Pomodoro", the ingredient lines "200 g Spaghetti", "400 g Dosentomaten", "2 Stk. Knoblauchzehe", "2 EL Olivenöl", "10 g Basilikum" and "30 g Parmesan" and the German step 1 at /recipes/spaghetti-pomodoro in German, and the page as before in English', async () => {
       localStorage.setItem(LANGUAGE_KEY, 'de');
@@ -1501,6 +1502,19 @@ describe('RecipePage', () => {
       expect(textOf(stepParagraph())).toBe(stepsOf('Spaghetti pomodoro')[2]);
     });
 
+    it('shows the German step 2 at /recipes/spaghetti-pomodoro as "Die Knoblauchzehen (2 Stk.) schälen und in dünne Scheiben schneiden.", and as "Peel and thinly slice the garlic cloves (2 pc)." when the user switches to English (#37)', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      await click(button('Weiter'));
+      expect(textOf(page().querySelector('p.counter'))).toBe('Schritt 2 von 7');
+      expect(textOf(stepParagraph())).toBe(POMODORO_STEP_2);
+
+      TestBed.inject(LanguageStore).set('en');
+      await harness.fixture.whenStable();
+      expect(textOf(page().querySelector('p.counter'))).toBe('Step 2 of 7');
+      expect(textOf(stepParagraph())).toBe('Peel and thinly slice the garlic cloves (2 pc).');
+    });
+
     it('shows the own recipe "Omas Eintopf" with "200 g linsen" as typed and no steps in German and in English, while the German page of "Spaghetti pomodoro" heads "Spaghetti Pomodoro"', async () => {
       // Saved as the form saves "Linsen": it stores ingredient names in lowercase
       storeOwnRecipes({
@@ -1525,7 +1539,7 @@ describe('RecipePage', () => {
     });
 
     describe('edge cases', () => {
-      it('shows "(200 g)" after "Spaghetti" in the German step 1 and no amount in step 2, whose "Knoblauchzehen" is not the German name "Knoblauchzehe", and "(2 EL)" after "Olivenöl" in step 3, in the step view and in "Alle Schritte"', async () => {
+      it('shows "(200 g)" after "Spaghetti" in the German step 1, "(2 Stk.)" after "Knoblauchzehen" in step 2 (#37) and "(2 EL)" after "Olivenöl" in step 3, in the step view and in "Alle Schritte"', async () => {
         localStorage.setItem(LANGUAGE_KEY, 'de');
         harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
         expect(textOf(stepParagraph())).toBe(
@@ -1533,19 +1547,15 @@ describe('RecipePage', () => {
         );
         expect(amountsIn(stepParagraph())).toEqual(['(200 g)']);
         await click(button('Weiter'));
-        expect(textOf(stepParagraph())).toBe(
-          'Die Knoblauchzehen schälen und in dünne Scheiben schneiden.',
-        );
-        expect(amountsIn(stepParagraph())).toEqual([]);
+        expect(textOf(stepParagraph())).toBe(POMODORO_STEP_2);
+        expect(amountsIn(stepParagraph())).toEqual(['(2 Stk.)']);
         await click(button('Weiter'));
         expect(textOf(stepParagraph())).toMatch(/^Das Olivenöl \(2 EL\) in einer weiten Pfanne/);
 
         await click(button('Alle Schritte'));
         const items = Array.from(page().querySelectorAll<HTMLElement>('ol.all > li'));
-        expect(items.slice(0, 3).map(amountsIn)).toEqual([['(200 g)'], [], ['(2 EL)']]);
-        expect(textOf(items[1])).toBe(
-          'Die Knoblauchzehen schälen und in dünne Scheiben schneiden.',
-        );
+        expect(items.slice(0, 3).map(amountsIn)).toEqual([['(200 g)'], ['(2 Stk.)'], ['(2 EL)']]);
+        expect(textOf(items[1])).toBe(POMODORO_STEP_2);
       });
 
       it('opens "Pesto-Pasta mit Kirschtomaten" at its English slug /recipes/pesto-pasta-with-cherry-tomatoes in German, and no recipe page at /recipes/pesto-pasta-mit-kirschtomaten', async () => {

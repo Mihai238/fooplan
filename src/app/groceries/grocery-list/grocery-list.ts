@@ -47,7 +47,7 @@ export class GroceryList {
   protected readonly key = itemKey;
   protected readonly view = computed(() =>
     shoppingView(
-      listItems(this.plan(), this.recipes.all()),
+      listItems(this.plan(), this.recipes.all(), this.language.language()),
       this.plan().ticked,
       byShownName((item) => this.nameOf(item), this.language.language()),
     ),
@@ -89,7 +89,7 @@ export class GroceryList {
   // back to the field after a click on "Add", so several items can be added in a row
   protected add(event: SubmitEvent, input: HTMLInputElement): void {
     event.preventDefault();
-    this.feedback.set(addFeedback(this.plan(), input.value));
+    this.feedback.set(addFeedback(this.plan(), input.value, this.language.language()));
     this.store.addItem(input.value);
     input.value = '';
     input.focus();

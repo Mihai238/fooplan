@@ -1,16 +1,11 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { LanguageStore } from '../language-store';
 import { isRecord, readStored, writeStored } from '../storage';
+import { GermanRecipe, germanRecipe, ingredientNameIn } from './german-names';
 import { checkRecipe, MAX_INGREDIENTS } from './own-recipe';
 import { Ingredient, Recipe, UNITS } from './recipe';
 import { recipeSlug } from './recipe-slug';
 import { RECIPES } from './recipes';
-import german from './recipes.de.json';
-
-const GERMAN_RECIPES = new Map<string, { name: string; steps: string[] }>(
-  Object.entries(german.recipes),
-);
-const GERMAN_INGREDIENTS = new Map<string, string>(Object.entries(german.ingredients));
 
 const STORAGE_KEY = 'fooplan.recipes';
 
@@ -48,7 +43,7 @@ export class RecipeStore {
   // By name only, unlike displayIngredients: a grocery line can stand for a built-in and an own
   // recipe's ingredient at once
   displayIngredient(name: string): string {
-    return (this.german() && GERMAN_INGREDIENTS.get(name)) || name;
+    return ingredientNameIn(name, this.language.language());
   }
 
   // The caller checks the recipe first, with checkRecipe
@@ -76,8 +71,8 @@ export class RecipeStore {
     this.save();
   }
 
-  private germanRecipe(recipe: Recipe): { name: string; steps: string[] } | undefined {
-    return this.german() && !recipe.own ? GERMAN_RECIPES.get(recipe.name) : undefined;
+  private germanRecipe(recipe: Recipe): GermanRecipe | undefined {
+    return this.german() && !recipe.own ? germanRecipe(recipe.name) : undefined;
   }
 
   private german(): boolean {
