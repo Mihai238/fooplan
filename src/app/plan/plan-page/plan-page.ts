@@ -2,6 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { recipeSlug } from '../../recipes/recipe-slug';
+import { RECIPES } from '../../recipes/recipes';
 import {
   DEFAULT_DAYS,
   filledMeals,
@@ -59,6 +60,10 @@ export class PlanPage {
     return kind === 'lunch' ? leftoversOf(this.plan(), day) : null;
   }
 
+  protected minutes(recipe: string): number {
+    return MINUTES_BY_RECIPE.get(recipe)!;
+  }
+
   protected newPlan(dialog: HTMLDialogElement): void {
     if (this.filled() > 0 || this.plan().accepted) {
       // A leftover press from the last time would otherwise let a click without a press of its own
@@ -114,3 +119,5 @@ export class PlanPage {
     );
   }
 }
+
+const MINUTES_BY_RECIPE = new Map(RECIPES.map((recipe) => [recipe.name, recipe.minutes]));

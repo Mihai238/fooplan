@@ -48,7 +48,7 @@ describe('RecipePage', () => {
     harness = await RouterTestingHarness.create('/plan');
     const suggestion = page().querySelector<HTMLButtonElement>('button.suggestion');
     expect(suggestion, 'no suggestion on the Plan page').not.toBeNull();
-    const picked = textOf(suggestion);
+    const picked = textOf(suggestion!.querySelector('span.name'));
     suggestion!.click();
     await harness.fixture.whenStable();
     const before = TestBed.inject(PlanStore).plan();

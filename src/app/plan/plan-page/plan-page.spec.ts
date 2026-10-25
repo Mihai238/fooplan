@@ -3,7 +3,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { groceryList, itemKey } from '../../groceries/groceries';
 import { RECIPES } from '../../recipes/recipes';
-import { Plan } from '../plan';
+import { Plan, PlanDay } from '../plan';
 import { PlanStore, RANDOM, TODAY } from '../plan-store';
 import { covered, day as planDay, open, picked, seededRandom } from '../testing';
 import { PlanPage } from './plan-page';
@@ -338,17 +338,17 @@ describe('PlanPage', () => {
 
   it('shows the picked recipe and no suggestions for a meal once the user picks one of its three suggestions', async () => {
     expect(suggestionsOf(meal(0)), 'suggestions of the first meal').toHaveLength(3);
-    const recipe = textOf(suggestionsOf(meal(0))[1]);
+    const recipe = recipeOf(suggestionsOf(meal(0))[1]);
     await click(suggestionsOf(meal(0))[1]);
     expect(textOf(meal(0).querySelector('p.recipe'))).toBe(recipe);
     expect(suggestionsOf(meal(0))).toEqual([]);
   });
 
   it('shows three other suggestions when the user clicks "Other suggestions"', async () => {
-    const before = suggestionsOf(meal(0)).map(textOf);
+    const before = suggestionsOf(meal(0)).map(recipeOf);
     expect(before, 'suggestions of the first meal').toHaveLength(3);
     await click(button(meal(0), 'Other suggestions'));
-    const after = suggestionsOf(meal(0)).map(textOf);
+    const after = suggestionsOf(meal(0)).map(recipeOf);
     expect(after).toHaveLength(3);
     expect(after.filter((name) => before.includes(name))).toEqual([]);
   });
@@ -371,7 +371,7 @@ describe('PlanPage', () => {
   });
 
   it('shows the same three suggestions in the same order, and not while the meal is picked, when the user picks one and clicks "Undo"', async () => {
-    const before = suggestionsOf(meal(0)).map(textOf);
+    const before = suggestionsOf(meal(0)).map(recipeOf);
     expect(before, 'suggestions of the first meal').toHaveLength(3);
     await click(suggestionsOf(meal(0))[1]);
     expect(textOf(meal(0).querySelector('p.recipe'))).toBe(before[1]);
@@ -379,7 +379,7 @@ describe('PlanPage', () => {
 
     await click(button(meal(0), 'Undo'));
     expect(meal(0).querySelector('p.recipe')).toBeNull();
-    expect(suggestionsOf(meal(0)).map(textOf)).toEqual(before);
+    expect(suggestionsOf(meal(0)).map(recipeOf)).toEqual(before);
   });
 
   it('disables "Accept plan" while a meal is open and enables it once every meal has a recipe', async () => {
@@ -518,7 +518,7 @@ describe('PlanPage', () => {
       expect(store.plan()).toBe(before);
       expect(localStorage.getItem('fooplan.plan')).toBe(saved);
       expect(meal(1).querySelector('p.recipe')).toBeNull();
-      expect(suggestionsOf(meal(1)).map(textOf)).toEqual([
+      expect(suggestionsOf(meal(1)).map(recipeOf)).toEqual([
         'Niçoise salad',
         'Käsespätzle',
         'Spaghetti carbonara',
@@ -532,7 +532,7 @@ describe('PlanPage', () => {
       expect(suggestions, 'suggestions of the open dinner').toHaveLength(3);
       expect(links, '"Recipe" links of the open dinner').toHaveLength(3);
       suggestions.forEach((suggestion, i) => {
-        const name = textOf(suggestion);
+        const name = recipeOf(suggestion);
         expect(suggestion.closest('a'), `${name} in a link`).toBeNull();
         expect(suggestion.querySelector('a'), `${name} holds a link`).toBeNull();
         expect(links[i].closest('button'), `"Recipe" link of ${name} in a button`).toBeNull();
@@ -554,7 +554,7 @@ describe('PlanPage', () => {
         const links = recipeLinksOf(meal(index));
         expect(suggestions, `suggestions of meal ${index}`).toHaveLength(3);
         expect(links.map(nameOf), `"Recipe" links of meal ${index}`).toEqual(
-          suggestions.map((suggestion) => `Recipe for ${textOf(suggestion)}`),
+          suggestions.map((suggestion) => `Recipe for ${recipeOf(suggestion)}`),
         );
         for (const link of links) {
           expect(link.getAttribute('href'), nameOf(link)).toMatch(
@@ -568,7 +568,7 @@ describe('PlanPage', () => {
 
     it('moves the "Recipe" links to the new suggestions when the user clicks "Other suggestions"', async () => {
       await click(button(meal(0), 'Other suggestions'));
-      const suggestions = suggestionsOf(meal(0)).map(textOf);
+      const suggestions = suggestionsOf(meal(0)).map(recipeOf);
       expect(suggestions, 'suggestions of the first meal').toHaveLength(3);
       expect(recipeLinksOf(meal(0)).map(nameOf)).toEqual(
         suggestions.map((name) => `Recipe for ${name}`),
@@ -647,6 +647,201 @@ describe('PlanPage', () => {
           ? ['Käsespätzle', "Shepherd's pie", 'Niçoise salad']
           : ['Käsespätzle', "Shepherd's pie", 'Niçoise salad', 'Lasagne', 'Minestrone'],
       };
+    }
+  });
+
+  describe('cooking time', () => {
+    const OPEN_LASAGNE = open('Lasagne', 'Niçoise salad', 'Käsespätzle');
+
+    it('shows a suggestion as a span.name with the recipe and a span.minutes with its time, read as "Lasagne 105 minutes" without an aria-label', async () => {
+      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
+      const lasagne = suggestionsOf(meal(0))[0];
+      expect(Array.from(lasagne.children).map(partOf)).toEqual([
+        ['span.name', 'Lasagne'],
+        ['span.minutes', '105 minutes'],
+      ]);
+      expect(textOf(lasagne)).toBe('Lasagne 105 minutes');
+      expect(lasagne.hasAttribute('aria-label')).toBe(false);
+    });
+
+    it('keeps the time of a suggestion inside its button, out of its "Recipe" link, which stays "Recipe for Lasagne"', async () => {
+      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
+      const option = suggestionsOf(meal(0))[0].closest<HTMLElement>('.option');
+      expect(option, 'no option around the "Lasagne" suggestion').not.toBeNull();
+      const times = Array.from(option!.querySelectorAll('.minutes'));
+      expect(times.map(textOf), 'times of the "Lasagne" option').toEqual(['105 minutes']);
+      expect(times[0].closest('button.suggestion')).toBe(suggestionsOf(meal(0))[0]);
+      const [link] = recipeLinksOf(option!);
+      expect(link.querySelector('.minutes')).toBeNull();
+      expect(nameOf(link)).toBe('Recipe for Lasagne');
+    });
+
+    it('picks "Lasagne" when the user clicks the time in its suggestion', async () => {
+      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
+      const time = suggestionsOf(meal(0))[0].querySelector<HTMLElement>('span.minutes');
+      expect(time, 'no time in the "Lasagne" suggestion').not.toBeNull();
+      await click(time!);
+      expect(store.plan().days[0].lunch.recipe).toBe('Lasagne');
+      expect(textOf(meal(0).querySelector('p.recipe'))).toBe('Lasagne');
+    });
+
+    it('shows a p.minutes "20 minutes" right after the p.recipe of a picked "Spaghetti carbonara"', async () => {
+      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
+      const name = meal(1).querySelector('p.recipe');
+      expect(textOf(name)).toBe('Spaghetti carbonara');
+      expect(partOf(name?.nextElementSibling)).toEqual(['p.minutes', '20 minutes']);
+    });
+
+    it("puts no link in or around a picked meal's time, and keeps the time out of the recipe name's link", async () => {
+      await openWith(planOf([planDay('2026-10-24', OPEN_LASAGNE, picked('Spaghetti carbonara'))]));
+      const time = meal(1).querySelector('p.minutes');
+      expect(time, 'no time below "Spaghetti carbonara"').not.toBeNull();
+      expect(time!.closest('a'), 'time in a link').toBeNull();
+      expect(time!.querySelector('a'), 'time holds a link').toBeNull();
+      expect(textOf(recipeLink(meal(1)))).toBe('Spaghetti carbonara');
+    });
+
+    it('shows a time of a whole number of hours in minutes, "120 minutes" and "60 minutes", never in hours', async () => {
+      await openWith(
+        planOf([planDay('2026-10-24', picked('Pizza margherita'), picked('Fish and chips'))]),
+      );
+      expect(Array.from(element.querySelectorAll('.minutes')).map(textOf)).toEqual([
+        '120 minutes',
+        '60 minutes',
+      ]);
+    });
+
+    it('shows a picked dinner that is not on the last day as its name, its time, "Cook extra" and "Undo", in this order', async () => {
+      await openWith(goulashPlan({ cookExtra: false, accepted: false }));
+      expect(childrenAfterHeading(meal(1))).toEqual([
+        ['p.recipe', 'Goulash with bread'],
+        ['p.minutes', '150 minutes'],
+        ['label.cook-extra', "Cook extra for tomorrow's lunch"],
+        ['button.link', 'Undo'],
+      ]);
+    });
+
+    it('shows no time on a leftovers lunch, but keeps it on the dinner cooked extra for it', async () => {
+      await openWith(goulashPlan({ cookExtra: true, accepted: false }));
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Leftovers: Goulash with bread');
+      expect(meal(2).querySelectorAll('.minutes')).toHaveLength(0);
+      expect(textOf(meal(2))).not.toMatch(/\d+ minutes/);
+      expect(textOf(meal(1).querySelector('.minutes'))).toBe('150 minutes');
+    });
+
+    it('shows a dinner cooked extra of an accepted plan as its name, its time and the note, the leftovers lunch without a time, and no control or linked time', async () => {
+      await openWith(goulashPlan({ cookExtra: true, accepted: true }));
+      expect(childrenAfterHeading(meal(1))).toEqual([
+        ['p.recipe', 'Goulash with bread'],
+        ['p.minutes', '150 minutes'],
+        ['p.note', "Cooking extra for tomorrow's lunch"],
+      ]);
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Leftovers: Goulash with bread');
+      expect(meal(2).querySelectorAll('.minutes')).toHaveLength(0);
+      expect(element.querySelectorAll('section.day button, section.day input')).toHaveLength(0);
+      const times = Array.from(element.querySelectorAll('.minutes'));
+      expect(times.filter((time) => time.closest('a') !== null)).toEqual([]);
+    });
+
+    it('brings back the suggestions with "Lasagne 105 minutes" when the user clicks "Undo" on a picked "Lasagne"', async () => {
+      await openWith(
+        planOf([
+          planDay(
+            '2026-10-24',
+            picked('Lasagne', ['Niçoise salad', 'Lasagne', 'Käsespätzle']),
+            picked('Spaghetti carbonara'),
+          ),
+        ]),
+      );
+      await click(button(meal(0), 'Undo'));
+      expect(suggestionsOf(meal(0)), 'suggestions after "Undo"').toHaveLength(3);
+      expect(suggestionsOf(meal(0)).map(textOf)).toContain('Lasagne 105 minutes');
+    });
+
+    it('shows the times of a plan saved without them as soon as it loads, keeps the plan, and saves no time when the user picks', async () => {
+      const saved = planOf(
+        [
+          planDay(
+            '2026-10-24',
+            picked('Lasagne'),
+            open('Niçoise salad', 'Käsespätzle', 'Spaghetti carbonara'),
+          ),
+        ],
+        { people: 3 },
+      );
+      await openWith(saved);
+      const name = meal(0).querySelector('p.recipe');
+      expect(textOf(name)).toBe('Lasagne');
+      expect(partOf(name?.nextElementSibling)).toEqual(['p.minutes', '105 minutes']);
+      expect(store.plan()).toEqual(saved);
+      expect(textOf(stepper('People'))).toBe('3');
+      expect(suggestionsOf(meal(1)).map(recipeOf)).toEqual([
+        'Niçoise salad',
+        'Käsespätzle',
+        'Spaghetti carbonara',
+      ]);
+
+      await click(suggestionsOf(meal(1))[0]);
+      expect(store.plan().days[0].dinner.recipe, 'dinner not picked').toBe('Niçoise salad');
+      expect(localStorage.getItem('fooplan.plan')).not.toMatch(/"minutes"/);
+    });
+
+    it('keeps "105 minutes" on a picked "Lasagne" when the user raises People from 2 to 3', async () => {
+      await openWith(
+        planOf([planDay('2026-10-24', picked('Lasagne'), picked('Spaghetti carbonara'))]),
+      );
+      await click(arrow('One more person'));
+      expect(textOf(stepper('People'))).toBe('3');
+      expect(textOf(meal(0).querySelector('.minutes'))).toBe('105 minutes');
+    });
+
+    // The first day's dinner, "Goulash with bread", isn't on the last day; cooked extra, it covers
+    // the second day's lunch
+    function goulashPlan({ cookExtra, accepted }: { cookExtra: boolean; accepted: boolean }): Plan {
+      return planOf(
+        [
+          planDay('2026-10-24', picked('Käsespätzle'), picked('Goulash with bread'), cookExtra),
+          planDay(
+            '2026-10-25',
+            cookExtra ? covered() : picked('Minestrone'),
+            accepted ? picked('Niçoise salad') : open('Niçoise salad', 'Lasagne', 'Pumpkin soup'),
+          ),
+        ],
+        { accepted },
+      );
+    }
+
+    // Lists every recipe of the days as shown, as loading the plan would
+    function planOf(planDays: PlanDay[], { people = 2, accepted = false } = {}): Plan {
+      const shown = planDays.flatMap((planDay) =>
+        [planDay.lunch, planDay.dinner].flatMap((meal) => [
+          ...(meal.recipe === null ? [] : [meal.recipe]),
+          ...meal.suggestions,
+          ...(meal.offered ?? []),
+        ]),
+      );
+      return {
+        days: planDays,
+        people,
+        accepted,
+        ticked: [],
+        added: [],
+        shown: [...new Set(shown)],
+      };
+    }
+
+    function childrenAfterHeading(article: HTMLElement): [string, string][] {
+      const children = Array.from(article.children);
+      expect(children[0]?.tagName, 'first child of the meal').toBe('H3');
+      return children.slice(1).map(partOf);
+    }
+
+    function partOf(node: Element | null | undefined): [string, string] {
+      if (!node) {
+        return ['(none)', ''];
+      }
+      const classes = Array.from(node.classList).map((name) => `.${name}`);
+      return [node.tagName.toLowerCase() + classes.join(''), textOf(node)];
     }
   });
 
@@ -1074,7 +1269,7 @@ describe('PlanPage', () => {
   async function pickFirstSuggestion(mealIndex: number): Promise<string> {
     const suggestions = suggestionsOf(meal(mealIndex));
     expect(suggestions.length, `suggestions of meal ${mealIndex}`).toBeGreaterThan(0);
-    const recipe = textOf(suggestions[0]);
+    const recipe = recipeOf(suggestions[0]);
     await click(suggestions[0]);
     return recipe;
   }
@@ -1145,6 +1340,10 @@ describe('PlanPage', () => {
 
   function suggestionsOf(article: HTMLElement): HTMLButtonElement[] {
     return Array.from(article.querySelectorAll('button.suggestion'));
+  }
+
+  function recipeOf(suggestion: HTMLButtonElement): string {
+    return textOf(suggestion.querySelector('span.name'));
   }
 
   function recipeLink(article: HTMLElement): HTMLAnchorElement {

@@ -64,6 +64,69 @@ const SPEC_NAMES = [
   'Niçoise salad',
 ];
 
+const SPEC_MINUTES: Record<string, number> = {
+  'Spaghetti pomodoro': 25,
+  'Spaghetti carbonara': 20,
+  'Pesto pasta with cherry tomatoes': 20,
+  Lasagne: 105,
+  Käsespätzle: 45,
+  'Chili con carne': 75,
+  'Goulash with bread': 150,
+  'Beef burgers with oven fries': 45,
+  'Stuffed peppers': 60,
+  'Schnitzel with potato salad': 50,
+  'Chicken curry with rice': 40,
+  'Teriyaki chicken with rice': 30,
+  'Chicken fajitas': 30,
+  'Chicken Caesar salad': 25,
+  'Oven-baked salmon with potatoes and green beans': 45,
+  'Fish tacos': 30,
+  'Chickpea and spinach curry': 30,
+  'Vegetable stir-fry with noodles': 25,
+  'Fried rice with egg and vegetables': 35,
+  'Ratatouille with rice': 60,
+  'Mushroom risotto': 40,
+  'Shakshuka with bread': 30,
+  'Spinach and feta quiche': 60,
+  'Baked potatoes with herb quark': 70,
+  'Couscous salad with halloumi': 25,
+  'Greek salad with feta and bread': 15,
+  'Lentil soup': 35,
+  Minestrone: 50,
+  'Pumpkin soup': 45,
+  'Tomato soup with grilled cheese': 35,
+  'Spaghetti bolognese': 60,
+  'Penne arrabbiata': 25,
+  'Spaghetti aglio e olio': 15,
+  'Mac and cheese': 35,
+  'Gnocchi with tomato sauce and mozzarella': 30,
+  'Spinach and ricotta cannelloni': 75,
+  'Pizza margherita': 120,
+  "Shepherd's pie": 90,
+  'Meatballs in tomato sauce with rice': 50,
+  'Beef stroganoff with rice': 35,
+  'Bratwurst with sauerkraut and mashed potatoes': 40,
+  'Sweet and sour pork with rice': 40,
+  'Chicken drumsticks with roasted vegetables': 60,
+  'Butter chicken with naan': 80,
+  'Chicken noodle soup': 50,
+  'Chicken quesadillas': 25,
+  'Pad thai with chicken': 30,
+  'Fish and chips': 60,
+  'Tuna pasta bake': 45,
+  'Seafood paella': 60,
+  'Thai green curry with prawns': 30,
+  'Falafel wraps with hummus': 50,
+  'Bean burritos': 35,
+  'Eggplant parmigiana': 75,
+  'Spanish tortilla with salad': 45,
+  'Potato and leek soup': 40,
+  'French onion soup': 90,
+  'Potato goulash': 45,
+  'Sweet potato and black bean chili': 45,
+  'Niçoise salad': 30,
+};
+
 describe('RECIPES', () => {
   it('has a unique name, servings > 0 and at least one ingredient with amount > 0 and a known unit per recipe', () => {
     expectRecipesLoaded();
@@ -97,6 +160,27 @@ describe('RECIPES', () => {
     const problems = RECIPES.filter((recipe) => !Number.isInteger(recipe.servings)).map(
       (recipe) => `"${recipe.name}": servings ${recipe.servings}`,
     );
+    expect(problems).toEqual([]);
+  });
+
+  it('has the minutes of the spec table for every recipe', () => {
+    expectRecipesLoaded();
+    expect(Object.keys(SPEC_MINUTES), 'recipes in the minutes table').toEqual(SPEC_NAMES);
+    const problems = RECIPES.filter((recipe) => recipe.minutes !== SPEC_MINUTES[recipe.name]).map(
+      (recipe) => `"${recipe.name}": minutes ${recipe.minutes}, not ${SPEC_MINUTES[recipe.name]}`,
+    );
+    expect(problems).toEqual([]);
+  });
+
+  it('has minutes that are a whole multiple of 5 from 10 to 240 for every recipe', () => {
+    expectRecipesLoaded();
+    const problems = RECIPES.filter(
+      (recipe) =>
+        !Number.isInteger(recipe.minutes) ||
+        recipe.minutes % 5 !== 0 ||
+        recipe.minutes < 10 ||
+        recipe.minutes > 240,
+    ).map((recipe) => `"${recipe.name}": minutes ${recipe.minutes}`);
     expect(problems).toEqual([]);
   });
 

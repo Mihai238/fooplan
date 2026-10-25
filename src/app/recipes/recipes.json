@@ -2,6 +2,7 @@
   {
     "name": "Spaghetti pomodoro",
     "servings": 2,
+    "minutes": 25,
     "ingredients": [
       { "name": "spaghetti", "amount": 200, "unit": "g" },
       { "name": "canned tomatoes", "amount": 400, "unit": "g" },
@@ -23,6 +24,7 @@
   {
     "name": "Spaghetti carbonara",
     "servings": 2,
+    "minutes": 20,
     "ingredients": [
       { "name": "spaghetti", "amount": 200, "unit": "g" },
       { "name": "guanciale", "amount": 100, "unit": "g" },
@@ -43,6 +45,7 @@
   {
     "name": "Pesto pasta with cherry tomatoes",
     "servings": 2,
+    "minutes": 20,
     "ingredients": [
       { "name": "penne", "amount": 200, "unit": "g" },
       { "name": "pesto", "amount": 4, "unit": "tbsp" },
@@ -64,6 +67,7 @@
   {
     "name": "Lasagne",
     "servings": 4,
+    "minutes": 105,
     "ingredients": [
       { "name": "lasagne sheet", "amount": 250, "unit": "g" },
       { "name": "ground beef", "amount": 500, "unit": "g" },
@@ -97,6 +101,7 @@
   {
     "name": "Käsespätzle",
     "servings": 4,
+    "minutes": 45,
     "ingredients": [
       { "name": "flour", "amount": 400, "unit": "g" },
       { "name": "egg", "amount": 4, "unit": "pc" },
@@ -121,6 +126,7 @@
   {
     "name": "Chili con carne",
     "servings": 4,
+    "minutes": 75,
     "ingredients": [
       { "name": "ground beef", "amount": 500, "unit": "g" },
       { "name": "onion", "amount": 2, "unit": "pc" },
@@ -148,6 +154,7 @@
   {
     "name": "Goulash with bread",
     "servings": 4,
+    "minutes": 150,
     "ingredients": [
       { "name": "beef", "amount": 800, "unit": "g" },
       { "name": "onion", "amount": 4, "unit": "pc" },
@@ -174,6 +181,7 @@
   {
     "name": "Beef burgers with oven fries",
     "servings": 4,
+    "minutes": 45,
     "ingredients": [
       { "name": "ground beef", "amount": 600, "unit": "g" },
       { "name": "burger bun", "amount": 4, "unit": "pc" },
@@ -200,6 +208,7 @@
   {
     "name": "Stuffed peppers",
     "servings": 4,
+    "minutes": 60,
     "ingredients": [
       { "name": "bell pepper", "amount": 4, "unit": "pc" },
       { "name": "ground beef", "amount": 400, "unit": "g" },
@@ -226,6 +235,7 @@
   {
     "name": "Schnitzel with potato salad",
     "servings": 4,
+    "minutes": 50,
     "ingredients": [
       { "name": "pork cutlet", "amount": 600, "unit": "g" },
       { "name": "flour", "amount": 50, "unit": "g" },
@@ -258,6 +268,7 @@
   {
     "name": "Chicken curry with rice",
     "servings": 4,
+    "minutes": 40,
     "ingredients": [
       { "name": "chicken breast", "amount": 600, "unit": "g" },
       { "name": "onion", "amount": 2, "unit": "pc" },
@@ -284,6 +295,7 @@
   {
     "name": "Teriyaki chicken with rice",
     "servings": 2,
+    "minutes": 30,
     "ingredients": [
       { "name": "chicken thigh", "amount": 400, "unit": "g" },
       { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
@@ -309,6 +321,7 @@
   {
     "name": "Chicken fajitas",
     "servings": 4,
+    "minutes": 30,
     "ingredients": [
       { "name": "chicken breast", "amount": 500, "unit": "g" },
       { "name": "bell pepper", "amount": 3, "unit": "pc" },
@@ -337,6 +350,7 @@
   {
     "name": "Chicken Caesar salad",
     "servings": 2,
+    "minutes": 25,
     "ingredients": [
       { "name": "chicken breast", "amount": 300, "unit": "g" },
       { "name": "romaine lettuce", "amount": 1, "unit": "pc" },
@@ -363,6 +377,7 @@
   {
     "name": "Oven-baked salmon with potatoes and green beans",
     "servings": 4,
+    "minutes": 45,
     "ingredients": [
       { "name": "salmon", "amount": 600, "unit": "g" },
       { "name": "potato", "amount": 1000, "unit": "g" },
@@ -385,6 +400,7 @@
   {
     "name": "Fish tacos",
     "servings": 4,
+    "minutes": 30,
     "ingredients": [
       { "name": "cod", "amount": 500, "unit": "g" },
       { "name": "cumin", "amount": 1, "unit": "tsp" },
@@ -410,6 +426,7 @@
   {
     "name": "Chickpea and spinach curry",
     "servings": 4,
+    "minutes": 30,
     "ingredients": [
       { "name": "canned chickpeas", "amount": 800, "unit": "g" },
       { "name": "spinach", "amount": 200, "unit": "g" },
@@ -436,6 +453,7 @@
   {
     "name": "Vegetable stir-fry with noodles",
     "servings": 2,
+    "minutes": 25,
     "ingredients": [
       { "name": "egg noodle", "amount": 200, "unit": "g" },
       { "name": "bell pepper", "amount": 1, "unit": "pc" },
@@ -462,6 +480,7 @@
   {
     "name": "Fried rice with egg and vegetables",
     "servings": 2,
+    "minutes": 35,
     "ingredients": [
       { "name": "rice", "amount": 150, "unit": "g" },
       { "name": "egg", "amount": 2, "unit": "pc" },
@@ -489,6 +508,7 @@
   {
     "name": "Ratatouille with rice",
     "servings": 4,
+    "minutes": 60,
     "ingredients": [
       { "name": "eggplant", "amount": 1, "unit": "pc" },
       { "name": "zucchini", "amount": 2, "unit": "pc" },
@@ -518,6 +538,7 @@
   {
     "name": "Mushroom risotto",
     "servings": 4,
+    "minutes": 40,
     "ingredients": [
       { "name": "arborio rice", "amount": 320, "unit": "g" },
       { "name": "mushroom", "amount": 400, "unit": "g" },
@@ -544,6 +565,7 @@
   {
     "name": "Shakshuka with bread",
     "servings": 2,
+    "minutes": 30,
     "ingredients": [
       { "name": "egg", "amount": 4, "unit": "pc" },
       { "name": "canned tomatoes", "amount": 400, "unit": "g" },
@@ -570,6 +592,7 @@
   {
     "name": "Spinach and feta quiche",
     "servings": 4,
+    "minutes": 60,
     "ingredients": [
       { "name": "shortcrust pastry", "amount": 250, "unit": "g" },
       { "name": "spinach", "amount": 300, "unit": "g" },
@@ -595,6 +618,7 @@
   {
     "name": "Baked potatoes with herb quark",
     "servings": 4,
+    "minutes": 70,
     "ingredients": [
       { "name": "potato", "amount": 1200, "unit": "g" },
       { "name": "olive oil", "amount": 1, "unit": "tbsp" },
@@ -616,6 +640,7 @@
   {
     "name": "Couscous salad with halloumi",
     "servings": 4,
+    "minutes": 25,
     "ingredients": [
       { "name": "couscous", "amount": 250, "unit": "g" },
       { "name": "vegetable stock", "amount": 250, "unit": "ml" },
@@ -642,6 +667,7 @@
   {
     "name": "Greek salad with feta and bread",
     "servings": 2,
+    "minutes": 15,
     "ingredients": [
       { "name": "tomato", "amount": 3, "unit": "pc" },
       { "name": "cucumber", "amount": 1, "unit": "pc" },
@@ -665,6 +691,7 @@
   {
     "name": "Lentil soup",
     "servings": 4,
+    "minutes": 35,
     "ingredients": [
       { "name": "red lentil", "amount": 250, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -690,6 +717,7 @@
   {
     "name": "Minestrone",
     "servings": 4,
+    "minutes": 50,
     "ingredients": [
       { "name": "onion", "amount": 1, "unit": "pc" },
       { "name": "carrot", "amount": 2, "unit": "pc" },
@@ -718,6 +746,7 @@
   {
     "name": "Pumpkin soup",
     "servings": 4,
+    "minutes": 45,
     "ingredients": [
       { "name": "pumpkin", "amount": 1200, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -742,6 +771,7 @@
   {
     "name": "Tomato soup with grilled cheese",
     "servings": 4,
+    "minutes": 35,
     "ingredients": [
       { "name": "canned tomatoes", "amount": 800, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -769,6 +799,7 @@
   {
     "name": "Spaghetti bolognese",
     "servings": 4,
+    "minutes": 60,
     "ingredients": [
       { "name": "spaghetti", "amount": 400, "unit": "g" },
       { "name": "ground beef", "amount": 500, "unit": "g" },
@@ -797,6 +828,7 @@
   {
     "name": "Penne arrabbiata",
     "servings": 2,
+    "minutes": 25,
     "ingredients": [
       { "name": "penne", "amount": 200, "unit": "g" },
       { "name": "canned tomatoes", "amount": 400, "unit": "g" },
@@ -817,6 +849,7 @@
   {
     "name": "Spaghetti aglio e olio",
     "servings": 2,
+    "minutes": 15,
     "ingredients": [
       { "name": "spaghetti", "amount": 200, "unit": "g" },
       { "name": "garlic clove", "amount": 4, "unit": "pc" },
@@ -837,6 +870,7 @@
   {
     "name": "Mac and cheese",
     "servings": 4,
+    "minutes": 35,
     "ingredients": [
       { "name": "macaroni", "amount": 400, "unit": "g" },
       { "name": "butter", "amount": 50, "unit": "g" },
@@ -860,6 +894,7 @@
   {
     "name": "Gnocchi with tomato sauce and mozzarella",
     "servings": 4,
+    "minutes": 30,
     "ingredients": [
       { "name": "gnocchi", "amount": 1000, "unit": "g" },
       { "name": "canned tomatoes", "amount": 800, "unit": "g" },
@@ -884,6 +919,7 @@
   {
     "name": "Spinach and ricotta cannelloni",
     "servings": 4,
+    "minutes": 75,
     "ingredients": [
       { "name": "cannelloni tube", "amount": 16, "unit": "pc" },
       { "name": "spinach", "amount": 500, "unit": "g" },
@@ -916,6 +952,7 @@
   {
     "name": "Pizza margherita",
     "servings": 4,
+    "minutes": 120,
     "ingredients": [
       { "name": "flour", "amount": 500, "unit": "g" },
       { "name": "dry yeast", "amount": 7, "unit": "g" },
@@ -939,6 +976,7 @@
   {
     "name": "Shepherd's pie",
     "servings": 4,
+    "minutes": 90,
     "ingredients": [
       { "name": "ground lamb", "amount": 600, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -971,6 +1009,7 @@
   {
     "name": "Meatballs in tomato sauce with rice",
     "servings": 4,
+    "minutes": 50,
     "ingredients": [
       { "name": "ground beef", "amount": 500, "unit": "g" },
       { "name": "breadcrumbs", "amount": 50, "unit": "g" },
@@ -1000,6 +1039,7 @@
   {
     "name": "Beef stroganoff with rice",
     "servings": 4,
+    "minutes": 35,
     "ingredients": [
       { "name": "beef sirloin", "amount": 600, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -1028,6 +1068,7 @@
   {
     "name": "Bratwurst with sauerkraut and mashed potatoes",
     "servings": 4,
+    "minutes": 40,
     "ingredients": [
       { "name": "bratwurst", "amount": 8, "unit": "pc" },
       { "name": "vegetable oil", "amount": 30, "unit": "ml" },
@@ -1054,6 +1095,7 @@
   {
     "name": "Sweet and sour pork with rice",
     "servings": 4,
+    "minutes": 40,
     "ingredients": [
       { "name": "pork shoulder", "amount": 500, "unit": "g" },
       { "name": "egg", "amount": 1, "unit": "pc" },
@@ -1084,6 +1126,7 @@
   {
     "name": "Chicken drumsticks with roasted vegetables",
     "servings": 4,
+    "minutes": 60,
     "ingredients": [
       { "name": "chicken drumstick", "amount": 8, "unit": "pc" },
       { "name": "potato", "amount": 800, "unit": "g" },
@@ -1111,6 +1154,7 @@
   {
     "name": "Butter chicken with naan",
     "servings": 4,
+    "minutes": 80,
     "ingredients": [
       { "name": "chicken thigh", "amount": 700, "unit": "g" },
       { "name": "yogurt", "amount": 150, "unit": "g" },
@@ -1146,6 +1190,7 @@
   {
     "name": "Chicken noodle soup",
     "servings": 4,
+    "minutes": 50,
     "ingredients": [
       { "name": "chicken thigh", "amount": 500, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -1173,6 +1218,7 @@
   {
     "name": "Chicken quesadillas",
     "servings": 2,
+    "minutes": 25,
     "ingredients": [
       { "name": "chicken breast", "amount": 250, "unit": "g" },
       { "name": "bell pepper", "amount": 1, "unit": "pc" },
@@ -1199,6 +1245,7 @@
   {
     "name": "Pad thai with chicken",
     "servings": 2,
+    "minutes": 30,
     "ingredients": [
       { "name": "rice noodle", "amount": 200, "unit": "g" },
       { "name": "chicken breast", "amount": 250, "unit": "g" },
@@ -1228,6 +1275,7 @@
   {
     "name": "Fish and chips",
     "servings": 4,
+    "minutes": 60,
     "ingredients": [
       { "name": "cod", "amount": 600, "unit": "g" },
       { "name": "flour", "amount": 220, "unit": "g" },
@@ -1251,6 +1299,7 @@
   {
     "name": "Tuna pasta bake",
     "servings": 4,
+    "minutes": 45,
     "ingredients": [
       { "name": "penne", "amount": 400, "unit": "g" },
       { "name": "canned tuna", "amount": 320, "unit": "g" },
@@ -1273,6 +1322,7 @@
   {
     "name": "Seafood paella",
     "servings": 4,
+    "minutes": 60,
     "ingredients": [
       { "name": "paella rice", "amount": 350, "unit": "g" },
       { "name": "prawn", "amount": 400, "unit": "g" },
@@ -1308,6 +1358,7 @@
   {
     "name": "Thai green curry with prawns",
     "servings": 4,
+    "minutes": 30,
     "ingredients": [
       { "name": "prawn", "amount": 400, "unit": "g" },
       { "name": "green curry paste", "amount": 3, "unit": "tbsp" },
@@ -1337,6 +1388,7 @@
   {
     "name": "Falafel wraps with hummus",
     "servings": 4,
+    "minutes": 50,
     "ingredients": [
       { "name": "dried chickpeas", "amount": 250, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -1367,6 +1419,7 @@
   {
     "name": "Bean burritos",
     "servings": 4,
+    "minutes": 35,
     "ingredients": [
       { "name": "canned pinto beans", "amount": 800, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -1396,6 +1449,7 @@
   {
     "name": "Eggplant parmigiana",
     "servings": 4,
+    "minutes": 75,
     "ingredients": [
       { "name": "eggplant", "amount": 3, "unit": "pc" },
       { "name": "vegetable oil", "amount": 150, "unit": "ml" },
@@ -1422,6 +1476,7 @@
   {
     "name": "Spanish tortilla with salad",
     "servings": 4,
+    "minutes": 45,
     "ingredients": [
       { "name": "potato", "amount": 800, "unit": "g" },
       { "name": "onion", "amount": 1, "unit": "pc" },
@@ -1447,6 +1502,7 @@
   {
     "name": "Potato and leek soup",
     "servings": 4,
+    "minutes": 40,
     "ingredients": [
       { "name": "leek", "amount": 2, "unit": "pc" },
       { "name": "potato", "amount": 600, "unit": "g" },
@@ -1468,6 +1524,7 @@
   {
     "name": "French onion soup",
     "servings": 4,
+    "minutes": 90,
     "ingredients": [
       { "name": "onion", "amount": 6, "unit": "pc" },
       { "name": "butter", "amount": 50, "unit": "g" },
@@ -1494,6 +1551,7 @@
   {
     "name": "Potato goulash",
     "servings": 4,
+    "minutes": 45,
     "ingredients": [
       { "name": "potato", "amount": 1000, "unit": "g" },
       { "name": "onion", "amount": 2, "unit": "pc" },
@@ -1520,6 +1578,7 @@
   {
     "name": "Sweet potato and black bean chili",
     "servings": 4,
+    "minutes": 45,
     "ingredients": [
       { "name": "sweet potato", "amount": 800, "unit": "g" },
       { "name": "canned black beans", "amount": 800, "unit": "g" },
@@ -1548,6 +1607,7 @@
   {
     "name": "Niçoise salad",
     "servings": 2,
+    "minutes": 30,
     "ingredients": [
       { "name": "canned tuna", "amount": 160, "unit": "g" },
       { "name": "egg", "amount": 2, "unit": "pc" },

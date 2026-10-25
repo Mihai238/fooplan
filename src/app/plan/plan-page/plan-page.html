@@ -101,6 +101,7 @@
                 {{ current.recipe }}
               </a>
             </p>
+            <p class="minutes">{{ minutes(current.recipe) }} minutes</p>
             @if (meal.kind === 'dinner') {
               @if (plan().accepted) {
                 @if (day.cookExtra) {
@@ -133,7 +134,8 @@
             @for (recipe of current.suggestions; track $index) {
               <div class="option">
                 <button type="button" class="suggestion" (click)="store.pick(ref, recipe)">
-                  {{ recipe }}
+                  <span class="name">{{ recipe }}</span
+                  >{{ ' ' }}<span class="minutes">{{ minutes(recipe) }} minutes</span>
                 </button>
                 <a
                   class="recipe-link"
