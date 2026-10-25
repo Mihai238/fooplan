@@ -22,6 +22,7 @@ const RECIPES: readonly Recipe[] = [
       { name: 'spaghetti', amount: 200, unit: 'g' },
       { name: 'tomatoes', amount: 400, unit: 'g' },
     ],
+    steps: [],
   },
   {
     name: 'Chili',
@@ -30,6 +31,7 @@ const RECIPES: readonly Recipe[] = [
       { name: 'tomatoes', amount: 200, unit: 'g' },
       { name: 'onion', amount: 1, unit: 'pc' },
     ],
+    steps: [],
   },
   {
     name: 'Soup',
@@ -38,6 +40,7 @@ const RECIPES: readonly Recipe[] = [
       { name: 'carrots', amount: 500, unit: 'g' },
       { name: 'onion', amount: 1, unit: 'pc' },
     ],
+    steps: [],
   },
   {
     name: 'Stew',
@@ -46,36 +49,43 @@ const RECIPES: readonly Recipe[] = [
       { name: 'onion', amount: 1, unit: 'pc' },
       { name: 'stock', amount: 500, unit: 'ml' },
     ],
+    steps: [],
   },
   {
     name: 'Fried onions',
     servings: 2,
     ingredients: [{ name: 'onion', amount: 300, unit: 'g' }],
+    steps: [],
   },
   {
     name: 'Rice',
     servings: 2,
     ingredients: [{ name: 'rice', amount: 150, unit: 'g' }],
+    steps: [],
   },
   {
     name: 'Salad',
     servings: 3,
     ingredients: [{ name: 'lettuce', amount: 200, unit: 'g' }],
+    steps: [],
   },
   {
     name: 'Dressing',
     servings: 4,
     ingredients: [{ name: 'soy sauce', amount: 3, unit: 'tbsp' }],
+    steps: [],
   },
   {
     name: 'Porridge',
     servings: 2,
     ingredients: [{ name: 'sugar', amount: 0.4, unit: 'tsp' }],
+    steps: [],
   },
   {
     name: 'Bread',
     servings: 2,
     ingredients: [{ name: 'sugar', amount: 1.6, unit: 'tsp' }],
+    steps: [],
   },
   {
     name: 'Market',
@@ -87,11 +97,13 @@ const RECIPES: readonly Recipe[] = [
       { name: 'zucchini', amount: 200, unit: 'g' },
       { name: 'basil', amount: 20, unit: 'g' },
     ],
+    steps: [],
   },
   {
     name: 'Exotic',
     servings: 2,
     ingredients: [{ name: 'dragon fruit', amount: 1, unit: 'pc' }],
+    steps: [],
   },
   {
     name: 'Staples',
@@ -105,6 +117,7 @@ const RECIPES: readonly Recipe[] = [
       { name: 'black pepper', amount: 1, unit: 'tsp' },
       { name: 'bell pepper', amount: 2, unit: 'pc' },
     ],
+    steps: [],
   },
 ];
 

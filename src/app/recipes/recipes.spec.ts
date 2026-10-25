@@ -1,4 +1,4 @@
-import { UNITS, Unit } from './recipe';
+import { Recipe, UNITS, Unit } from './recipe';
 import { RECIPES } from './recipes';
 
 const SPEC_NAMES = [
@@ -79,7 +79,9 @@ describe('RECIPES', () => {
           problems.push(`"${recipe.name}" / "${ingredient.name}": amount ${ingredient.amount}`);
         }
         if (!UNITS.includes(ingredient.unit)) {
-          problems.push(`"${recipe.name}" / "${ingredient.name}": unknown unit "${ingredient.unit}"`);
+          problems.push(
+            `"${recipe.name}" / "${ingredient.name}": unknown unit "${ingredient.unit}"`,
+          );
         }
       }
     }
@@ -104,7 +106,9 @@ describe('RECIPES', () => {
     for (const recipe of RECIPES) {
       const seen = new Set<string>();
       for (const ingredient of recipe.ingredients) {
-        if (seen.has(ingredient.name)) problems.push(`"${recipe.name}": "${ingredient.name}" twice`);
+        if (seen.has(ingredient.name)) {
+          problems.push(`"${recipe.name}": "${ingredient.name}" twice`);
+        }
         seen.add(ingredient.name);
       }
     }
@@ -163,8 +167,126 @@ describe('RECIPES', () => {
     expect(oils.filter((oil) => oil.unit !== 'ml')).toEqual([]);
   });
 
+  it('has at least three steps per recipe, none of them empty', () => {
+    expectRecipesLoaded();
+    const problems: string[] = [];
+    for (const recipe of RECIPES) {
+      const steps = stepsOf(recipe);
+      if (steps.length < 3) problems.push(`"${recipe.name}": ${steps.length} steps`);
+      steps.forEach((step, index) => {
+        if (typeof step !== 'string' || step.trim() === '') {
+          problems.push(`"${recipe.name}": step ${index + 1} empty`);
+        }
+      });
+    }
+    expect(problems).toEqual([]);
+  });
+
+  it('names every ingredient of a recipe in at least one of its steps', () => {
+    expectRecipesLoaded();
+    const problems = RECIPES.flatMap((recipe) => {
+      const text = stepsOf(recipe).join('\n').toLowerCase();
+      return recipe.ingredients
+        .filter((ingredient) => !containsWord(text, ingredient.name))
+        .map((ingredient) => `"${recipe.name}": "${ingredient.name}" in no step`);
+    });
+    expect(problems).toEqual([]);
+  });
+
+  // Water, salt and pepper, which steps may use, need no exception: the recipe rules keep them off
+  // every ingredient list, so they aren't in the catalog
+  it('names no ingredient of the catalog that the recipe does not list as a whole word in its steps', () => {
+    expectRecipesLoaded();
+    const recipesWithoutSteps = RECIPES.filter((recipe) => stepsOf(recipe).length === 0);
+    expect(
+      recipesWithoutSteps.map((recipe) => recipe.name),
+      'recipes without steps pass vacuously',
+    ).toEqual([]);
+    const catalog = new Set(
+      RECIPES.flatMap((recipe) => recipe.ingredients.map((ingredient) => ingredient.name)),
+    );
+    const problems = RECIPES.flatMap((recipe) =>
+      unlistedIngredients(
+        stepsOf(recipe),
+        recipe.ingredients.map((ingredient) => ingredient.name),
+        catalog,
+      ).map((name) => `"${recipe.name}": "${name}" not listed`),
+    );
+    expect(problems).toEqual([]);
+  });
+
+  it('reports an unlisted ingredient that contains a listed name or is in the plural, but not a listed plural or a name inside another word', () => {
+    const catalog = [
+      'egg',
+      'eggplant',
+      'onion',
+      'red onion',
+      'spring onion',
+      'oil',
+      'pea',
+      'anchovy',
+    ];
+    expect(unlistedIngredients(['Fry the eggplant.'], ['egg'], catalog)).toEqual(['eggplant']);
+    expect(unlistedIngredients(['Chop the spring onion.'], ['onion'], catalog)).toEqual([
+      'spring onion',
+    ]);
+    expect(unlistedIngredients(['Slice the onions.'], ['red onion'], catalog)).toEqual(['onion']);
+    expect(unlistedIngredients(['Slice the red onions.'], ['red onion'], catalog)).toEqual([]);
+    expect(unlistedIngredients(['Beat the eggs.'], ['egg'], catalog)).toEqual([]);
+    expect(unlistedIngredients(['Boil the peanuts.'], [], catalog)).toEqual([]);
+    expect(unlistedIngredients(['Chop the anchovies.'], [], catalog)).toEqual(['anchovy']);
+    expect(unlistedIngredients(['Add the bay leaves.'], ['bay leaf'], catalog)).toEqual([]);
+  });
+
+  it('names an ingredient as a whole word or its plural, not inside another word', () => {
+    expect(containsWord('slice the onions', 'onion')).toBe(true);
+    expect(containsWord('peel the potatoes', 'potato')).toBe(true);
+    expect(containsWord('grate the gruyère', 'gruyère')).toBe(true);
+    expect(containsWord('chop the anchovies', 'anchovy')).toBe(true);
+    expect(containsWord('add the bay leaves', 'bay leaf')).toBe(true);
+    expect(containsWord('bring to the boil', 'oil')).toBe(false);
+    expect(containsWord('add the peanuts', 'pea')).toBe(false);
+    expect(containsWord('roast the turkies', 'turkey')).toBe(false);
+    expect(containsWord('brown the beeves', 'beef')).toBe(false);
+  });
+
   // Without it, the invariant tests would pass vacuously on an empty list
   function expectRecipesLoaded() {
     expect(RECIPES.length, 'no recipes loaded').toBeGreaterThan(0);
+  }
+
+  // recipes.json is only cast to Recipe, so a recipe without steps gets here as undefined
+  function stepsOf(recipe: Recipe): string[] {
+    return recipe.steps ?? [];
+  }
+
+  // Longest first, each name blanked once looked for: a listed "red onion" leaves no "onion" behind,
+  // and an unlisted "spring onion" is found before a listed "onion" inside it is blanked
+  function unlistedIngredients(
+    steps: string[],
+    own: string[],
+    catalog: Iterable<string>,
+  ): string[] {
+    const unlisted: string[] = [];
+    let text = steps.join('\n').toLowerCase();
+    for (const name of [...new Set([...catalog, ...own])].sort((a, b) => b.length - a.length)) {
+      if (!own.includes(name) && containsWord(text, name)) unlisted.push(name);
+      text = text.replace(wordPattern(name, 'gu'), ' ');
+    }
+    return unlisted;
+  }
+
+  function containsWord(text: string, name: string): boolean {
+    return wordPattern(name, 'u').test(text);
+  }
+
+  // \b only knows ASCII letters, and names like "gruyère" have others. The plural endings let
+  // "onions", "tomatoes", "anchovies" and "leaves" name their ingredient. f→ves only after a, l or r,
+  // since "beef" has no "beeves"
+  function wordPattern(name: string, flags: string): RegExp {
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const irregular = escaped.replace(/(?<=[^aeiou])y$/, 'ies').replace(/(?<=[alr])f$/, 'ves');
+    const plurals = irregular === escaped ? '(?:e?s)?' : `(?:e?s)?|${irregular}`;
+    return new RegExp(`(?<![\\p{L}\\p{N}])(?:${escaped}${plurals})(?![\\p{L}\\p{N}])`, flags);
   }
 });

@@ -9,4 +9,30 @@
       <li>{{ shown.amount }} {{ shown.unit }} {{ ingredient.name }}</li>
     }
   </ul>
+  <div class="steps">
+    <!-- Screen readers announce changes inside a live region already on the page, not a region
+         added along with its text, so this one stays across the steps -->
+    <div aria-live="polite" aria-atomic="true">
+      <p class="counter">Step {{ step() + 1 }} of {{ recipe.steps.length }}</p>
+      <p class="step">{{ recipe.steps[step()] }}</p>
+    </div>
+    <div class="actions">
+      <button
+        #previousButton
+        type="button"
+        class="secondary"
+        [disabled]="step() === 0"
+        (click)="showPrevious(previousButton)"
+      >
+        Previous
+      </button>
+      @if (last()) {
+        <a #doneLink class="primary" [routerLink]="page().back">Done</a>
+      } @else {
+        <button #nextButton type="button" class="primary" (click)="showNext(nextButton)">
+          Next
+        </button>
+      }
+    </div>
+  </div>
 </article>

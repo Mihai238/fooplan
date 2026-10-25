@@ -98,6 +98,7 @@ describe('searchRecipes', () => {
       ingredients: ingredients.map((ingredient) =>
         typeof ingredient === 'string' ? { name: ingredient, amount: 1, unit: 'pc' } : ingredient,
       ),
+      steps: [],
     };
   }
 });
