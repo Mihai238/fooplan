@@ -111,9 +111,9 @@ describe('RecipeList', () => {
     expect(lines).not.toContain('15 ml vegetable oil');
   });
 
-  it('keeps 700 ml milk of "Mac and cheese" and 100 ml cream of "Tomato soup with grilled cheese" in ml', () => {
+  it('keeps 700 ml milk of "Mac and cheese" and 250 ml beef stock of "Beef stroganoff with rice" in ml', () => {
     expect(ingredientLinesOf('Mac and cheese')).toContain('700 ml milk');
-    expect(ingredientLinesOf('Tomato soup with grilled cheese')).toContain('100 ml cream');
+    expect(ingredientLinesOf('Beef stroganoff with rice')).toContain('250 ml beef stock');
   });
 
   it("links each recipe's name to its recipe page, which a click opens", async () => {
@@ -271,23 +271,65 @@ describe('RecipeList', () => {
       expect(listedNames()).toEqual(['Spaghetti carbonara']);
     });
 
-    it('says "33 recipes match "s"." and lists all recipes when the user types "s"', async () => {
+    it('says "29 recipes match "s"." and lists all recipes when the user types "s"', async () => {
       await search('s');
       expect(statusText()).toBe(`${RECIPES.length} recipes match "s".`);
-      expect(RECIPES.length, 'recipes loaded').toBe(33);
+      expect(RECIPES.length, 'recipes loaded').toBe(29);
       expectAllRecipesRendered();
     });
 
-    it('lists the 33 quick recipes on open, and says "33 recipes match "s".", "3 recipes match "spaghetti"." and "No recipe matches "kase"."', async () => {
-      expect(articles()).toHaveLength(33);
+    it('lists the 29 quick recipes on open, and says "29 recipes match "s".", "3 recipes match "spaghetti"." and "No recipe matches "kase"."', async () => {
+      expect(articles()).toHaveLength(29);
       await search('s');
-      expect(statusText()).toBe('33 recipes match "s".');
-      expect(articles(), 'cards for "s"').toHaveLength(33);
+      expect(statusText()).toBe('29 recipes match "s".');
+      expect(articles(), 'cards for "s"').toHaveLength(29);
       await search('spaghetti');
       expect(statusText()).toBe('3 recipes match "spaghetti".');
       await search('kase');
       expect(statusText()).toBe('No recipe matches "kase".');
       expect(articles(), 'cards for "kase"').toEqual([]);
+    });
+
+    it('lists 29 built-in recipes on open, and says "29 recipes match "s"." for "s" and "No recipe matches "soup"." for "soup"', async () => {
+      expect(articles()).toHaveLength(29);
+      await search('s');
+      expect(statusText()).toBe('29 recipes match "s".');
+      expect(articles(), 'cards for "s"').toHaveLength(29);
+      await search('soup');
+      expect(statusText()).toBe('No recipe matches "soup".');
+      expect(articles(), 'cards for "soup"').toEqual([]);
+    });
+
+    it('lists no card whose name contains "soup", and says that no recipe matches "Soup" or the ingredients only the soups used, "lentil", "pumpkin", "leek" and "chive"', async () => {
+      expect(listedNames().filter((name) => /soup/i.test(name))).toEqual([]);
+      for (const text of ['Soup', 'lentil', 'pumpkin', 'leek', 'chive']) {
+        await search(text);
+        expect(statusText()).toBe(`No recipe matches "${text}".`);
+        expect(articles(), `cards for "${text}"`).toEqual([]);
+      }
+    });
+
+    it('says "1 recipe matches "soup"." and lists only the own recipe "Grandma\'s Soup", listed after the 29 built-in recipes, when the user types "soup"', async () => {
+      recipeStore().add(ownRecipe("Grandma's Soup"));
+      await reopenPage();
+      expect(articles(), 'cards on open').toHaveLength(30);
+      expect(listedNames().at(-1)).toBe("Grandma's Soup");
+
+      await search('soup');
+      expect(statusText()).toBe('1 recipe matches "soup".');
+      expect(listedNames()).toEqual(["Grandma's Soup"]);
+    });
+
+    it('says "5 recipes match "cream"." and lists the 5 recipes with sour cream when the user types "cream"', async () => {
+      await search('cream');
+      expect(statusText()).toBe('5 recipes match "cream".');
+      expect(listedNames()).toEqual([
+        'Chicken fajitas',
+        'Fish tacos',
+        'Beef stroganoff with rice',
+        'Chicken quesadillas',
+        'Bean burritos',
+      ]);
     });
 
     it('says "1 recipe matches "goulash"." and lists only "Potato goulash" when the user types "goulash"', async () => {
@@ -364,7 +406,7 @@ describe('RecipeList', () => {
   });
 
   describe('"Don\'t suggest" and "Suggest again"', () => {
-    it('shows a "Don\'t suggest <recipe>" button in a p.suggest between the servings and the ingredients of every card, which turns into "Not suggested" and a focused "Suggest again: Lentil soup", and back into a focused "Don\'t suggest", on clicks', async () => {
+    it('shows a "Don\'t suggest <recipe>" button in a p.suggest between the servings and the ingredients of every card, which turns into "Not suggested" and a focused "Suggest again: Shakshuka with bread", and back into a focused "Don\'t suggest", on clicks', async () => {
       expectAllRecipesRendered();
       articles().forEach((article, i) => {
         const name = RECIPES[i].name;
@@ -378,7 +420,7 @@ describe('RecipeList', () => {
         ]);
       });
 
-      const card = cardOf('Lentil soup');
+      const card = cardOf('Shakshuka with bread');
       const dontSuggest = suggestButtons(card)[0];
       dontSuggest.focus();
       await click(dontSuggest);
@@ -388,18 +430,18 @@ describe('RecipeList', () => {
         ['BUTTON', 'Suggest again'],
       ]);
       const suggestAgain = suggestButtons(card)[0];
-      expect(nameOf(suggestAgain)).toBe('Suggest again: Lentil soup');
+      expect(nameOf(suggestAgain)).toBe('Suggest again: Shakshuka with bread');
       expect(document.activeElement, 'focus after "Don\'t suggest"').toBe(suggestAgain);
 
       await click(suggestAgain);
       const back = suggestButtons(card);
       expect(back.map(textOf)).toEqual(["Don't suggest"]);
       expect(document.activeElement, 'focus after "Suggest again"').toBe(back[0]);
-      expect(store().removed()).not.toContain('Lentil soup');
+      expect(store().removed()).not.toContain('Shakshuka with bread');
     });
 
     it('leaves the focus where it was when "Don\'t suggest" is clicked without having it', async () => {
-      const card = cardOf('Lentil soup');
+      const card = cardOf('Shakshuka with bread');
       const [dontSuggest] = suggestButtons(card);
       expect(dontSuggest, 'no "Don\'t suggest" button').toBeDefined();
       expect(document.activeElement, 'focus before the click').toBe(document.body);
@@ -411,14 +453,16 @@ describe('RecipeList', () => {
     });
 
     it('lists a removed recipe in its place and counts it in the search', async () => {
-      store().removeRecipe('Lentil soup');
-      expect(store().removed(), 'Lentil soup not removed').toEqual(['Lentil soup']);
+      store().removeRecipe('Shakshuka with bread');
+      expect(store().removed(), 'Shakshuka with bread not removed').toEqual([
+        'Shakshuka with bread',
+      ]);
       await reopenPage();
 
       expect(listedNames()).toEqual(RECIPES.map((recipe) => recipe.name));
-      await search('lentil');
-      expect(statusText()).toBe('1 recipe matches "lentil".');
-      expect(listedNames()).toEqual(['Lentil soup']);
+      await search('shakshuka');
+      expect(statusText()).toBe('1 recipe matches "shakshuka".');
+      expect(listedNames()).toEqual(['Shakshuka with bread']);
     });
 
     it('says once, in a p.note right after the status line, that at least 15 recipes stay suggested, also when nothing matches, with no "Don\'t suggest" and "Suggest again" on every removed recipe\'s card, while exactly 15 are suggested', async () => {

@@ -243,11 +243,11 @@ describe('RecipePage', () => {
   });
 
   it('moves the focus to "Next" when "Previous" becomes disabled under it in a recipe of two steps', async () => {
-    const recipe = recipeNamed('Lentil soup');
+    const recipe = recipeNamed('Shakshuka with bread');
     const original = recipe.steps;
-    recipe.steps = ['Simmer the lentils for 25 minutes.', 'Serve the soup.'];
+    recipe.steps = ['Simmer the sauce for 10 minutes.', 'Serve the shakshuka.'];
     try {
-      harness = await RouterTestingHarness.create('/recipes/lentil-soup');
+      harness = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
       await click(button('Next'));
       const previous = button('Previous');
       previous.focus();
@@ -319,18 +319,18 @@ describe('RecipePage', () => {
   });
 
   it('reaches "Done" after two clicks on "Next" in a recipe of three steps', async () => {
-    const recipe = recipeNamed('Lentil soup');
+    const recipe = recipeNamed('Shakshuka with bread');
     const original = recipe.steps;
-    recipe.steps = ['Rinse the lentils.', 'Simmer them for 25 minutes.', 'Serve the soup.'];
+    recipe.steps = ['Chop the onion.', 'Simmer the sauce for 10 minutes.', 'Serve the shakshuka.'];
     try {
-      harness = await RouterTestingHarness.create('/recipes/lentil-soup');
+      harness = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
       expect(stepCounters()).toEqual(['Step 1 of 3']);
       await click(button('Next'));
       expect(stepCounters()).toEqual(['Step 2 of 3']);
       expect(controlsLabelled('Done')).toEqual([]);
       await click(button('Next'));
       expect(stepCounters()).toEqual(['Step 3 of 3']);
-      expect(textOf(page())).toContain('Serve the soup.');
+      expect(textOf(page())).toContain('Serve the shakshuka.');
       expect(buttonsLabelled('Next')).toEqual([]);
       doneLink();
     } finally {
@@ -405,7 +405,7 @@ describe('RecipePage', () => {
 
   describe('"Don\'t suggest" and "Suggest again"', () => {
     it('shows a "Don\'t suggest" button in a p.suggest between the servings and the ingredients, which turns into "Not suggested" and a focused "Suggest again", and back into a focused "Don\'t suggest", on clicks', async () => {
-      harness = await RouterTestingHarness.create('/recipes/lentil-soup');
+      harness = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
       const suggest = page().querySelector('p.servings')?.nextElementSibling;
       expect(suggest?.matches('p.suggest'), 'p.suggest after the servings').toBe(true);
       expect(suggest!.nextElementSibling?.tagName, 'after p.suggest').toBe('UL');
@@ -432,8 +432,8 @@ describe('RecipePage', () => {
     });
 
     it('shows that at least 15 recipes stay suggested in a p.note instead of "Don\'t suggest" on the page of a suggested recipe while exactly 15 are suggested', async () => {
-      leaveSuggested(TestBed.inject(PlanStore), 15, 'Lentil soup');
-      harness = await RouterTestingHarness.create('/recipes/lentil-soup');
+      leaveSuggested(TestBed.inject(PlanStore), 15, 'Shakshuka with bread');
+      harness = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
 
       const notes = Array.from(page().querySelectorAll('p.note'));
       expect(notes.map(textOf)).toEqual([LIMIT_NOTE]);
@@ -446,10 +446,10 @@ describe('RecipePage', () => {
 
     it('shows "Not suggested" and "Suggest again", without the note, on the page of a removed recipe while exactly 15 are suggested', async () => {
       leaveSuggested(TestBed.inject(PlanStore), 15);
-      expect(TestBed.inject(PlanStore).removed(), 'Lentil soup not removed').toContain(
-        'Lentil soup',
+      expect(TestBed.inject(PlanStore).removed(), 'Penne arrabbiata not removed').toContain(
+        'Penne arrabbiata',
       );
-      harness = await RouterTestingHarness.create('/recipes/lentil-soup');
+      harness = await RouterTestingHarness.create('/recipes/penne-arrabbiata');
 
       const suggest = page().querySelector('p.suggest');
       expect(suggest, 'no p.suggest').not.toBeNull();
@@ -505,7 +505,11 @@ describe('RecipePage', () => {
         plan: planOf([
           day(
             '2026-10-24',
-            picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+            picked('Quick Dal', [
+              'Shakshuka with bread',
+              'Quick Dal',
+              'Chickpea and spinach curry',
+            ]),
             open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
           ),
         ]),
@@ -521,7 +525,7 @@ describe('RecipePage', () => {
         plan: planOf([
           day(
             '2026-10-24',
-            open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
+            open('Shakshuka with bread', 'Chickpea and spinach curry', 'Fish tacos'),
             picked('Quick Dal'),
             true,
           ),
@@ -535,7 +539,7 @@ describe('RecipePage', () => {
       expectNote(PLAN_NOTE, 'dinner cooked extra');
 
       await reopenQuickDal({
-        plan: planOf([day('2026-10-24', picked('Quick Dal'), picked('Lentil soup'))], {
+        plan: planOf([day('2026-10-24', picked('Quick Dal'), picked('Shakshuka with bread'))], {
           accepted: true,
         }),
       });
@@ -593,7 +597,7 @@ describe('RecipePage', () => {
     });
 
     it('deletes "Quick Dal" on "Delete recipe" and shows the Recipes page at /recipes without it, with it gone from fooplan.recipes and the removed recipes', async () => {
-      await openQuickDal({ removed: ['Lentil soup', 'Quick Dal'] });
+      await openQuickDal({ removed: ['Shakshuka with bread', 'Quick Dal'] });
       await click(buttonIn(await openDeleteDialog(), 'Delete recipe'));
 
       expect(router().url).toBe('/recipes');
@@ -603,7 +607,7 @@ describe('RecipePage', () => {
       expect(listed).not.toContain('Quick Dal');
       expect(JSON.parse(localStorage.getItem(RECIPES_KEY) ?? 'null')).toEqual([]);
       expect(JSON.parse(localStorage.getItem('fooplan.removed') ?? 'null')).toEqual([
-        'Lentil soup',
+        'Shakshuka with bread',
       ]);
     });
 
@@ -640,7 +644,7 @@ describe('RecipePage', () => {
       const plan = planOf([
         day(
           '2026-10-24',
-          open('Lentil soup', 'Quick Dal', 'Pumpkin soup'),
+          open('Shakshuka with bread', 'Quick Dal', 'Chickpea and spinach curry'),
           picked('Fish tacos', ['Fish tacos', 'Quick Dal', 'Bean burritos']),
         ),
       ]);

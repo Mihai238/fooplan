@@ -33,7 +33,6 @@ export const INGREDIENTS_BY_SECTION: Readonly<
     'bell pepper',
     'carrot',
     'cherry tomato',
-    'chive',
     'coriander',
     'cucumber',
     'dill',
@@ -41,7 +40,6 @@ export const INGREDIENTS_BY_SECTION: Readonly<
     'garlic clove',
     'ginger',
     'green bean',
-    'leek',
     'lemon',
     'lettuce',
     'lime',
@@ -51,7 +49,6 @@ export const INGREDIENTS_BY_SECTION: Readonly<
     'onion',
     'parsley',
     'potato',
-    'pumpkin',
     'red cabbage',
     'red onion',
     'romaine lettuce',
@@ -77,7 +74,6 @@ export const INGREDIENTS_BY_SECTION: Readonly<
   'Dairy & eggs': [
     'butter',
     'cheddar',
-    'cream',
     'egg',
     'feta',
     'halloumi',
@@ -95,7 +91,6 @@ export const INGREDIENTS_BY_SECTION: Readonly<
     'gnocchi',
     'macaroni',
     'penne',
-    'red lentil',
     'rice',
     'rice noodle',
     'spaghetti',
@@ -138,7 +133,7 @@ export const INGREDIENTS_BY_SECTION: Readonly<
     'white wine vinegar',
     'worcestershire sauce',
   ],
-  'Nuts & seeds': ['peanut', 'pine nut', 'pumpkin seed', 'sesame seed'],
+  'Nuts & seeds': ['peanut', 'pine nut', 'sesame seed'],
   Drinks: ['sake'],
 };
 

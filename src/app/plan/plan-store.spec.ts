@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { groceryList, itemKey } from '../groceries/groceries';
 import { RecipeStore } from '../recipes/recipe-store';
 import { RECIPES } from '../recipes/recipes';
-import { PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../recipes/testing';
+import { ownRecipe, PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../recipes/testing';
 import { addedKey, DEFAULT_DAYS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
 import {
@@ -40,36 +40,87 @@ describe('PlanStore', () => {
     expectFreshPlan(store.plan(), '2026-10-24');
   });
 
-  it('suggests three recipes for each of the 10 meals of a new 5-day plan, no recipe for two meals, all of them from the 33 quick recipes', () => {
+  it('suggests three different recipes for each of the 10 meals of a new 5-day plan, all from the 29 recipes, and one recipe for two meals', () => {
     const plan = store.plan();
     expect(plan.days, 'days').toHaveLength(5);
     for (const planDay of plan.days) {
-      expect(planDay.lunch.suggestions, `${planDay.date} lunch`).toHaveLength(3);
-      expect(planDay.dinner.suggestions, `${planDay.date} dinner`).toHaveLength(3);
+      for (const [kind, meal] of [
+        ['lunch', planDay.lunch],
+        ['dinner', planDay.dinner],
+      ] as const) {
+        expect(meal.suggestions, `${planDay.date} ${kind}`).toHaveLength(3);
+        expect(new Set(meal.suggestions).size, `different on ${planDay.date} ${kind}`).toBe(3);
+      }
     }
     const suggestions = suggestionsOf(plan);
-    expect(new Set(suggestions).size, 'different recipes suggested').toBe(30);
-    const quick = RECIPES.filter(
-      (recipe) => recipe.workMinutes! <= 30 && recipe.minutes! <= 45,
-    ).map((recipe) => recipe.name);
-    expect(suggestions.filter((name) => !quick.includes(name))).toEqual([]);
-    expect(quick, 'quick recipes').toHaveLength(33);
+    expect(suggestions, 'suggestions').toHaveLength(30);
+    expect(new Set(suggestions).size, 'different recipes suggested').toBe(29);
+    expect(NAMES, 'recipes').toHaveLength(29);
+    expect(suggestions.filter((name) => !NAMES.includes(name))).toEqual([]);
+    const repeated = suggestions.filter((name, i) => suggestions.indexOf(name) !== i);
+    expect(repeated).toEqual([plan.days[0].lunch.suggestions[0]]);
+    expect(plan.days[4].dinner.suggestions).toContain(plan.days[0].lunch.suggestions[0]);
   });
 
-  it('brings the 3 recipes a new 5-day plan does not show on the first "Other suggestions", and only recipes shown earlier on the second', () => {
-    const shownAtStart = suggestionsOf(store.plan());
-    const notShown = RECIPES.map((recipe) => recipe.name).filter(
-      (name) => !shownAtStart.includes(name),
+  it('suggests no recipe whose name contains "soup" in a new 5-day plan', () => {
+    expect(suggestionsOf(store.plan()).filter((name) => /soup/i.test(name))).toEqual([]);
+  });
+
+  it("suggests 27 different recipes for the first 9 meals of a new 5-day plan and, for the last dinner, the 2 recipes left and the first suggestion of day 1's lunch, whatever the draw", () => {
+    for (let draw = 1; draw <= 10; draw++) {
+      localStorage.clear();
+      seed = draw * 7;
+      store = reload();
+      const plan = store.plan();
+      const firstNine = suggestionsOf(plan).slice(0, 27);
+      expect(new Set(firstNine).size, `draw ${draw}: first 9 meals`).toBe(27);
+      const left = NAMES.filter((name) => !firstNine.includes(name));
+      expect([...plan.days[4].dinner.suggestions].sort(), `draw ${draw}: last dinner`).toEqual(
+        [...left, plan.days[0].lunch.suggestions[0]].sort(),
+      );
+    }
+  });
+
+  it('shows every recipe in a new 5-day plan, so the first "Other suggestions" brings 3 other recipes shown earlier', () => {
+    const plan = store.plan();
+    expect(new Set(suggestionsOf(plan)).size).toBe(RECIPES.length);
+    const before = plan.days[0].lunch.suggestions;
+
+    store.otherSuggestions(LUNCH);
+    const after = store.plan().days[0].lunch.suggestions;
+    expect(new Set(after).size, after.join(', ')).toBe(3);
+    expect(after.filter((name) => before.includes(name))).toEqual([]);
+  });
+
+  it('suggests 30 different recipes, the own recipe "Grandma\'s Soup" among them, in a new 5-day plan of the 29 recipes and "Grandma\'s Soup"', () => {
+    localStorage.clear();
+    storeOwnRecipes(ownRecipe("Grandma's Soup"));
+    store = reload();
+
+    const suggestions = suggestionsOf(store.plan());
+    expect(new Set(suggestions).size).toBe(30);
+    expect(suggestions).toContain("Grandma's Soup");
+  });
+
+  it('starts a fresh plan for today when the stored plan suggests "Lentil soup", and reads "Lentil soup" in the saved removed recipes as unknown', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(
+        planOf([
+          day(
+            '2026-10-20',
+            open('Lentil soup', 'Spaghetti carbonara', 'Niçoise salad'),
+            open('Fish tacos', 'Bean burritos', 'Potato goulash'),
+          ),
+        ]),
+      ),
     );
-    expect(notShown, 'recipes not shown at the start').toHaveLength(3);
+    localStorage.setItem(REMOVED_KEY, JSON.stringify(['Lentil soup', 'Fish tacos']));
 
-    store.otherSuggestions(LUNCH);
-    expect([...store.plan().days[0].lunch.suggestions].sort()).toEqual([...notShown].sort());
-
-    store.otherSuggestions(LUNCH);
-    const second = store.plan().days[0].lunch.suggestions;
-    expect(second, 'suggestions after the second click').toHaveLength(3);
-    expect(second.filter((name) => !shownAtStart.includes(name))).toEqual([]);
+    store = reload();
+    expectFreshPlan(store.plan(), '2026-10-24');
+    expect(suggestionsOf(store.plan())).not.toContain('Lentil soup');
+    expect(store.removed()).toEqual(['Fish tacos']);
   });
 
   it('shows the same fresh plan after a reload without any change', () => {
@@ -119,13 +170,13 @@ describe('PlanStore', () => {
     store = reload();
     expect(store.plan(), 'saved plan not loaded').toEqual(saved);
 
-    // 27 of the 33 recipes start unshown, enough for 3 new ones on each of the 8 clicks
+    // 23 of the 29 recipes start unshown, enough for 3 new ones on each of the 7 clicks
     clickOtherSuggestions(1, 3);
     const before = store.plan();
     store = reload();
     expect(store.plan()).toEqual(before);
-    clickOtherSuggestions(4, 8);
-    expect(store.plan().shown).toHaveLength(30);
+    clickOtherSuggestions(4, 7);
+    expect(store.plan().shown).toHaveLength(27);
 
     function clickOtherSuggestions(first: number, last: number) {
       for (let click = first; click <= last; click++) {
@@ -248,7 +299,9 @@ describe('PlanStore', () => {
 
     store.newPlan();
     expectFreshPlan(store.plan(), '2026-10-24');
-    expect([...store.plan().shown].sort()).toEqual([...suggestionsOf(store.plan())].sort());
+    expect([...store.plan().shown].sort()).toEqual(
+      [...new Set(suggestionsOf(store.plan()))].sort(),
+    );
   });
 
   it('keeps the people on "New plan"', () => {
@@ -320,7 +373,7 @@ describe('PlanStore', () => {
         ...planOf([
           day(
             '2026-10-24',
-            open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
+            open('Shakshuka with bread', 'Chickpea and spinach curry', 'Fish tacos'),
             open('Spaghetti carbonara', 'Niçoise salad', 'Bean burritos'),
           ),
         ]),
@@ -351,7 +404,7 @@ describe('PlanStore', () => {
       const saved = planOf([
         day(
           '2026-10-24',
-          picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+          picked('Quick Dal', ['Shakshuka with bread', 'Quick Dal', 'Chickpea and spinach curry']),
           open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
         ),
       ]);
@@ -390,7 +443,11 @@ describe('PlanStore', () => {
           planOf([
             day(
               '2026-10-24',
-              picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+              picked('Quick Dal', [
+                'Shakshuka with bread',
+                'Quick Dal',
+                'Chickpea and spinach curry',
+              ]),
               open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
             ),
           ]),
@@ -405,7 +462,7 @@ describe('PlanStore', () => {
           planOf([
             day(
               '2026-10-24',
-              open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
+              open('Shakshuka with bread', 'Chickpea and spinach curry', 'Fish tacos'),
               picked('Quick Dal'),
               true,
             ),
@@ -420,7 +477,7 @@ describe('PlanStore', () => {
         expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
 
         load(
-          planOf([day('2026-10-24', picked('Quick Dal'), picked('Lentil soup'))], {
+          planOf([day('2026-10-24', picked('Quick Dal'), picked('Shakshuka with bread'))], {
             accepted: true,
           }),
         );
@@ -447,19 +504,19 @@ describe('PlanStore', () => {
         storeOwnRecipes(QUICK_DAL);
         localStorage.setItem(
           REMOVED_KEY,
-          JSON.stringify(['Lentil soup', 'Quick Dal', 'Fish tacos']),
+          JSON.stringify(['Shakshuka with bread', 'Quick Dal', 'Fish tacos']),
         );
         load(
           planOf([
             day(
               '2026-10-24',
-              picked('Quick Dal', ['Pumpkin soup', 'Quick Dal', 'Bean burritos']),
+              picked('Quick Dal', ['Chickpea and spinach curry', 'Quick Dal', 'Bean burritos']),
               open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
             ),
           ]),
         );
         expect(store.removed(), 'removed recipes not loaded').toEqual([
-          'Lentil soup',
+          'Shakshuka with bread',
           'Quick Dal',
           'Fish tacos',
         ]);
@@ -472,19 +529,23 @@ describe('PlanStore', () => {
           days: [
             {
               ...before.days[0],
-              lunch: picked('Daily Dal', ['Pumpkin soup', 'Daily Dal', 'Bean burritos']),
+              lunch: picked('Daily Dal', [
+                'Chickpea and spinach curry',
+                'Daily Dal',
+                'Bean burritos',
+              ]),
             },
           ],
           shown: before.shown.map((name) => (name === 'Quick Dal' ? 'Daily Dal' : name)),
         };
         expect(store.plan()).toEqual(expected);
-        expect(store.removed()).toEqual(['Lentil soup', 'Daily Dal', 'Fish tacos']);
+        expect(store.removed()).toEqual(['Shakshuka with bread', 'Daily Dal', 'Fish tacos']);
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(expected);
 
         store = reload();
         expect(store.plan(), 'plan after a reload').toEqual(expected);
         expect(store.removed(), 'removed after a reload').toEqual([
-          'Lentil soup',
+          'Shakshuka with bread',
           'Daily Dal',
           'Fish tacos',
         ]);
@@ -492,12 +553,16 @@ describe('PlanStore', () => {
 
       it('deletes "Quick Dal", not picked and removed, from the own recipes, fooplan.recipes, the removed recipes and the plan\'s shown recipes and remembered suggestions on deleteRecipe, saving each', () => {
         storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
-        localStorage.setItem(REMOVED_KEY, JSON.stringify(['Lentil soup', 'Quick Dal']));
+        localStorage.setItem(REMOVED_KEY, JSON.stringify(['Shakshuka with bread', 'Quick Dal']));
         load(
           planOf([
             day(
               '2026-10-24',
-              picked('Pumpkin soup', ['Pumpkin soup', 'Quick Dal', 'Fish tacos']),
+              picked('Chickpea and spinach curry', [
+                'Chickpea and spinach curry',
+                'Quick Dal',
+                'Fish tacos',
+              ]),
               open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
             ),
           ]),
@@ -513,9 +578,11 @@ describe('PlanStore', () => {
             ingredients: PLAIN_RICE.ingredients,
           },
         ]);
-        expect(store.removed()).toEqual(['Lentil soup']);
-        expect(JSON.parse(localStorage.getItem(REMOVED_KEY) ?? 'null')).toEqual(['Lentil soup']);
-        expect(store.plan().days[0].lunch).toEqual(picked('Pumpkin soup'));
+        expect(store.removed()).toEqual(['Shakshuka with bread']);
+        expect(JSON.parse(localStorage.getItem(REMOVED_KEY) ?? 'null')).toEqual([
+          'Shakshuka with bread',
+        ]);
+        expect(store.plan().days[0].lunch).toEqual(picked('Chickpea and spinach curry'));
         expect(JSON.stringify(store.plan())).not.toContain('Quick Dal');
         expect(localStorage.getItem(STORAGE_KEY)).not.toContain('Quick Dal');
       });
@@ -527,8 +594,12 @@ describe('PlanStore', () => {
           planOf([
             day(
               '2026-10-24',
-              picked('Pumpkin soup', ['Pumpkin soup', 'Quick Dal', 'Fish tacos']),
-              open('Spaghetti carbonara', 'Lentil soup', 'Penne arrabbiata'),
+              picked('Chickpea and spinach curry', [
+                'Chickpea and spinach curry',
+                'Quick Dal',
+                'Fish tacos',
+              ]),
+              open('Spaghetti carbonara', 'Shakshuka with bread', 'Penne arrabbiata'),
             ),
           ]),
         );
@@ -569,7 +640,11 @@ describe('PlanStore', () => {
             planOf([
               day(
                 '2026-10-24',
-                picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+                picked('Quick Dal', [
+                  'Shakshuka with bread',
+                  'Quick Dal',
+                  'Chickpea and spinach curry',
+                ]),
                 open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
               ),
             ]),
@@ -637,7 +712,7 @@ describe('PlanStore', () => {
             ...planOf([
               day(
                 '2026-10-24',
-                open('Lentil soup', 'Quick Dal', 'Pumpkin soup'),
+                open('Shakshuka with bread', 'Quick Dal', 'Chickpea and spinach curry'),
                 open('Spaghetti carbonara', 'Fish tacos', 'Penne arrabbiata'),
               ),
             ]),
@@ -647,7 +722,7 @@ describe('PlanStore', () => {
 
           store.deleteRecipe('Quick Dal');
           const [first, replacement, last] = store.plan().days[0].lunch.suggestions;
-          expect([first, last]).toEqual(['Lentil soup', 'Pumpkin soup']);
+          expect([first, last]).toEqual(['Shakshuka with bread', 'Chickpea and spinach curry']);
           expect(NAMES.slice(0, 20)).toContain(replacement);
           expect(['Spaghetti carbonara', 'Fish tacos', 'Penne arrabbiata']).not.toContain(
             replacement,
@@ -732,19 +807,27 @@ describe('PlanStore', () => {
 
     it('suggests a recipe brought back with restoreRecipe in a new plan', () => {
       leaveSuggested(store, 15);
-      expect(store.removed(), 'Lentil soup not removed').toContain('Lentil soup');
+      expect(store.removed(), 'Penne arrabbiata not removed').toContain('Penne arrabbiata');
 
-      store.restoreRecipe('Lentil soup');
+      store.restoreRecipe('Penne arrabbiata');
       store.newPlan();
-      expect(suggestionsOf(store.plan())).toContain('Lentil soup');
+      expect(suggestionsOf(store.plan())).toContain('Penne arrabbiata');
     });
 
     it('keeps a plan with a pick of a removed recipe, and a meal remembering it among the suggestions it showed, unchanged after a reload', () => {
       const saved = planOf([
         day(
           '2026-10-24',
-          picked('Lentil soup', ['Pumpkin soup', 'Lentil soup', 'Fish tacos']),
-          picked('Spaghetti carbonara', ['Lentil soup', 'Spaghetti carbonara', 'Niçoise salad']),
+          picked('Shakshuka with bread', [
+            'Chickpea and spinach curry',
+            'Shakshuka with bread',
+            'Fish tacos',
+          ]),
+          picked('Spaghetti carbonara', [
+            'Shakshuka with bread',
+            'Spaghetti carbonara',
+            'Niçoise salad',
+          ]),
         ),
         day(
           '2026-10-25',
@@ -754,9 +837,11 @@ describe('PlanStore', () => {
       ]);
       load(saved);
 
-      store.removeRecipe('Lentil soup');
+      store.removeRecipe('Shakshuka with bread');
       store = reload();
-      expect(store.removed(), 'Lentil soup not removed after the reload').toEqual(['Lentil soup']);
+      expect(store.removed(), 'Shakshuka with bread not removed after the reload').toEqual([
+        'Shakshuka with bread',
+      ]);
       expect(store.plan()).toEqual(saved);
     });
 
@@ -765,24 +850,24 @@ describe('PlanStore', () => {
         planOf([
           day(
             '2026-10-24',
-            picked('Lentil soup'),
-            open('Spaghetti carbonara', 'Niçoise salad', 'Pumpkin soup'),
+            picked('Shakshuka with bread'),
+            open('Spaghetti carbonara', 'Niçoise salad', 'Chickpea and spinach curry'),
           ),
         ]),
       );
-      store.removeRecipe('Lentil soup');
-      expect(store.removed(), 'Lentil soup not removed').toEqual(['Lentil soup']);
-      expect(store.plan().days[0].lunch).toEqual(picked('Lentil soup'));
+      store.removeRecipe('Shakshuka with bread');
+      expect(store.removed(), 'Shakshuka with bread not removed').toEqual(['Shakshuka with bread']);
+      expect(store.plan().days[0].lunch).toEqual(picked('Shakshuka with bread'));
 
       localStorage.clear();
       const accepted = planOf(
-        [day('2026-10-24', picked('Lentil soup'), picked('Spaghetti carbonara'))],
+        [day('2026-10-24', picked('Shakshuka with bread'), picked('Spaghetti carbonara'))],
         { accepted: true },
       );
       load(accepted);
-      store.removeRecipe('Lentil soup');
-      expect(store.removed(), 'Lentil soup not removed from an accepted plan').toEqual([
-        'Lentil soup',
+      store.removeRecipe('Shakshuka with bread');
+      expect(store.removed(), 'Shakshuka with bread not removed from an accepted plan').toEqual([
+        'Shakshuka with bread',
       ]);
       expect(store.plan()).toEqual(accepted);
     });
@@ -792,17 +877,17 @@ describe('PlanStore', () => {
         planOf([
           day(
             '2026-10-24',
-            open('Lentil soup', 'Spaghetti carbonara', 'Niçoise salad'),
-            open('Pumpkin soup', 'Fish tacos', 'Bean burritos'),
+            open('Shakshuka with bread', 'Spaghetti carbonara', 'Niçoise salad'),
+            open('Chickpea and spinach curry', 'Fish tacos', 'Bean burritos'),
           ),
         ]),
       );
       store.pick(LUNCH, 'Spaghetti carbonara');
-      store.removeRecipe('Lentil soup');
-      expect(store.removed(), 'Lentil soup not removed').toEqual(['Lentil soup']);
+      store.removeRecipe('Shakshuka with bread');
+      expect(store.removed(), 'Shakshuka with bread not removed').toEqual(['Shakshuka with bread']);
 
       store.clear(LUNCH);
-      expectReopenedWithout('Lentil soup');
+      expectReopenedWithout('Shakshuka with bread');
     });
 
     it('brings back the other suggestions in their places on "Undo" of a meal that picked the removed recipe, and another recipe not removed in its place', () => {
@@ -810,38 +895,40 @@ describe('PlanStore', () => {
         planOf([
           day(
             '2026-10-24',
-            open('Lentil soup', 'Spaghetti carbonara', 'Niçoise salad'),
-            open('Pumpkin soup', 'Fish tacos', 'Bean burritos'),
+            open('Shakshuka with bread', 'Spaghetti carbonara', 'Niçoise salad'),
+            open('Chickpea and spinach curry', 'Fish tacos', 'Bean burritos'),
           ),
         ]),
       );
-      store.pick(LUNCH, 'Lentil soup');
-      store.removeRecipe('Lentil soup');
-      expect(store.removed(), 'Lentil soup not removed').toEqual(['Lentil soup']);
-      expect(store.plan().days[0].lunch.recipe, 'pick lost').toBe('Lentil soup');
+      store.pick(LUNCH, 'Shakshuka with bread');
+      store.removeRecipe('Shakshuka with bread');
+      expect(store.removed(), 'Shakshuka with bread not removed').toEqual(['Shakshuka with bread']);
+      expect(store.plan().days[0].lunch.recipe, 'pick lost').toBe('Shakshuka with bread');
 
       store.clear(LUNCH);
-      expectReopenedWithout('Lentil soup');
+      expectReopenedWithout('Shakshuka with bread');
     });
 
     it("leaves the suggestions shown as they are when a removed recipe is brought back, and changes nothing when bringing back one that isn't removed or removing an unknown or removed one", () => {
-      store.removeRecipe('Lentil soup');
-      expect(store.removed(), 'Lentil soup not removed').toEqual(['Lentil soup']);
+      store.removeRecipe('Shakshuka with bread');
+      expect(store.removed(), 'Shakshuka with bread not removed').toEqual(['Shakshuka with bread']);
       const plan = store.plan();
 
-      store.restoreRecipe('Lentil soup');
+      store.restoreRecipe('Shakshuka with bread');
       expect(store.removed()).toEqual([]);
       expect(store.plan()).toEqual(plan);
 
-      store.removeRecipe('Pumpkin soup');
-      expect(store.removed(), 'Pumpkin soup not removed').toEqual(['Pumpkin soup']);
+      store.removeRecipe('Chickpea and spinach curry');
+      expect(store.removed(), 'Chickpea and spinach curry not removed').toEqual([
+        'Chickpea and spinach curry',
+      ]);
       const before = saved();
-      store.restoreRecipe('Lentil soup');
-      expect(saved(), 'after bringing back Lentil soup').toEqual(before);
+      store.restoreRecipe('Shakshuka with bread');
+      expect(saved(), 'after bringing back Shakshuka with bread').toEqual(before);
       store.removeRecipe('Imaginary stew');
       expect(saved(), 'after removing Imaginary stew').toEqual(before);
-      store.removeRecipe('Pumpkin soup');
-      expect(saved(), 'after removing Pumpkin soup again').toEqual(before);
+      store.removeRecipe('Chickpea and spinach curry');
+      expect(saved(), 'after removing Chickpea and spinach curry again').toEqual(before);
     });
 
     it('changes nothing when removing a recipe while exactly 15 are suggested', () => {
@@ -853,21 +940,30 @@ describe('PlanStore', () => {
     });
 
     it('keeps the removed recipes, saved in the order removed, after a reload and "New plan", and reads a saved list without unknown names and duplicates, or as empty when it is not a list of names or leaves fewer than 15 suggested', () => {
-      store.removeRecipe('Pumpkin soup');
-      store.removeRecipe('Lentil soup');
-      expect(store.removed()).toEqual(['Pumpkin soup', 'Lentil soup']);
-      expect(storedRemoved()).toEqual(['Pumpkin soup', 'Lentil soup']);
+      store.removeRecipe('Chickpea and spinach curry');
+      store.removeRecipe('Shakshuka with bread');
+      expect(store.removed()).toEqual(['Chickpea and spinach curry', 'Shakshuka with bread']);
+      expect(storedRemoved()).toEqual(['Chickpea and spinach curry', 'Shakshuka with bread']);
       store = reload();
-      expect(store.removed(), 'after a reload').toEqual(['Pumpkin soup', 'Lentil soup']);
+      expect(store.removed(), 'after a reload').toEqual([
+        'Chickpea and spinach curry',
+        'Shakshuka with bread',
+      ]);
       store.newPlan();
-      expect(store.removed(), 'after "New plan"').toEqual(['Pumpkin soup', 'Lentil soup']);
-      expect(storedRemoved(), 'saved after "New plan"').toEqual(['Pumpkin soup', 'Lentil soup']);
+      expect(store.removed(), 'after "New plan"').toEqual([
+        'Chickpea and spinach curry',
+        'Shakshuka with bread',
+      ]);
+      expect(storedRemoved(), 'saved after "New plan"').toEqual([
+        'Chickpea and spinach curry',
+        'Shakshuka with bread',
+      ]);
 
       localStorage.setItem(
         REMOVED_KEY,
-        JSON.stringify(['Lentil soup', 'Imaginary stew', 'Lentil soup']),
+        JSON.stringify(['Shakshuka with bread', 'Imaginary stew', 'Shakshuka with bread']),
       );
-      expect(reload().removed(), 'unknown name and duplicate').toEqual(['Lentil soup']);
+      expect(reload().removed(), 'unknown name and duplicate').toEqual(['Shakshuka with bread']);
       localStorage.setItem(REMOVED_KEY, '{}');
       expect(reload().removed(), '{}').toEqual([]);
       localStorage.setItem(REMOVED_KEY, JSON.stringify(NAMES.slice(14)));
@@ -875,17 +971,28 @@ describe('PlanStore', () => {
     });
 
     it('saves the removed recipes without one brought back, the others in their order, and with it last when it is removed again', () => {
-      store.removeRecipe('Pumpkin soup');
-      store.removeRecipe('Lentil soup');
+      store.removeRecipe('Chickpea and spinach curry');
+      store.removeRecipe('Shakshuka with bread');
       store.removeRecipe('Fish tacos');
-      store.restoreRecipe('Lentil soup');
-      expect(storedRemoved()).toEqual(['Pumpkin soup', 'Fish tacos']);
+      store.restoreRecipe('Shakshuka with bread');
+      expect(storedRemoved()).toEqual(['Chickpea and spinach curry', 'Fish tacos']);
       store = reload();
-      expect(store.removed(), 'after a reload').toEqual(['Pumpkin soup', 'Fish tacos']);
+      expect(store.removed(), 'after a reload').toEqual([
+        'Chickpea and spinach curry',
+        'Fish tacos',
+      ]);
 
-      store.removeRecipe('Lentil soup');
-      expect(store.removed()).toEqual(['Pumpkin soup', 'Fish tacos', 'Lentil soup']);
-      expect(storedRemoved()).toEqual(['Pumpkin soup', 'Fish tacos', 'Lentil soup']);
+      store.removeRecipe('Shakshuka with bread');
+      expect(store.removed()).toEqual([
+        'Chickpea and spinach curry',
+        'Fish tacos',
+        'Shakshuka with bread',
+      ]);
+      expect(storedRemoved()).toEqual([
+        'Chickpea and spinach curry',
+        'Fish tacos',
+        'Shakshuka with bread',
+      ]);
     });
 
     it('saves the plan with the replacement of a removed suggestion, so a reload shows it', () => {
@@ -893,30 +1000,30 @@ describe('PlanStore', () => {
         planOf([
           day(
             '2026-10-24',
-            open('Spaghetti carbonara', 'Lentil soup', 'Niçoise salad'),
-            open('Pumpkin soup', 'Fish tacos', 'Bean burritos'),
+            open('Spaghetti carbonara', 'Shakshuka with bread', 'Niçoise salad'),
+            open('Chickpea and spinach curry', 'Fish tacos', 'Bean burritos'),
           ),
         ]),
       );
-      store.removeRecipe('Lentil soup');
+      store.removeRecipe('Shakshuka with bread');
       const after = store.plan();
-      expect(after.days[0].lunch.suggestions[1], 'Lentil soup not replaced').not.toBe(
-        'Lentil soup',
+      expect(after.days[0].lunch.suggestions[1], 'Shakshuka with bread not replaced').not.toBe(
+        'Shakshuka with bread',
       );
 
       expect(reload().plan()).toEqual(after);
     });
 
     it('replaces a removed recipe still suggested by the saved plan when loading it, keeps the other suggestions in their places and saves the plan with the replacement', () => {
-      localStorage.setItem(REMOVED_KEY, JSON.stringify(['Lentil soup']));
+      localStorage.setItem(REMOVED_KEY, JSON.stringify(['Shakshuka with bread']));
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify(
           planOf([
             day(
               '2026-10-24',
-              open('Spaghetti carbonara', 'Lentil soup', 'Niçoise salad'),
-              open('Pumpkin soup', 'Fish tacos', 'Bean burritos'),
+              open('Spaghetti carbonara', 'Shakshuka with bread', 'Niçoise salad'),
+              open('Chickpea and spinach curry', 'Fish tacos', 'Bean burritos'),
             ),
           ]),
         ),
@@ -925,18 +1032,22 @@ describe('PlanStore', () => {
       store = reload();
       const [lunch, dinner] = [store.plan().days[0].lunch, store.plan().days[0].dinner];
       expect(lunch.suggestions[0]).toBe('Spaghetti carbonara');
-      expect(lunch.suggestions[1]).not.toBe('Lentil soup');
+      expect(lunch.suggestions[1]).not.toBe('Shakshuka with bread');
       expect(NAMES).toContain(lunch.suggestions[1]);
       expect(lunch.suggestions[2]).toBe('Niçoise salad');
-      expect(dinner.suggestions).toEqual(['Pumpkin soup', 'Fish tacos', 'Bean burritos']);
-      expect(suggestionsOf(store.plan())).not.toContain('Lentil soup');
+      expect(dinner.suggestions).toEqual([
+        'Chickpea and spinach curry',
+        'Fish tacos',
+        'Bean burritos',
+      ]);
+      expect(suggestionsOf(store.plan())).not.toContain('Shakshuka with bread');
       expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'), 'not saved').toEqual(
         store.plan(),
       );
 
       const before = saved();
-      store.removeRecipe('Lentil soup');
-      expect(saved(), 'after removing Lentil soup again').toEqual(before);
+      store.removeRecipe('Shakshuka with bread');
+      expect(saved(), 'after removing Shakshuka with bread again').toEqual(before);
       expect(reload().plan(), 'after a reload').toEqual(before.plan);
     });
 
@@ -945,8 +1056,8 @@ describe('PlanStore', () => {
         planOf([
           day(
             '2026-10-24',
-            open('Spaghetti carbonara', 'Lentil soup', 'Niçoise salad'),
-            open('Pumpkin soup', 'Fish tacos', 'Bean burritos'),
+            open('Spaghetti carbonara', 'Shakshuka with bread', 'Niçoise salad'),
+            open('Chickpea and spinach curry', 'Fish tacos', 'Bean burritos'),
           ),
         ]),
       );
@@ -954,13 +1065,13 @@ describe('PlanStore', () => {
         throw new DOMException('quota exceeded', 'QuotaExceededError');
       });
 
-      store.removeRecipe('Lentil soup');
-      expect(store.removed()).toEqual(['Lentil soup']);
-      expect(store.plan().days[0].lunch.suggestions).not.toContain('Lentil soup');
+      store.removeRecipe('Shakshuka with bread');
+      expect(store.removed()).toEqual(['Shakshuka with bread']);
+      expect(store.plan().days[0].lunch.suggestions).not.toContain('Shakshuka with bread');
     });
 
     it('reads a saved list holding something other than a name as empty', () => {
-      localStorage.setItem(REMOVED_KEY, JSON.stringify(['Lentil soup', 42]));
+      localStorage.setItem(REMOVED_KEY, JSON.stringify(['Shakshuka with bread', 42]));
 
       expect(reload().removed()).toEqual([]);
     });

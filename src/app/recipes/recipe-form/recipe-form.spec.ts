@@ -507,7 +507,11 @@ describe('RecipeForm', () => {
           planOf([
             day(
               '2026-10-24',
-              picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+              picked('Quick Dal', [
+                'Shakshuka with bread',
+                'Quick Dal',
+                'Chickpea and spinach curry',
+              ]),
               open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
             ),
           ]),
@@ -525,7 +529,7 @@ describe('RecipeForm', () => {
       expect(router().url).toBe('/recipes/daily-dal');
       expect(planStore().removed()).toEqual(['Bean burritos', 'Daily Dal', 'Fish tacos']);
       expect(planStore().plan().days[0].lunch).toEqual(
-        picked('Daily Dal', ['Lentil soup', 'Daily Dal', 'Pumpkin soup']),
+        picked('Daily Dal', ['Shakshuka with bread', 'Daily Dal', 'Chickpea and spinach curry']),
       );
       const plan = planStore().plan();
       const removed = planStore().removed();
@@ -545,7 +549,11 @@ describe('RecipeForm', () => {
           planOf([
             day(
               '2026-10-24',
-              picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+              picked('Quick Dal', [
+                'Shakshuka with bread',
+                'Quick Dal',
+                'Chickpea and spinach curry',
+              ]),
               open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
             ),
           ]),
@@ -560,7 +568,11 @@ describe('RecipeForm', () => {
       await click(control('Save changes'));
 
       expect(router().url).toBe('/recipes/daily-dal');
-      const lunch = picked('Daily Dal', ['Lentil soup', 'Daily Dal', 'Pumpkin soup']);
+      const lunch = picked('Daily Dal', [
+        'Shakshuka with bread',
+        'Daily Dal',
+        'Chickpea and spinach curry',
+      ]);
       const removed = ['Bean burritos', 'Daily Dal', 'Fish tacos'];
       expect(JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null').days[0].lunch).toEqual(
         lunch,
@@ -659,7 +671,11 @@ describe('RecipeForm', () => {
             planOf([
               day(
                 '2026-10-24',
-                picked('Quick Dal', ['Lentil soup', 'Quick Dal', 'Pumpkin soup']),
+                picked('Quick Dal', [
+                  'Shakshuka with bread',
+                  'Quick Dal',
+                  'Chickpea and spinach curry',
+                ]),
                 open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
               ),
             ]),
@@ -685,7 +701,7 @@ describe('RecipeForm', () => {
         expect(navigate).toHaveBeenLastCalledWith(['/recipes', 'red-dal'], { replaceUrl: true });
         expect(recipeStore().own()).toEqual([{ ...QUICK_DAL, name: 'Red Dal', servings: 6 }]);
         expect(planStore().plan().days[0].lunch).toEqual(
-          picked('Red Dal', ['Lentil soup', 'Red Dal', 'Pumpkin soup']),
+          picked('Red Dal', ['Shakshuka with bread', 'Red Dal', 'Chickpea and spinach curry']),
         );
       });
     });

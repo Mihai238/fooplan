@@ -397,88 +397,6 @@
     ]
   },
   {
-    "name": "Lentil soup",
-    "servings": 4,
-    "minutes": 35,
-    "workMinutes": 15,
-    "ingredients": [
-      { "name": "red lentil", "amount": 250, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "carrot", "amount": 2, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "cumin", "amount": 1, "unit": "tsp" },
-      { "name": "paprika", "amount": 1, "unit": "tsp" },
-      { "name": "tomato paste", "amount": 2, "unit": "tbsp" },
-      { "name": "vegetable stock", "amount": 1200, "unit": "ml" },
-      { "name": "lemon", "amount": 1, "unit": "pc" }
-    ],
-    "steps": [
-      "Finely chop the onion and garlic cloves, and dice the carrots.",
-      "Heat the olive oil in a large pot and fry the onion and carrots over medium heat for 5 minutes until soft.",
-      "Add the garlic, cumin, paprika and tomato paste and fry for 1 minute.",
-      "Rinse the red lentils, add them to the pot with the vegetable stock and bring to the boil.",
-      "Simmer for 20 minutes, stirring now and then, until the lentils have broken down.",
-      "Blend the soup until smooth, adding a little water if it is too thick.",
-      "Squeeze in the juice of half the lemon, season with salt and pepper and serve with the rest of the lemon cut into wedges."
-    ]
-  },
-  {
-    "name": "Pumpkin soup",
-    "servings": 4,
-    "minutes": 45,
-    "workMinutes": 20,
-    "ingredients": [
-      { "name": "pumpkin", "amount": 1200, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 1, "unit": "pc" },
-      { "name": "ginger", "amount": 20, "unit": "g" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "vegetable stock", "amount": 800, "unit": "ml" },
-      { "name": "cream", "amount": 200, "unit": "ml" },
-      { "name": "nutmeg", "amount": 0.25, "unit": "tsp" },
-      { "name": "pumpkin seed", "amount": 30, "unit": "g" }
-    ],
-    "steps": [
-      "Peel the pumpkin, scrape out and discard the fibres and seeds, and cut it into cubes.",
-      "Chop the onion, garlic clove and ginger.",
-      "Heat the olive oil in a large pot and fry the onion over medium heat for 5 minutes, then add the garlic clove and ginger and fry for 1 minute more.",
-      "Add the pumpkin and vegetable stock, bring to the boil and simmer for 20 minutes until the pumpkin is soft.",
-      "Meanwhile toast the pumpkin seeds in a dry pan over medium heat for 3 minutes until they start to pop.",
-      "Blend the soup until smooth, stir in the cream and nutmeg, and season with salt and pepper.",
-      "Reheat the soup gently and serve it sprinkled with the pumpkin seeds."
-    ]
-  },
-  {
-    "name": "Tomato soup with grilled cheese",
-    "servings": 4,
-    "minutes": 35,
-    "workMinutes": 25,
-    "ingredients": [
-      { "name": "canned tomatoes", "amount": 800, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "garlic clove", "amount": 2, "unit": "pc" },
-      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
-      { "name": "vegetable stock", "amount": 500, "unit": "ml" },
-      { "name": "cream", "amount": 100, "unit": "ml" },
-      { "name": "basil", "amount": 10, "unit": "g" },
-      { "name": "bread", "amount": 300, "unit": "g" },
-      { "name": "cheddar", "amount": 200, "unit": "g" },
-      { "name": "butter", "amount": 40, "unit": "g" }
-    ],
-    "steps": [
-      "Chop the onion and garlic cloves.",
-      "Heat the olive oil in a pot and fry the onion over medium heat for 5 minutes, then add the garlic cloves and fry for 1 minute more.",
-      "Add the canned tomatoes and vegetable stock, bring to the boil and simmer for 20 minutes.",
-      "Add the basil and blend the soup until smooth.",
-      "Stir in the cream, season with salt and pepper and keep the soup warm over low heat.",
-      "Grate the cheddar and spread the butter on one side of each slice of bread.",
-      "Make sandwiches with the cheddar between two slices, buttered sides facing out.",
-      "Fry the sandwiches in a pan over medium-low heat for 3 to 4 minutes per side until golden and the cheddar has melted.",
-      "Cut the sandwiches in half and serve them with the hot soup."
-    ]
-  },
-  {
     "name": "Penne arrabbiata",
     "servings": 2,
     "minutes": 25,
@@ -774,29 +692,6 @@
       "Dice the tomatoes and mix them with chopped coriander, the juice of the lime and salt.",
       "Warm each tortilla in a dry pan for 30 seconds per side.",
       "Fill the tortillas with rice, beans, grated cheddar, the tomato salsa and sour cream, fold in the sides and roll them up."
-    ]
-  },
-  {
-    "name": "Potato and leek soup",
-    "servings": 4,
-    "minutes": 40,
-    "workMinutes": 15,
-    "ingredients": [
-      { "name": "leek", "amount": 2, "unit": "pc" },
-      { "name": "potato", "amount": 600, "unit": "g" },
-      { "name": "onion", "amount": 1, "unit": "pc" },
-      { "name": "butter", "amount": 40, "unit": "g" },
-      { "name": "vegetable stock", "amount": 1000, "unit": "ml" },
-      { "name": "cream", "amount": 100, "unit": "ml" },
-      { "name": "chive", "amount": 10, "unit": "g" }
-    ],
-    "steps": [
-      "Slice the leeks, wash them well and chop the onion.",
-      "Melt the butter in a large pot and cook the leeks and onion over low heat for 10 minutes until soft but not browned.",
-      "Add the peeled and diced potatoes and the vegetable stock, bring to the boil and simmer for 20 minutes until the potatoes are soft.",
-      "Blend the soup until smooth.",
-      "Stir in the cream, season with salt and pepper and heat through without boiling.",
-      "Serve sprinkled with chopped chives."
     ]
   },
   {

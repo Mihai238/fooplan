@@ -793,13 +793,13 @@ describe('plan', () => {
         days: [
           day(
             '2026-10-24',
-            open('Spaghetti carbonara', 'Lentil soup', 'Niçoise salad'),
-            open('Pumpkin soup', 'Fish tacos', 'Bean burritos'),
+            open('Spaghetti carbonara', 'Shakshuka with bread', 'Niçoise salad'),
+            open('Chickpea and spinach curry', 'Fish tacos', 'Bean burritos'),
           ),
           day(
             '2026-10-25',
             picked('Chicken fajitas'),
-            open('Potato goulash', 'Pumpkin soup', 'Pad thai'),
+            open('Potato goulash', 'Chickpea and spinach curry', 'Pad thai'),
           ),
         ],
         people: 2,
@@ -807,8 +807,8 @@ describe('plan', () => {
         ticked: [],
         added: [],
         shown: [
-          'Lentil soup',
-          'Pumpkin soup',
+          'Shakshuka with bread',
+          'Chickpea and spinach curry',
           'Spaghetti carbonara',
           'Niçoise salad',
           'Fish tacos',
@@ -818,25 +818,37 @@ describe('plan', () => {
           'Pad thai',
         ],
       };
-      // Lentil soup and Pumpkin soup are the only candidates, and Lentil soup was shown longest ago
-      const recipes = ['Lentil soup', 'Spaghetti carbonara', 'Niçoise salad', 'Pumpkin soup'];
+      // Shakshuka with bread and Chickpea and spinach curry are the only candidates, and Shakshuka
+      // with bread was shown longest ago
+      const recipes = [
+        'Shakshuka with bread',
+        'Spaghetti carbonara',
+        'Niçoise salad',
+        'Chickpea and spinach curry',
+      ];
       for (const seed of SEEDS) {
-        const result = dropSuggestion(plan, 'Lentil soup', recipes, seededRandom(seed));
+        const result = dropSuggestion(plan, 'Shakshuka with bread', recipes, seededRandom(seed));
         expect(result.days[0].lunch, `seed ${seed}`).toEqual(
-          open('Spaghetti carbonara', 'Pumpkin soup', 'Niçoise salad'),
+          open('Spaghetti carbonara', 'Chickpea and spinach curry', 'Niçoise salad'),
         );
         expect(result.days[0].dinner, `seed ${seed}`).toEqual(plan.days[0].dinner);
         expect(result.days[1], `seed ${seed}`).toEqual(plan.days[1]);
       }
 
       const twice = oneDayPlan(
-        open('Spaghetti carbonara', 'Lentil soup', 'Niçoise salad'),
-        open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
-        ['Spaghetti carbonara', 'Lentil soup', 'Niçoise salad', 'Pumpkin soup', 'Fish tacos'],
+        open('Spaghetti carbonara', 'Shakshuka with bread', 'Niçoise salad'),
+        open('Shakshuka with bread', 'Chickpea and spinach curry', 'Fish tacos'),
+        [
+          'Spaghetti carbonara',
+          'Shakshuka with bread',
+          'Niçoise salad',
+          'Chickpea and spinach curry',
+          'Fish tacos',
+        ],
       );
       const more = [...twice.shown, ...RECIPES];
       for (const seed of SEEDS) {
-        const result = dropSuggestion(twice, 'Lentil soup', more, seededRandom(seed));
+        const result = dropSuggestion(twice, 'Shakshuka with bread', more, seededRandom(seed));
         const { lunch, dinner } = result.days[0];
         expect(lunch.suggestions[0], `seed ${seed}: ${lunch.suggestions.join(', ')}`).toBe(
           'Spaghetti carbonara',
@@ -847,10 +859,10 @@ describe('plan', () => {
         expect(
           dinner.suggestions.slice(1),
           `seed ${seed}: ${dinner.suggestions.join(', ')}`,
-        ).toEqual(['Pumpkin soup', 'Fish tacos']);
+        ).toEqual(['Chickpea and spinach curry', 'Fish tacos']);
         expectNoneOf(
           [lunch.suggestions[1], dinner.suggestions[0]],
-          ['Lentil soup'],
+          ['Shakshuka with bread'],
           `seed ${seed}`,
         );
         expectValidSuggestions(lunch, result, more, seed);
@@ -860,14 +872,20 @@ describe('plan', () => {
 
     it('replaces the dropped recipe in two open meals with two different recipes not shown yet, counted as shown', () => {
       const plan = oneDayPlan(
-        open('Spaghetti carbonara', 'Lentil soup', 'Niçoise salad'),
-        open('Lentil soup', 'Pumpkin soup', 'Fish tacos'),
-        ['Spaghetti carbonara', 'Lentil soup', 'Niçoise salad', 'Pumpkin soup', 'Fish tacos'],
+        open('Spaghetti carbonara', 'Shakshuka with bread', 'Niçoise salad'),
+        open('Shakshuka with bread', 'Chickpea and spinach curry', 'Fish tacos'),
+        [
+          'Spaghetti carbonara',
+          'Shakshuka with bread',
+          'Niçoise salad',
+          'Chickpea and spinach curry',
+          'Fish tacos',
+        ],
       );
       const recipes = [...plan.shown, 'Bean burritos', 'Potato goulash', 'Pad thai'];
       // Always takes the first fresh candidate, so drawing the second replacement before the first
       // is recorded in shown would repeat it
-      const result = dropSuggestion(plan, 'Lentil soup', recipes, () => 0);
+      const result = dropSuggestion(plan, 'Shakshuka with bread', recipes, () => 0);
       const replacements = [
         result.days[0].lunch.suggestions[1],
         result.days[0].dinner.suggestions[0],

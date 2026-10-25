@@ -17,9 +17,6 @@ const SPEC_NAMES = [
   'Shakshuka with bread',
   'Couscous salad with halloumi',
   'Greek salad with feta and bread',
-  'Lentil soup',
-  'Pumpkin soup',
-  'Tomato soup with grilled cheese',
   'Penne arrabbiata',
   'Spaghetti aglio e olio',
   'Mac and cheese',
@@ -31,7 +28,6 @@ const SPEC_NAMES = [
   'Tuna pasta bake',
   'Thai green curry with prawns',
   'Bean burritos',
-  'Potato and leek soup',
   'Potato goulash',
   'Sweet potato and black bean chili',
   'Niçoise salad',
@@ -53,9 +49,6 @@ const SPEC_TIMES: Record<string, { minutes: number; workMinutes: number }> = {
   'Shakshuka with bread': { minutes: 30, workMinutes: 15 },
   'Couscous salad with halloumi': { minutes: 25, workMinutes: 25 },
   'Greek salad with feta and bread': { minutes: 15, workMinutes: 15 },
-  'Lentil soup': { minutes: 35, workMinutes: 15 },
-  'Pumpkin soup': { minutes: 45, workMinutes: 20 },
-  'Tomato soup with grilled cheese': { minutes: 35, workMinutes: 25 },
   'Penne arrabbiata': { minutes: 25, workMinutes: 15 },
   'Spaghetti aglio e olio': { minutes: 15, workMinutes: 15 },
   'Mac and cheese': { minutes: 35, workMinutes: 15 },
@@ -67,7 +60,6 @@ const SPEC_TIMES: Record<string, { minutes: number; workMinutes: number }> = {
   'Tuna pasta bake': { minutes: 45, workMinutes: 20 },
   'Thai green curry with prawns': { minutes: 30, workMinutes: 25 },
   'Bean burritos': { minutes: 35, workMinutes: 25 },
-  'Potato and leek soup': { minutes: 40, workMinutes: 15 },
   'Potato goulash': { minutes: 45, workMinutes: 20 },
   'Sweet potato and black bean chili': { minutes: 45, workMinutes: 20 },
   'Niçoise salad': { minutes: 30, workMinutes: 15 },
@@ -103,6 +95,8 @@ const REMOVED_NAMES = [
   'Sweet and sour pork with rice',
 ];
 
+const SOUP_INGREDIENTS = ['chive', 'cream', 'leek', 'pumpkin', 'pumpkin seed', 'red lentil'];
+
 describe('RECIPES', () => {
   it('has a unique name, servings > 0 and at least one ingredient with amount > 0 and a known unit per recipe', () => {
     expectRecipesLoaded();
@@ -135,7 +129,7 @@ describe('RECIPES', () => {
     expect(problems).toEqual([]);
   });
 
-  it('contains exactly the 33 recipes of the spec table, in its order, each with its minutes and workMinutes', () => {
+  it('contains exactly the 29 recipes of the spec table, in its order, each with its minutes and workMinutes', () => {
     expect(Object.keys(SPEC_TIMES), 'recipes in the times table').toEqual(SPEC_NAMES);
     expect(
       RECIPES.map(({ name, minutes, workMinutes }) => ({ name, minutes, workMinutes })),
@@ -163,6 +157,21 @@ describe('RECIPES', () => {
     expect(
       RECIPES.map((recipe) => recipe.name).filter((name) => REMOVED_NAMES.includes(name)),
     ).toEqual([]);
+  });
+
+  it('has no recipe whose name contains "soup"', () => {
+    expectRecipesLoaded();
+    expect(RECIPES.map((recipe) => recipe.name).filter((name) => /soup/i.test(name))).toEqual([]);
+  });
+
+  it('uses none of the 6 ingredients only the soups used in any recipe', () => {
+    expectRecipesLoaded();
+    const problems = RECIPES.flatMap((recipe) =>
+      recipe.ingredients
+        .filter((ingredient) => SOUP_INGREDIENTS.includes(ingredient.name))
+        .map((ingredient) => `"${recipe.name}": "${ingredient.name}"`),
+    );
+    expect(problems).toEqual([]);
   });
 
   it('has minutes that are a whole multiple of 5 from 10 to 240 for every recipe', () => {

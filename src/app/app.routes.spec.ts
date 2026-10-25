@@ -74,6 +74,46 @@ describe('routes', () => {
     );
   });
 
+  it('shows the Recipes page for /recipes/lentil-soup, a removed soup, and the "Shakshuka with bread" recipe page for /recipes/shakshuka-with-bread', async () => {
+    const harness = await RouterTestingHarness.create('/recipes/lentil-soup');
+    expect(TestBed.inject(Router).url).toBe('/recipes');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Recipes');
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+    const recipePage = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
+    expect(TestBed.inject(Router).url).toBe('/recipes/shakshuka-with-bread');
+    expect(recipePage.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+      'Shakshuka with bread',
+    );
+  });
+
+  it('shows the Recipes page for the pages of the other removed soups, /recipes/pumpkin-soup, /recipes/tomato-soup-with-grilled-cheese and /recipes/potato-and-leek-soup', async () => {
+    for (const url of [
+      '/recipes/pumpkin-soup',
+      '/recipes/tomato-soup-with-grilled-cheese',
+      '/recipes/potato-and-leek-soup',
+    ]) {
+      const harness = await RouterTestingHarness.create(url);
+      expect(TestBed.inject(Router).url, url).toBe('/recipes');
+      expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim(), url).toBe(
+        'Recipes',
+      );
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+    }
+  });
+
+  it('shows the recipe page of an own recipe named "Lentil soup" at /recipes/lentil-soup opened directly', async () => {
+    storeOwnRecipes(ownRecipe('Lentil soup'));
+    const recipePage = await RouterTestingHarness.create('/recipes/lentil-soup');
+    expect(TestBed.inject(Router).url).toBe('/recipes/lentil-soup');
+    expect(recipePage.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+      'Lentil soup',
+    );
+    expect(TestBed.inject(RecipeStore).bySlug('lentil-soup')?.own, 'own recipe').toBe(true);
+  });
+
   it('shows the recipe page of the own recipe "Quick Dal" at /recipes/quick-dal opened directly, and the Recipes page for /recipes/no-such-dal', async () => {
     storeOwnRecipes(QUICK_DAL);
     const recipePage = await RouterTestingHarness.create('/recipes/quick-dal');

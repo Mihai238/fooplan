@@ -557,7 +557,7 @@ describe('PlanPage', () => {
       ).toEqual(['Recipe', 'Recipe', 'Recipe']);
     });
 
-    it('gives the 30 "Recipe" links of a 5-day plan the visible text "Recipe" and 30 different names, each "Recipe for" its suggestion', () => {
+    it('gives the 30 "Recipe" links of a 5-day plan the visible text "Recipe" and 29 different names, each "Recipe for" its suggestion', () => {
       expect(days(), 'days of the plan').toHaveLength(5);
       const names: string[] = [];
       for (let index = 0; index < 10; index++) {
@@ -574,7 +574,7 @@ describe('PlanPage', () => {
         }
         names.push(...links.map(nameOf));
       }
-      expect(new Set(names).size).toBe(30);
+      expect(new Set(names).size).toBe(29);
     });
 
     it('moves the "Recipe" links to the new suggestions when the user clicks "Other suggestions"', async () => {
@@ -668,7 +668,7 @@ describe('PlanPage', () => {
             covered(),
             accepted
               ? picked('Niçoise salad')
-              : open('Niçoise salad', 'Lentil soup', 'Pumpkin soup'),
+              : open('Niçoise salad', 'Shakshuka with bread', 'Chickpea and spinach curry'),
           ),
         ],
         people: 2,
@@ -685,61 +685,63 @@ describe('PlanPage', () => {
               'Oven-baked salmon with potatoes and green beans',
               'Beef stroganoff with rice',
               'Niçoise salad',
-              'Lentil soup',
-              'Pumpkin soup',
+              'Shakshuka with bread',
+              'Chickpea and spinach curry',
             ],
       };
     }
   });
 
   describe('cooking time', () => {
-    const OPEN_LENTIL_SOUP = open(
-      'Lentil soup',
+    const OPEN_SHAKSHUKA = open(
+      'Shakshuka with bread',
       'Niçoise salad',
       'Oven-baked salmon with potatoes and green beans',
     );
 
-    it('shows a suggestion as a span.name with the recipe and a span.minutes with its time, read as "Lentil soup 35 minutes" without an aria-label', async () => {
+    it('shows a suggestion as a span.name with the recipe and a span.minutes with its time, read as "Shakshuka with bread 30 minutes" without an aria-label', async () => {
       await openWith(
-        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+        planOf([planDay('2026-10-24', OPEN_SHAKSHUKA, picked('Spaghetti carbonara'))]),
       );
-      const soup = suggestionsOf(meal(0))[0];
-      expect(Array.from(soup.children).map(partOf)).toEqual([
-        ['span.name', 'Lentil soup'],
-        ['span.minutes', '35 minutes'],
+      const shakshuka = suggestionsOf(meal(0))[0];
+      expect(Array.from(shakshuka.children).map(partOf)).toEqual([
+        ['span.name', 'Shakshuka with bread'],
+        ['span.minutes', '30 minutes'],
       ]);
-      expect(textOf(soup)).toBe('Lentil soup 35 minutes');
-      expect(soup.hasAttribute('aria-label')).toBe(false);
+      expect(textOf(shakshuka)).toBe('Shakshuka with bread 30 minutes');
+      expect(shakshuka.hasAttribute('aria-label')).toBe(false);
     });
 
-    it('keeps the time of a suggestion inside its button, out of its "Recipe" link, which stays "Recipe for Lentil soup"', async () => {
+    it('keeps the time of a suggestion inside its button, out of its "Recipe" link, which stays "Recipe for Shakshuka with bread"', async () => {
       await openWith(
-        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+        planOf([planDay('2026-10-24', OPEN_SHAKSHUKA, picked('Spaghetti carbonara'))]),
       );
       const option = suggestionsOf(meal(0))[0].closest<HTMLElement>('.option');
-      expect(option, 'no option around the "Lentil soup" suggestion').not.toBeNull();
+      expect(option, 'no option around the "Shakshuka with bread" suggestion').not.toBeNull();
       const times = Array.from(option!.querySelectorAll('.minutes'));
-      expect(times.map(textOf), 'times of the "Lentil soup" option').toEqual(['35 minutes']);
+      expect(times.map(textOf), 'times of the "Shakshuka with bread" option').toEqual([
+        '30 minutes',
+      ]);
       expect(times[0].closest('button.suggestion')).toBe(suggestionsOf(meal(0))[0]);
       const [link] = recipeLinksOf(option!);
       expect(link.querySelector('.minutes')).toBeNull();
-      expect(nameOf(link)).toBe('Recipe for Lentil soup');
+      expect(nameOf(link)).toBe('Recipe for Shakshuka with bread');
     });
 
-    it('picks "Lentil soup" when the user clicks the time in its suggestion', async () => {
+    it('picks "Shakshuka with bread" when the user clicks the time in its suggestion', async () => {
       await openWith(
-        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+        planOf([planDay('2026-10-24', OPEN_SHAKSHUKA, picked('Spaghetti carbonara'))]),
       );
       const time = suggestionsOf(meal(0))[0].querySelector<HTMLElement>('span.minutes');
-      expect(time, 'no time in the "Lentil soup" suggestion').not.toBeNull();
+      expect(time, 'no time in the "Shakshuka with bread" suggestion').not.toBeNull();
       await click(time!);
-      expect(store.plan().days[0].lunch.recipe).toBe('Lentil soup');
-      expect(textOf(meal(0).querySelector('p.recipe'))).toBe('Lentil soup');
+      expect(store.plan().days[0].lunch.recipe).toBe('Shakshuka with bread');
+      expect(textOf(meal(0).querySelector('p.recipe'))).toBe('Shakshuka with bread');
     });
 
     it('shows a p.minutes "20 minutes" right after the p.recipe of a picked "Spaghetti carbonara"', async () => {
       await openWith(
-        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+        planOf([planDay('2026-10-24', OPEN_SHAKSHUKA, picked('Spaghetti carbonara'))]),
       );
       const name = meal(1).querySelector('p.recipe');
       expect(textOf(name)).toBe('Spaghetti carbonara');
@@ -748,7 +750,7 @@ describe('PlanPage', () => {
 
     it("puts no link in or around a picked meal's time, and keeps the time out of the recipe name's link", async () => {
       await openWith(
-        planOf([planDay('2026-10-24', OPEN_LENTIL_SOUP, picked('Spaghetti carbonara'))]),
+        planOf([planDay('2026-10-24', OPEN_SHAKSHUKA, picked('Spaghetti carbonara'))]),
       );
       const time = meal(1).querySelector('p.minutes');
       expect(time, 'no time below "Spaghetti carbonara"').not.toBeNull();
@@ -789,14 +791,14 @@ describe('PlanPage', () => {
       expect(times.filter((time) => time.closest('a') !== null)).toEqual([]);
     });
 
-    it('brings back the suggestions with "Lentil soup 35 minutes" when the user clicks "Undo" on a picked "Lentil soup"', async () => {
+    it('brings back the suggestions with "Shakshuka with bread 30 minutes" when the user clicks "Undo" on a picked "Shakshuka with bread"', async () => {
       await openWith(
         planOf([
           planDay(
             '2026-10-24',
-            picked('Lentil soup', [
+            picked('Shakshuka with bread', [
               'Niçoise salad',
-              'Lentil soup',
+              'Shakshuka with bread',
               'Oven-baked salmon with potatoes and green beans',
             ]),
             picked('Spaghetti carbonara'),
@@ -805,7 +807,7 @@ describe('PlanPage', () => {
       );
       await click(button(meal(0), 'Undo'));
       expect(suggestionsOf(meal(0)), 'suggestions after "Undo"').toHaveLength(3);
-      expect(suggestionsOf(meal(0)).map(textOf)).toContain('Lentil soup 35 minutes');
+      expect(suggestionsOf(meal(0)).map(textOf)).toContain('Shakshuka with bread 30 minutes');
     });
 
     it('shows the times of a plan saved without them as soon as it loads, keeps the plan, and saves no time when the user picks', async () => {
@@ -813,7 +815,7 @@ describe('PlanPage', () => {
         [
           planDay(
             '2026-10-24',
-            picked('Lentil soup'),
+            picked('Shakshuka with bread'),
             open(
               'Niçoise salad',
               'Oven-baked salmon with potatoes and green beans',
@@ -825,8 +827,8 @@ describe('PlanPage', () => {
       );
       await openWith(saved);
       const name = meal(0).querySelector('p.recipe');
-      expect(textOf(name)).toBe('Lentil soup');
-      expect(partOf(name?.nextElementSibling)).toEqual(['p.minutes', '35 minutes']);
+      expect(textOf(name)).toBe('Shakshuka with bread');
+      expect(partOf(name?.nextElementSibling)).toEqual(['p.minutes', '30 minutes']);
       expect(store.plan()).toEqual(saved);
       expect(textOf(stepper('People'))).toBe('3');
       expect(suggestionsOf(meal(1)).map(recipeOf)).toEqual([
@@ -840,13 +842,15 @@ describe('PlanPage', () => {
       expect(localStorage.getItem('fooplan.plan')).not.toMatch(/"minutes"/);
     });
 
-    it('keeps "35 minutes" on a picked "Lentil soup" when the user raises People from 2 to 3', async () => {
+    it('keeps "30 minutes" on a picked "Shakshuka with bread" when the user raises People from 2 to 3', async () => {
       await openWith(
-        planOf([planDay('2026-10-24', picked('Lentil soup'), picked('Spaghetti carbonara'))]),
+        planOf([
+          planDay('2026-10-24', picked('Shakshuka with bread'), picked('Spaghetti carbonara')),
+        ]),
       );
       await click(arrow('One more person'));
       expect(textOf(stepper('People'))).toBe('3');
-      expect(textOf(meal(0).querySelector('.minutes'))).toBe('35 minutes');
+      expect(textOf(meal(0).querySelector('.minutes'))).toBe('30 minutes');
     });
 
     it('shows a suggestion of the own recipe "Quick Dal" as its span.name alone, read as "Quick Dal", and no time once picked', async () => {
@@ -855,7 +859,7 @@ describe('PlanPage', () => {
         planOf([
           planDay(
             '2026-10-24',
-            open('Quick Dal', 'Lentil soup', 'Niçoise salad'),
+            open('Quick Dal', 'Shakshuka with bread', 'Niçoise salad'),
             picked('Spaghetti carbonara'),
           ),
         ]),
@@ -884,10 +888,10 @@ describe('PlanPage', () => {
           ),
           planDay(
             '2026-10-25',
-            cookExtra ? covered() : picked('Potato and leek soup'),
+            cookExtra ? covered() : picked('Bean burritos'),
             accepted
               ? picked('Niçoise salad')
-              : open('Niçoise salad', 'Lentil soup', 'Pumpkin soup'),
+              : open('Niçoise salad', 'Shakshuka with bread', 'Chickpea and spinach curry'),
           ),
         ],
         { accepted },
@@ -910,24 +914,24 @@ describe('PlanPage', () => {
   });
 
   describe('"×" to stop suggesting a recipe', () => {
-    const LENTIL_SOUP_LUNCH = planOf([
+    const SHAKSHUKA_LUNCH = planOf([
       planDay(
         '2026-10-24',
-        open('Lentil soup', 'Niçoise salad', 'Pumpkin soup'),
+        open('Shakshuka with bread', 'Niçoise salad', 'Chickpea and spinach curry'),
         picked('Spaghetti carbonara'),
       ),
     ]);
 
-    it('shows the suggestion button, the "Recipe" link and a "×" button named "Don\'t suggest Lentil soup" with the title "Don\'t suggest", in this order, in the row of a suggested "Lentil soup"', async () => {
-      await openWith(LENTIL_SOUP_LUNCH);
+    it('shows the suggestion button, the "Recipe" link and a "×" button named "Don\'t suggest Shakshuka with bread" with the title "Don\'t suggest", in this order, in the row of a suggested "Shakshuka with bread"', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
       const row = suggestionsOf(meal(0))[0].closest<HTMLElement>('div.option');
-      expect(row, 'no div.option around the "Lentil soup" suggestion').not.toBeNull();
+      expect(row, 'no div.option around the "Shakshuka with bread" suggestion').not.toBeNull();
       expect(
         Array.from(row!.children).map((child) => [child.tagName.toLowerCase(), nameOf(child)]),
       ).toEqual([
-        ['button', 'Lentil soup 35 minutes'],
-        ['a', 'Recipe for Lentil soup'],
-        ['button', "Don't suggest Lentil soup"],
+        ['button', 'Shakshuka with bread 30 minutes'],
+        ['a', 'Recipe for Shakshuka with bread'],
+        ['button', "Don't suggest Shakshuka with bread"],
       ]);
       const cross = row!.children[2];
       expect(cross.getAttribute('title')).toBe("Don't suggest");
@@ -938,8 +942,17 @@ describe('PlanPage', () => {
     it('gives every suggestion row of an open meal one "×" named after its recipe, and none to a picked meal or a leftovers lunch', async () => {
       await openWith(
         planOf([
-          planDay('2026-10-24', picked('Pumpkin soup'), picked('Potato goulash'), true),
-          planDay('2026-10-25', covered(), open('Niçoise salad', 'Lentil soup', 'Fish tacos')),
+          planDay(
+            '2026-10-24',
+            picked('Chickpea and spinach curry'),
+            picked('Potato goulash'),
+            true,
+          ),
+          planDay(
+            '2026-10-25',
+            covered(),
+            open('Niçoise salad', 'Shakshuka with bread', 'Fish tacos'),
+          ),
         ]),
       );
       for (const index of [0, 1, 2]) {
@@ -948,22 +961,22 @@ describe('PlanPage', () => {
       const rows = Array.from(meal(3).querySelectorAll<HTMLElement>('div.option'));
       expect(rows.map((row) => crossesOf(row).map(nameOf))).toEqual([
         ["Don't suggest Niçoise salad"],
-        ["Don't suggest Lentil soup"],
+        ["Don't suggest Shakshuka with bread"],
         ["Don't suggest Fish tacos"],
       ]);
       expect(crossesOf(element)).toHaveLength(3);
     });
 
-    it('shows another recipe in the row, removes "Lentil soup" and keeps the focus on the same "×", named after the new suggestion, when the user clicks the focused "Don\'t suggest Lentil soup"', async () => {
-      await openWith(LENTIL_SOUP_LUNCH);
-      const cross = dontSuggest(meal(0), 'Lentil soup');
+    it('shows another recipe in the row, removes "Shakshuka with bread" and keeps the focus on the same "×", named after the new suggestion, when the user clicks the focused "Don\'t suggest Shakshuka with bread"', async () => {
+      await openWith(SHAKSHUKA_LUNCH);
+      const cross = dontSuggest(meal(0), 'Shakshuka with bread');
       cross.focus();
       await click(cross);
 
       const recipes = suggestionsOf(meal(0)).map(recipeOf);
-      expect(recipes[0]).not.toBe('Lentil soup');
-      expect(recipes.slice(1)).toEqual(['Niçoise salad', 'Pumpkin soup']);
-      expect(store.removed()).toEqual(['Lentil soup']);
+      expect(recipes[0]).not.toBe('Shakshuka with bread');
+      expect(recipes.slice(1)).toEqual(['Niçoise salad', 'Chickpea and spinach curry']);
+      expect(store.removed()).toEqual(['Shakshuka with bread']);
       expect(document.activeElement, 'focus after the click').toBe(cross);
       expect(nameOf(cross)).toBe(`Don't suggest ${recipes[0]}`);
     });

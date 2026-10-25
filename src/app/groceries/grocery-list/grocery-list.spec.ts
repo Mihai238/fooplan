@@ -564,6 +564,38 @@ describe('GroceryList', () => {
       expect(labelsIn(sectionHeaded('Other'))).toContain('quark');
     });
 
+    it('says "Added "leek" to Other." and lists it under "Other", as no recipe uses leek any more', async () => {
+      acceptOneDayPlan(store);
+      await open();
+
+      await add('leek');
+      expect(statusText()).toBe('Added "leek" to Other.');
+      expect(labelsIn(sectionHeaded('Other'))).toContain('leek');
+    });
+
+    it('says "Added … to Other." for chive, cream, pumpkin, pumpkin seed and red lentil, the other ingredients only the soups used, and lists each under "Other"', async () => {
+      acceptOneDayPlan(store);
+      await open();
+
+      for (const name of ['chive', 'cream', 'pumpkin', 'pumpkin seed', 'red lentil']) {
+        await add(name);
+        expect(statusText()).toBe(`Added "${name}" to Other.`);
+        expect(labelsIn(sectionHeaded('Other')), `${name} not under "Other"`).toContain(name);
+      }
+    });
+
+    it('says "Added "sour cream" to Dairy & eggs." and "Added "sesame seed" to Nuts & seeds.", as recipes still use them', async () => {
+      acceptOneDayPlan(store);
+      await open();
+
+      await add('sour cream');
+      expect(statusText()).toBe('Added "sour cream" to Dairy & eggs.');
+      expect(labelsIn(sectionHeaded('Dairy & eggs'))).toContain('sour cream');
+      await add('sesame seed');
+      expect(statusText()).toBe('Added "sesame seed" to Nuts & seeds.');
+      expect(labelsIn(sectionHeaded('Nuts & seeds'))).toContain('sesame seed');
+    });
+
     it('keeps the inner spaces of the entry in the text', async () => {
       acceptOneDayPlan(store);
       await open();
@@ -572,18 +604,18 @@ describe('GroceryList', () => {
       expect(statusText()).toBe('Added "toilet  paper" to Other.');
     });
 
-    it('says "Added "lemon" to Fruit & vegetables." for an entry named like a plan line, and lists both lemon lines', async () => {
+    it('says "Added "lime" to Fruit & vegetables." for an entry named like a plan line, and lists both lime lines', async () => {
       acceptOneDayPlan(store);
-      const lemon = groceryList(store.plan(), RECIPES).find((item) => item.name === 'lemon');
-      expect(lemon, 'no lemon in the plan').toBeDefined();
+      const lime = groceryList(store.plan(), RECIPES).find((item) => item.name === 'lime');
+      expect(lime, 'no lime in the plan').toBeDefined();
       await open();
 
-      await add('lemon');
-      expect(statusText()).toBe('Added "lemon" to Fruit & vegetables.');
+      await add('lime');
+      expect(statusText()).toBe('Added "lime" to Fruit & vegetables.');
       const lines = labelsIn(sectionHeaded('Fruit & vegetables')).filter(
-        (line) => line === lineOf(lemon!) || line === 'lemon',
+        (line) => line === lineOf(lime!) || line === 'lime',
       );
-      expect(lines).toEqual([lineOf(lemon!), 'lemon']);
+      expect(lines).toEqual([lineOf(lime!), 'lime']);
     });
 
     it('says that "coffee" is already on the list for "COFFEE" after "coffee", adds no second line and empties the field', async () => {
@@ -626,16 +658,16 @@ describe('GroceryList', () => {
 
     it('says "Added" for an entry named like a ticked plan line, as only added items count', async () => {
       acceptOneDayPlan(store);
-      const lemon = groceryList(store.plan(), RECIPES).find((item) => item.name === 'lemon');
-      expect(lemon, 'no lemon in the plan').toBeDefined();
+      const lime = groceryList(store.plan(), RECIPES).find((item) => item.name === 'lime');
+      expect(lime, 'no lime in the plan').toBeDefined();
       await open();
-      await click(checkboxOf(listed().find((item) => labelOf(item) === lineOf(lemon!))!));
-      expect(inCart().map(labelOf), 'plan line not ticked').toEqual([lineOf(lemon!)]);
+      await click(checkboxOf(listed().find((item) => labelOf(item) === lineOf(lime!))!));
+      expect(inCart().map(labelOf), 'plan line not ticked').toEqual([lineOf(lime!)]);
 
-      await add('lemon');
-      expect(statusText()).toBe('Added "lemon" to Fruit & vegetables.');
-      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain('lemon');
-      expect(inCart().map(labelOf)).toEqual([lineOf(lemon!)]);
+      await add('lime');
+      expect(statusText()).toBe('Added "lime" to Fruit & vegetables.');
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain('lime');
+      expect(inCart().map(labelOf)).toEqual([lineOf(lime!)]);
     });
 
     it('empties the status and adds nothing for an empty entry or one of only spaces', async () => {
