@@ -41,6 +41,8 @@ const EN = {
   'plan.otherSuggestions': 'Other suggestions',
   'plan.eatOut': 'Eat out',
   'plan.accept': 'Accept plan',
+  'plan.acceptedStatus': 'Plan accepted. Your grocery list is ready.',
+  'plan.groceriesLink': 'Grocery list',
   'newPlan.title': 'Start a new plan?',
   'newPlan.lost': 'The plan for {dates}, with {filled} of {total} meals picked, will be discarded.',
   'newPlan.accepted': 'This plan is accepted.',
@@ -189,6 +191,8 @@ export const MESSAGES: Record<Language, Record<MessageId, string>> = {
     'plan.otherSuggestions': 'Andere Vorschläge',
     'plan.eatOut': 'Auswärts essen',
     'plan.accept': 'Plan annehmen',
+    'plan.acceptedStatus': 'Plan angenommen. Deine Einkaufsliste ist fertig.',
+    'plan.groceriesLink': 'Einkaufsliste',
     'newPlan.title': 'Neuen Plan starten?',
     'newPlan.lost':
       'Der Plan für {dates} mit {filled} von {total} gewählten Mahlzeiten wird verworfen.',

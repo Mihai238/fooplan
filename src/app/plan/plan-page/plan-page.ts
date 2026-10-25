@@ -1,5 +1,14 @@
 import { DatePipe } from '@angular/common';
-import { afterNextRender, Component, computed, inject, Injector, signal } from '@angular/core';
+import {
+  afterNextRender,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MessageId } from '../../i18n';
 import { Language, LanguageStore } from '../../language-store';
@@ -42,6 +51,9 @@ export class PlanPage {
   // starts, so a page left open past midnight keeps its marking until then
   protected readonly today = signal(this.readToday());
   protected readonly complete = computed(() => isComplete(this.plan()));
+  protected readonly status = computed(() =>
+    this.plan().accepted ? this.language.t('plan.acceptedStatus') : '',
+  );
   protected readonly filled = computed(() => filledMeals(this.plan()));
   protected readonly dateFormat = computed(() => DATE_FORMATS[this.language.language()]);
   protected readonly summary = computed(() => {
@@ -77,6 +89,7 @@ export class PlanPage {
   private readonly recipesByName = computed(
     () => new Map(this.recipes.all().map((recipe) => [recipe.name, recipe])),
   );
+  private readonly groceriesLink = viewChild<ElementRef<HTMLAnchorElement>>('groceriesLink');
   protected readonly removing = signal('');
   private removalRow: RemovalRow | null = null;
   private pressedOnBackdrop = false;
@@ -108,6 +121,14 @@ export class PlanPage {
 
   protected minutes(recipe: string): number | undefined {
     return this.recipesByName().get(recipe)?.minutes;
+  }
+
+  // The focus moves whether or not the click focused the button (Safari and Firefox on macOS don't),
+  // since it would otherwise drop to the page along with the button; the link taking the button's
+  // place exists only once the page is rendered
+  protected accept(): void {
+    this.store.accept();
+    afterNextRender(() => this.groceriesLink()?.nativeElement.focus(), { injector: this.injector });
   }
 
   protected newPlan(dialog: HTMLDialogElement): void {

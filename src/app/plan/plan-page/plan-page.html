@@ -213,10 +213,16 @@
   }
 </div>
 
+<p class="status" role="status">{{ status() }}</p>
+
 @if (!plan().accepted) {
-  <button type="button" class="primary accept" [disabled]="!complete()" (click)="store.accept()">
+  <button type="button" class="primary accept" [disabled]="!complete()" (click)="accept()">
     {{ language.t('plan.accept') }}
   </button>
+} @else {
+  <a #groceriesLink class="primary groceries" routerLink="/groceries">
+    {{ language.t('plan.groceriesLink') }}
+  </a>
 }
 
 <!-- On close, the browser returns the focus to where it was before the dialog opened, which is

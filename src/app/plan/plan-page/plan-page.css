@@ -25,7 +25,9 @@ h1 {
 label,
 .stepper-label,
 .note,
-.minutes {
+.minutes,
+.recipe-link {
+  margin: 0;
   color: var(--muted);
   font-size: 0.875rem;
 }
@@ -88,7 +90,9 @@ label,
   text-align: center;
 }
 
-.summary {
+.summary,
+.status,
+h3 {
   margin: 0;
   color: var(--muted);
 }
@@ -99,7 +103,8 @@ label,
   gap: 1rem;
 }
 
-.day {
+.day,
+dialog {
   padding: 1rem 1.25rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
@@ -136,8 +141,6 @@ h2 {
 }
 
 h3 {
-  margin: 0;
-  color: var(--muted);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -179,11 +182,6 @@ label input {
    height */
 .kid-friendly {
   min-height: max(2.75rem, 44px);
-}
-
-.note,
-.minutes {
-  margin: 0;
 }
 
 .toolbar + .note {
@@ -236,8 +234,6 @@ button {
   min-height: 44px;
   margin: -0.25rem 0;
   padding: 0 0.5rem;
-  color: var(--muted);
-  font-size: 0.875rem;
   white-space: nowrap;
 }
 
@@ -312,8 +308,15 @@ button {
   padding: calc(0.5rem - 1px) calc(1rem - 1px);
 }
 
+.status:not(:empty),
 .accept {
   margin-top: 1.5rem;
+}
+
+.groceries {
+  display: inline-block;
+  margin-top: 0.75rem;
+  text-decoration: none;
 }
 
 /* dialog button:focus: opening the dialog with a click doesn't make its first focus
@@ -332,9 +335,6 @@ dialog {
   width: 28rem;
   max-width: calc(100vw - 2rem);
   padding: 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--surface);
   color: var(--text);
 }
 

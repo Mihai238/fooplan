@@ -7,6 +7,7 @@ import { RECIPES } from '../../recipes/recipes';
 import germanRecipes from '../../recipes/recipes.de.json';
 import { QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
 import { App } from '../../app';
+import { LanguageStore } from '../../language-store';
 import { installDialog, LANGUAGE_KEY, modalDialogs, TABBABLE } from '../../testing';
 import { Plan } from '../plan';
 import { PlanStore, RANDOM, TODAY } from '../plan-store';
@@ -2196,6 +2197,226 @@ describe('PlanPage', () => {
         `no paragraph with the plan's dates in ${JSON.stringify(paragraphs)}`,
       ).toBeDefined();
       return lost!;
+    }
+  });
+
+  describe('status line and "Grocery list" link after "Accept plan" (#38)', () => {
+    const ACCEPTED = 'Plan accepted. Your grocery list is ready.';
+
+    it('shows an empty p.status[role="status"] right after div.days, then "Accept plan", and no link to /groceries, for an open plan and a complete one', async () => {
+      expectUnaccepted('open plan');
+      await completeOneDayPlan();
+      expect(button(element, 'Accept plan').disabled, 'complete plan').toBe(false);
+      expectUnaccepted('complete plan');
+    });
+
+    it('keeps the empty status line free of any text, whitespace or element, for a new plan and for a saved unaccepted one', async () => {
+      expectEmpty(statusLine(), 'new plan');
+      await openWith(
+        planOf([planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'))]),
+      );
+      expectEmpty(statusLine(), 'saved unaccepted plan');
+    });
+
+    it('replaces "Accept plan" with the line "Plan accepted. Your grocery list is ready." in the same p.status and a following a.primary "Grocery list" link to /groceries when the user clicks "Accept plan" on a complete 1-day plan', async () => {
+      const accept = await completeOneDayPlan();
+      const before = statusLine();
+      await click(accept);
+      expectAccepted();
+      expect(statusLine(), 'status paragraph re-created').toBe(before);
+    });
+
+    it('keeps the same p.status[role="status"] element through accepting and starting a new plan, empty again afterwards', async () => {
+      const before = statusLine();
+      await click(await completeOneDayPlan());
+      expect(textOf(statusLine()), 'accepted').toBe(ACCEPTED);
+      expect(statusLine(), 'after accepting').toBe(before);
+      await click(button(element, 'New plan'));
+      await click(button(openDialog(), 'Start new plan'));
+      expect(statusLine(), 'after "Start new plan"').toBe(before);
+      expect(before.getAttribute('role')).toBe('status');
+      expectEmpty(before, 'after "Start new plan"');
+    });
+
+    it('moves the focus to the "Grocery list" link when the user clicks "Accept plan", whether the button had the focus or not', async () => {
+      const focused = await completeOneDayPlan();
+      focused.focus();
+      expect(document.activeElement, 'focus before the click').toBe(focused);
+      await click(focused);
+      expect(document.activeElement, 'button focused').toBe(groceriesLink());
+
+      localStorage.clear();
+      await reload();
+      const blurred = await completeOneDayPlan();
+      (document.activeElement as HTMLElement | null)?.blur();
+      expect(document.activeElement, 'focus before the click').toBe(document.body);
+      await click(blurred);
+      expect(document.activeElement, 'focus on the page').toBe(groceriesLink());
+    });
+
+    it('shows the line and the "Grocery list" link, without "Accept plan", and moves no focus when the page opens with a saved accepted plan', async () => {
+      await openWith(
+        planOf([planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'))], {
+          accepted: true,
+        }),
+      );
+      expectAccepted();
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it('shows the line and the "Grocery list" link and moves no focus when the user comes back to the Plan page from the Grocery list page with an accepted plan', async () => {
+      localStorage.setItem(
+        'fooplan.plan',
+        JSON.stringify(
+          planOf([planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'))], {
+            accepted: true,
+          }),
+        ),
+      );
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter([
+            { path: 'plan', component: PlanPage },
+            { path: '**', component: Blank },
+          ]),
+          { provide: RANDOM, useValue: seededRandom(1) },
+          { provide: TODAY, useValue: () => today },
+        ],
+      });
+      const app = TestBed.createComponent(App);
+      await TestBed.inject(Router).navigateByUrl('/groceries');
+      await app.whenStable();
+      await TestBed.inject(Router).navigateByUrl('/plan');
+      await app.whenStable();
+      const page = (app.nativeElement as HTMLElement).querySelector<HTMLElement>('app-plan-page');
+      expect(page, 'no Plan page').not.toBeNull();
+      element = page!;
+      expectAccepted();
+      expect(document.activeElement).toBe(document.body);
+    });
+
+    it('shows the line and the "Grocery list" link for a saved accepted 1-day plan with both meals eating out', async () => {
+      await openWith(planOf([planDay('2026-10-24', eatingOut(), eatingOut())], { accepted: true }));
+      expectAccepted();
+    });
+
+    it('shows the line and moves the focus to the "Grocery list" link when the user accepts a 1-day plan with both meals eating out', async () => {
+      await setDays(1);
+      await click(button(meal(0), 'Eat out'));
+      await click(button(meal(1), 'Eat out'));
+      await click(button(element, 'Accept plan'));
+      expectAccepted();
+      expect(document.activeElement).toBe(groceriesLink());
+    });
+
+    it('empties the line, removes the link and puts back the disabled "Accept plan" with the focus on "New plan" when the user clicks "New plan" and "Start new plan" on an accepted plan', async () => {
+      await acceptOneDayPlan();
+      expect(textOf(statusLine()), 'accepted').toBe(ACCEPTED);
+      await click(button(element, 'New plan'));
+      await click(button(openDialog(), 'Start new plan'));
+      expect(textOf(statusLine())).toBe('');
+      expect(groceriesLinks()).toHaveLength(0);
+      expect(button(element, 'Accept plan').disabled).toBe(true);
+      expect(document.activeElement).toBe(button(element, 'New plan'));
+    });
+
+    it('keeps the line and the "Grocery list" link when the user clicks "New plan" and then "Keep this plan" on an accepted plan', async () => {
+      await acceptOneDayPlan();
+      await click(button(element, 'New plan'));
+      await click(button(openDialog(), 'Keep this plan'));
+      expectAccepted();
+    });
+
+    it('shows the line again and moves the focus to the "Grocery list" link when the user accepts the next plan after "Start new plan"', async () => {
+      await acceptOneDayPlan();
+      await click(button(element, 'New plan'));
+      await click(button(openDialog(), 'Start new plan'));
+      expect(groceriesLinks(), 'link after "Start new plan"').toHaveLength(0);
+      await click(await completeOneDayPlan());
+      expectAccepted();
+      expect(document.activeElement).toBe(groceriesLink());
+    });
+
+    it('shows the line and the "Grocery list" link with the focus on it when the user presses Enter on the focused "Accept plan"', async () => {
+      const accept = await completeOneDayPlan();
+      const before = statusLine();
+      accept.focus();
+      await keydown(accept, 'Enter');
+      // The browser's default action of Enter on a button, which jsdom doesn't perform
+      await click(accept);
+      expectAccepted();
+      expect(statusLine(), 'status paragraph re-created').toBe(before);
+      expect(document.activeElement).toBe(groceriesLink());
+    });
+
+    it('says "Plan angenommen. Deine Einkaufsliste ist fertig." with the link "Einkaufsliste" when the user accepts a complete plan in German, and both in English on "EN"', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await reload();
+      await completeOneDayPlan();
+      await click(button(element, 'Plan annehmen'));
+      expect(textOf(statusLine())).toBe('Plan angenommen. Deine Einkaufsliste ist fertig.');
+      expect(textOf(groceriesLink())).toBe('Einkaufsliste');
+
+      TestBed.inject(LanguageStore).set('en');
+      await fixture.whenStable();
+      expect(textOf(statusLine())).toBe(ACCEPTED);
+      expect(textOf(groceriesLink())).toBe('Grocery list');
+    });
+
+    async function completeOneDayPlan(): Promise<HTMLButtonElement> {
+      await setDays(1);
+      await pickFirstSuggestion(0);
+      await pickFirstSuggestion(1);
+      const accept = element.querySelector<HTMLButtonElement>('button.accept');
+      expect(accept, 'no button.accept').not.toBeNull();
+      return accept!;
+    }
+
+    function expectUnaccepted(label: string) {
+      const status = element.querySelector('div.days')?.nextElementSibling ?? null;
+      expect(status?.matches('p.status[role="status"]'), `${label}: p.status after div.days`).toBe(
+        true,
+      );
+      expect(textOf(status), label).toBe('');
+      expect(status!.nextElementSibling, `${label}: "Accept plan" after p.status`).toBe(
+        button(element, 'Accept plan'),
+      );
+      expect(groceriesLinks(), label).toHaveLength(0);
+    }
+
+    function expectAccepted() {
+      const status = statusLine();
+      expect(element.querySelector('div.days')?.nextElementSibling, 'p.status after div.days').toBe(
+        status,
+      );
+      expect(textOf(status)).toBe(ACCEPTED);
+      expect(buttonTexts()).not.toContain('Accept plan');
+      const link = groceriesLink();
+      expect(status.nextElementSibling, 'link after p.status').toBe(link);
+      expect(link.matches('a.primary'), 'a.primary').toBe(true);
+      expect(nameOf(link)).toBe('Grocery list');
+    }
+
+    function expectEmpty(status: HTMLElement, label: string) {
+      expect(status.textContent, label).toBe('');
+      expect(status.children, label).toHaveLength(0);
+    }
+
+    function statusLine(): HTMLElement {
+      const found = element.querySelector<HTMLElement>('p.status[role="status"]');
+      expect(found, 'no p.status[role="status"]').not.toBeNull();
+      return found!;
+    }
+
+    function groceriesLink(): HTMLAnchorElement {
+      const links = groceriesLinks();
+      expect(links, 'links to /groceries').toHaveLength(1);
+      return links[0];
+    }
+
+    function groceriesLinks(): HTMLAnchorElement[] {
+      return Array.from(element.querySelectorAll<HTMLAnchorElement>('a[href="/groceries"]'));
     }
   });
 
