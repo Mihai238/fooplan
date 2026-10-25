@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
+import { searchRecipes } from '../recipe-search';
 import { RECIPES } from '../recipes';
 
 @Component({
@@ -7,5 +8,6 @@ import { RECIPES } from '../recipes';
   templateUrl: './recipe-list.html',
 })
 export class RecipeList {
-  protected readonly recipes = RECIPES;
+  protected readonly query = signal('');
+  protected readonly recipes = computed(() => searchRecipes(RECIPES, this.query()));
 }
