@@ -19,6 +19,9 @@ export interface Plan {
   accepted: boolean;
   // Keys of the grocery list items the user has ticked off, see itemKey
   ticked: string[];
+  // Recipe names, least recently shown first; a recipe shown again, or whose pick is cleared or
+  // dropped, moves to the end
+  shown: string[];
 }
 
 export interface MealRef {
@@ -35,8 +38,8 @@ export const DEFAULT_PEOPLE = 2;
 const SUGGESTIONS = 3;
 
 export function createPlan(startDate: string, recipes: readonly string[], random: Random): Plan {
-  const plan: Plan = { days: [], people: DEFAULT_PEOPLE, accepted: false, ticked: [] };
-  return { ...plan, days: openDays(plan, startDate, DEFAULT_DAYS, recipes, random) };
+  const plan: Plan = { days: [], people: DEFAULT_PEOPLE, accepted: false, ticked: [], shown: [] };
+  return openDays(plan, startDate, DEFAULT_DAYS, recipes, random);
 }
 
 export function setDays(
@@ -55,12 +58,13 @@ export function setDays(
     return plan;
   }
   if (days < plan.days.length) {
+    const dropped = picksOf({ ...plan, days: plan.days.slice(days) });
+    const kept = markUnpicked({ ...plan, days: plan.days.slice(0, days) }, dropped);
     // The new last day has no next lunch left to cover
-    return withDay({ ...plan, days: plan.days.slice(0, days) }, days - 1, { cookExtra: false });
+    return withDay(kept, days - 1, { cookExtra: false });
   }
   const nextDate = addDays(plan.days[plan.days.length - 1].date, 1);
-  const added = openDays(plan, nextDate, days - plan.days.length, recipes, random);
-  return { ...plan, days: [...plan.days, ...added] };
+  return openDays(plan, nextDate, days - plan.days.length, recipes, random);
 }
 
 export function setPeople(plan: Plan, people: number): Plan {
@@ -87,14 +91,10 @@ export function pickRecipe(
     return plan;
   }
   const withPick = withMeal(plan, meal, { recipe, suggestions: [] });
-  return {
-    ...withPick,
-    days: withPick.days.map((day) => ({
-      ...day,
-      lunch: withoutSuggestion(day.lunch, recipe, withPick, recipes, random),
-      dinner: withoutSuggestion(day.dinner, recipe, withPick, recipes, random),
-    })),
-  };
+  return mealRefsOf(withPick).reduce(
+    (next, ref) => withoutSuggestion(next, ref, recipe, recipes, random),
+    withPick,
+  );
 }
 
 export function clearMeal(
@@ -108,7 +108,7 @@ export function clearMeal(
     return plan;
   }
   const cleared = withMeal(plan, meal, { recipe: null, suggestions: [] });
-  const opened = withMeal(cleared, meal, openMeal(cleared, recipes, random));
+  const opened = openMeal(markUnpicked(cleared, [current.recipe]), meal, recipes, random);
   return meal.kind === 'dinner' && plan.days[meal.day].cookExtra
     ? turnCookExtraOff(opened, meal.day, recipes, random)
     : opened;
@@ -124,10 +124,7 @@ export function otherSuggestions(
   if (plan.accepted || isCovered(plan, meal) || current?.recipe !== null) {
     return plan;
   }
-  return withMeal(plan, meal, {
-    recipe: null,
-    suggestions: drawUnpicked(plan, SUGGESTIONS, current.suggestions, recipes, random),
-  });
+  return openMeal(plan, meal, recipes, random, current.suggestions);
 }
 
 export function setCookExtra(
@@ -150,7 +147,8 @@ export function setCookExtra(
   if (!on) {
     return turnCookExtraOff(plan, day, recipes, random);
   }
-  return withDay(withDay(plan, day, { cookExtra: true }), day + 1, {
+  const unpicked = markUnpicked(plan, [plan.days[day + 1].lunch.recipe]);
+  return withDay(withDay(unpicked, day, { cookExtra: true }), day + 1, {
     lunch: { recipe: null, suggestions: [] },
   });
 }
@@ -176,8 +174,9 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
   if (!isRecord(value)) {
     return null;
   }
-  // Plans saved before the grocery list existed have no ticks
-  const { days, people, accepted, ticked = [] } = value;
+  // Plans saved before the grocery list existed have no ticks, and those saved before shown
+  // recipes were recorded have no shown recipes
+  const { days, people, accepted, ticked = [], shown = [] } = value;
   if (!Array.isArray(days) || days.length < MIN_DAYS || days.length > MAX_DAYS) {
     return null;
   }
@@ -190,16 +189,22 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
   if (!Array.isArray(ticked) || !ticked.every((key) => typeof key === 'string')) {
     return null;
   }
+  if (!isRecipeList(shown, recipes)) {
+    return null;
+  }
   const parsedDays = days.map((day) => parseDay(day, recipes));
   if (parsedDays.some((day) => day === null)) {
     return null;
   }
-  const plan: Plan = {
+  const parsed: Plan = {
     days: parsedDays as PlanDay[],
     people,
     accepted,
     ticked: ticked as string[],
+    shown,
   };
+  // A record missing what a meal shows (an old or hand-edited save) still counts it as shown
+  const plan = { ...parsed, shown: [...new Set([...shown, ...suggestionsOf(parsed)])] };
   const valid =
     hasConsecutiveDates(plan) &&
     usesRecipesOnce(plan) &&
@@ -221,6 +226,14 @@ export function leftoversOf(plan: Plan, day: number): string | null {
     return null;
   }
   return plan.days[day - 1].dinner.recipe;
+}
+
+function isRecipeList(value: unknown, recipes: readonly string[]): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every((name) => typeof name === 'string' && recipes.includes(name)) &&
+    new Set(value).size === value.length
+  );
 }
 
 function parseDay(value: unknown, recipes: readonly string[]): PlanDay | null {
@@ -302,13 +315,17 @@ function openDays(
   count: number,
   recipes: readonly string[],
   random: Random,
-): PlanDay[] {
-  return Array.from({ length: count }, (_, i) => ({
+): Plan {
+  const added: PlanDay[] = Array.from({ length: count }, (_, i) => ({
     date: addDays(startDate, i),
-    lunch: openMeal(plan, recipes, random),
-    dinner: openMeal(plan, recipes, random),
+    lunch: { recipe: null, suggestions: [] },
+    dinner: { recipe: null, suggestions: [] },
     cookExtra: false,
   }));
+  const withAdded = { ...plan, days: [...plan.days, ...added] };
+  return mealRefsOf(withAdded)
+    .filter((ref) => ref.day >= plan.days.length)
+    .reduce((next, ref) => openMeal(next, ref, recipes, random), withAdded);
 }
 
 function addDays(date: string, days: number): string {
@@ -324,11 +341,37 @@ function turnCookExtraOff(
   random: Random,
 ): Plan {
   const off = withDay(plan, day, { cookExtra: false });
-  return withDay(off, day + 1, { lunch: openMeal(off, recipes, random) });
+  return openMeal(off, { day: day + 1, kind: 'lunch' }, recipes, random);
 }
 
-function openMeal(plan: Plan, recipes: readonly string[], random: Random): Meal {
-  return { recipe: null, suggestions: drawUnpicked(plan, SUGGESTIONS, [], recipes, random) };
+function openMeal(
+  plan: Plan,
+  ref: MealRef,
+  recipes: readonly string[],
+  random: Random,
+  excluded: readonly string[] = [],
+): Plan {
+  const [suggestions, drawn] = drawSuggestions(plan, SUGGESTIONS, excluded, recipes, random);
+  return withMeal(drawn, ref, { recipe: null, suggestions });
+}
+
+function withoutSuggestion(
+  plan: Plan,
+  ref: MealRef,
+  recipe: string,
+  recipes: readonly string[],
+  random: Random,
+): Plan {
+  const meal = mealAt(plan, ref);
+  if (!meal?.suggestions.includes(recipe)) {
+    return plan;
+  }
+  const others = meal.suggestions.filter((name) => name !== recipe);
+  const [[replacement], drawn] = drawSuggestions(plan, 1, others, recipes, random);
+  return withMeal(drawn, ref, {
+    ...meal,
+    suggestions: meal.suggestions.map((name) => (name === recipe ? replacement : name)),
+  });
 }
 
 function mealAt(plan: Plan, meal: MealRef): Meal | undefined {
@@ -354,39 +397,41 @@ function withDay(plan: Plan, index: number, patch: Partial<PlanDay>): Plan {
   };
 }
 
-function withoutSuggestion(
-  meal: Meal,
-  recipe: string,
-  plan: Plan,
-  recipes: readonly string[],
-  random: Random,
-): Meal {
-  if (!meal.suggestions.includes(recipe)) {
-    return meal;
-  }
-  const others = meal.suggestions.filter((name) => name !== recipe);
-  const [replacement] = drawUnpicked(plan, 1, others, recipes, random);
-  return {
-    ...meal,
-    suggestions: meal.suggestions.map((name) => (name === recipe ? replacement : name)),
-  };
-}
-
-function drawUnpicked(
+function drawSuggestions(
   plan: Plan,
   count: number,
   excluded: readonly string[],
   recipes: readonly string[],
   random: Random,
-): string[] {
+): [string[], Plan] {
   const picked = pickedRecipes(plan);
   const candidates = recipes.filter((name) => !picked.has(name) && !excluded.includes(name));
+  const fresh = candidates.filter((name) => !plan.shown.includes(name));
   const drawn: string[] = [];
-  for (let i = 0; i < count; i++) {
-    const [name] = candidates.splice(Math.floor(random() * candidates.length), 1);
-    drawn.push(name);
+  while (drawn.length < count && fresh.length > 0) {
+    drawn.push(...fresh.splice(Math.floor(random() * fresh.length), 1));
   }
-  return drawn;
+  // Other meals' suggestions come last, so two meals share one only when nothing else is left
+  const showing = new Set(suggestionsOf(plan));
+  const old = plan.shown.filter((name) => candidates.includes(name));
+  const suggestions = [
+    ...drawn,
+    ...old.filter((name) => !showing.has(name)),
+    ...old.filter((name) => showing.has(name)),
+  ].slice(0, count);
+  return [suggestions, markShown(plan, suggestions)];
+}
+
+// A cleared or dropped pick was on screen until now, so it counts as shown just now
+function markUnpicked(plan: Plan, picks: readonly (string | null)[]): Plan {
+  return markShown(
+    plan,
+    picks.filter((name) => name !== null),
+  );
+}
+
+function markShown(plan: Plan, names: readonly string[]): Plan {
+  return { ...plan, shown: [...plan.shown.filter((name) => !names.includes(name)), ...names] };
 }
 
 function pickedRecipes(plan: Plan): Set<string> {
@@ -397,6 +442,17 @@ function picksOf(plan: Plan): string[] {
   return mealsOf(plan).flatMap((meal) => (meal.recipe === null ? [] : [meal.recipe]));
 }
 
+function suggestionsOf(plan: Plan): string[] {
+  return mealsOf(plan).flatMap((meal) => meal.suggestions);
+}
+
 function mealsOf(plan: Plan): Meal[] {
   return plan.days.flatMap((day) => [day.lunch, day.dinner]);
+}
+
+function mealRefsOf(plan: Plan): MealRef[] {
+  return plan.days.flatMap((_, day): MealRef[] => [
+    { day, kind: 'lunch' },
+    { day, kind: 'dinner' },
+  ]);
 }

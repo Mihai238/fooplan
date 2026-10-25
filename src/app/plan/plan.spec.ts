@@ -17,7 +17,17 @@ import {
   setPeople,
   toggleTicked,
 } from './plan';
-import { covered, day, DINNER, empty, LUNCH, open, picked, seededRandom } from './testing';
+import {
+  covered,
+  day,
+  DINNER,
+  empty,
+  LUNCH,
+  open,
+  picked,
+  seededRandom,
+  suggestionsOf,
+} from './testing';
 
 const RECIPES = [
   'Chili',
@@ -33,7 +43,8 @@ const RECIPES = [
   'Shakshuka',
   'Tacos',
 ];
-const THIRTY_RECIPES = Array.from({ length: 30 }, (_, i) => `Recipe ${i + 1}`);
+const FOURTEEN_RECIPES = [...RECIPES, 'Udon', 'Vindaloo'];
+const FORTY_RECIPES = Array.from({ length: 40 }, (_, i) => `Recipe ${i + 1}`);
 const SEEDS = [1, 2, 3, 42, 2026];
 
 describe('plan', () => {
@@ -51,6 +62,54 @@ describe('plan', () => {
       expect(plan.people).toBe(DEFAULT_PEOPLE);
       expect(plan.accepted).toBe(false);
       expect(meals(plan).every((meal) => meal.recipe === null)).toBe(true);
+    });
+
+    it('suggests every recipe for at most one meal when there are more recipes than suggestions', () => {
+      for (const seed of SEEDS) {
+        const suggestions = suggestionsOf(
+          createPlan('2026-10-24', FORTY_RECIPES, seededRandom(seed)),
+        );
+        expect(suggestions, `seed ${seed}`).toHaveLength(30);
+        expect(new Set(suggestions).size, `seed ${seed}: ${suggestions.join(', ')}`).toBe(30);
+      }
+    });
+
+    it('suggests every recipe exactly once when there are exactly as many recipes as suggestions', () => {
+      const thirtyRecipes = FORTY_RECIPES.slice(0, 30);
+      for (const seed of SEEDS) {
+        const suggestions = suggestionsOf(
+          createPlan('2026-10-24', thirtyRecipes, seededRandom(seed)),
+        );
+        expect([...suggestions].sort(), `seed ${seed}`).toEqual([...thirtyRecipes].sort());
+      }
+    });
+
+    it('suggests every recipe before suggesting one again, and none more than twice, when there are fewer recipes than suggestions', () => {
+      const twentyRecipes = FORTY_RECIPES.slice(0, 20);
+      for (const seed of SEEDS) {
+        const plan = createPlan('2026-10-24', twentyRecipes, seededRandom(seed));
+        openMealsOf(plan).forEach((meal) =>
+          expectValidSuggestions(meal, plan, twentyRecipes, seed),
+        );
+        const suggestions = suggestionsOf(plan);
+        for (const recipe of twentyRecipes) {
+          const times = suggestions.filter((name) => name === recipe).length;
+          expect(times, `seed ${seed}: ${recipe} in ${suggestions.join(', ')}`).toBeGreaterThan(0);
+          expect(times, `seed ${seed}: ${recipe} in ${suggestions.join(', ')}`).toBeLessThan(3);
+        }
+      }
+    });
+
+    it('brings only recipes no meal of the new plan suggested on the first "Other suggestions"', () => {
+      for (const seed of SEEDS) {
+        const random = seededRandom(seed);
+        const plan = createPlan('2026-10-24', FORTY_RECIPES, random);
+        const shownBefore = suggestionsOf(plan);
+        const result = otherSuggestions(plan, LUNCH, FORTY_RECIPES, random);
+        const lunch = result.days[0].lunch;
+        expectValidSuggestions(lunch, result, FORTY_RECIPES, seed);
+        expectNoneOf(lunch.suggestions, shownBefore, `seed ${seed}:`);
+      }
     });
   });
 
@@ -83,6 +142,7 @@ describe('plan', () => {
         people: 3,
         accepted: false,
         ticked: [],
+        shown: [],
       };
       const grown = setDays(plan, 5, RECIPES, seededRandom(1));
       expect(grown.days.map((d) => d.date)).toEqual([
@@ -103,6 +163,61 @@ describe('plan', () => {
       }
     });
 
+    it('suggests exactly the recipes not shown yet for an added day when there are just as many left as it needs', () => {
+      for (const seed of SEEDS) {
+        const plan = oneDayPlan(
+          open('Chili', 'Curry', 'Dal'),
+          open('Fajitas', 'Goulash', 'Lasagne'),
+          ['Minestrone', 'Pesto', 'Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne'],
+        );
+        const grown = setDays(plan, 2, FOURTEEN_RECIPES, seededRandom(seed));
+        const added = [...grown.days[1].lunch.suggestions, ...grown.days[1].dinner.suggestions];
+        expect(added.sort(), `seed ${seed}`).toEqual([
+          'Quiche',
+          'Risotto',
+          'Shakshuka',
+          'Tacos',
+          'Udon',
+          'Vindaloo',
+        ]);
+      }
+    });
+
+    it('fills an added day with the recipes not shown yet and then with those shown longest ago when too few are left', () => {
+      for (const seed of SEEDS) {
+        const plan = oneDayPlan(
+          open('Chili', 'Curry', 'Dal'),
+          open('Fajitas', 'Goulash', 'Lasagne'),
+          [
+            'Minestrone',
+            'Pesto',
+            'Quiche',
+            'Risotto',
+            'Shakshuka',
+            'Tacos',
+            'Chili',
+            'Curry',
+            'Dal',
+            'Fajitas',
+            'Goulash',
+            'Lasagne',
+          ],
+        );
+        const grown = setDays(plan, 2, FOURTEEN_RECIPES, seededRandom(seed));
+        expectValidSuggestions(grown.days[1].lunch, grown, FOURTEEN_RECIPES, seed);
+        expectValidSuggestions(grown.days[1].dinner, grown, FOURTEEN_RECIPES, seed);
+        const added = [...grown.days[1].lunch.suggestions, ...grown.days[1].dinner.suggestions];
+        expect(added.sort(), `seed ${seed}`).toEqual([
+          'Minestrone',
+          'Pesto',
+          'Quiche',
+          'Risotto',
+          'Udon',
+          'Vindaloo',
+        ]);
+      }
+    });
+
     it('drops days from the end when shrinking, so their recipes can be suggested again', () => {
       const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
       const plan: Plan = {
@@ -113,6 +228,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        shown: [],
       };
       const shrunk = setDays(plan, 1, recipes, seededRandom(1));
       expect(shrunk.days).toHaveLength(1);
@@ -136,6 +252,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        shown: [],
       };
       const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
       expect(shrunk.days).toHaveLength(2);
@@ -153,6 +270,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        shown: [],
       };
       const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
       expect(shrunk.days).toEqual(plan.days.slice(0, 2));
@@ -193,6 +311,105 @@ describe('plan', () => {
         openMealsOf(plan).forEach((meal) => expectValidSuggestions(meal, plan, RECIPES, seed));
       }
     });
+
+    it('draws only recipes not shown yet for added days, a pick replacement, a cleared meal and a lunch reopened by turning "Cook extra" off, while such recipes are left', () => {
+      for (const seed of SEEDS) {
+        const shown = [
+          'Minestrone',
+          'Pesto',
+          'Chili',
+          'Curry',
+          'Dal',
+          'Fajitas',
+          'Goulash',
+          'Lasagne',
+        ];
+
+        const oneDay = oneDayPlan(
+          open('Chili', 'Curry', 'Dal'),
+          open('Fajitas', 'Goulash', 'Lasagne'),
+          [...shown],
+        );
+        const grown = setDays(oneDay, 2, FOURTEEN_RECIPES, seededRandom(seed));
+        const added = [...grown.days[1].lunch.suggestions, ...grown.days[1].dinner.suggestions];
+        expect(new Set(added).size, `seed ${seed}, added day: ${added.join(', ')}`).toBe(6);
+        expectNoneOf(added, shown, `seed ${seed}, added day:`);
+
+        const sharing: Plan = {
+          days: [
+            day('2026-10-24', open('Chili', 'Curry', 'Dal'), open('Fajitas', 'Chili', 'Goulash')),
+            day('2026-10-25', open('Lasagne', 'Minestrone', 'Pesto'), picked('Quiche')),
+          ],
+          people: 2,
+          accepted: false,
+          ticked: [],
+          shown: ['Risotto', 'Shakshuka', ...shown, 'Quiche'],
+        };
+        const withPick = pickRecipe(sharing, LUNCH, 'Chili', FOURTEEN_RECIPES, seededRandom(seed));
+        const dinner = withPick.days[0].dinner.suggestions;
+        expect(dinner, `seed ${seed}, pick replacement`).toContain('Fajitas');
+        expect(dinner, `seed ${seed}, pick replacement`).toContain('Goulash');
+        const replacement = dinner.filter((name) => !['Fajitas', 'Goulash'].includes(name));
+        expect(replacement, `seed ${seed}, pick replacement`).toHaveLength(1);
+        expectNoneOf(replacement, sharing.shown, `seed ${seed}, pick replacement:`);
+
+        const pickedLunch = oneDayPlan(picked('Chili'), open('Dal', 'Fajitas', 'Goulash'), [
+          ...shown,
+        ]);
+        const cleared = clearMeal(pickedLunch, LUNCH, FOURTEEN_RECIPES, seededRandom(seed));
+        expectValidSuggestions(cleared.days[0].lunch, cleared, FOURTEEN_RECIPES, seed);
+        expectNoneOf(cleared.days[0].lunch.suggestions, shown, `seed ${seed}, cleared meal:`);
+
+        const cookExtra: Plan = { ...cookExtraPlan(), shown: [...shown] };
+        const off = setCookExtra(cookExtra, 0, false, FOURTEEN_RECIPES, seededRandom(seed));
+        expectValidSuggestions(off.days[1].lunch, off, FOURTEEN_RECIPES, seed);
+        expectNoneOf(off.days[1].lunch.suggestions, shown, `seed ${seed}, reopened lunch:`);
+      }
+    });
+
+    it('counts a lunch pick dropped by "Cook extra" and the picks of days dropped by shrinking as shown just now, so the recipes shown before them come back first', () => {
+      const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+      for (const seed of SEEDS) {
+        const nextLunchPicked: Plan = {
+          days: [
+            day('2026-10-24', picked('A'), picked('B')),
+            day('2026-10-25', picked('C'), open('D', 'E', 'F')),
+          ],
+          people: 2,
+          accepted: false,
+          ticked: [],
+          shown: ['C', 'G', 'H', 'I', 'A', 'B', 'D', 'E', 'F'],
+        };
+        const cookExtra = setCookExtra(nextLunchPicked, 0, true, recipes, seededRandom(seed));
+        const afterCookExtra = otherSuggestions(
+          cookExtra,
+          { day: 1, kind: 'dinner' },
+          recipes,
+          seededRandom(seed),
+        );
+        expect(
+          [...afterCookExtra.days[1].dinner.suggestions].sort(),
+          `seed ${seed}, "Cook extra"`,
+        ).toEqual(['G', 'H', 'I']);
+
+        const lastDayPicked: Plan = {
+          days: [
+            day('2026-10-24', picked('A'), open('D', 'E', 'F')),
+            day('2026-10-25', picked('B'), picked('C')),
+          ],
+          people: 2,
+          accepted: false,
+          ticked: [],
+          shown: ['B', 'C', 'G', 'H', 'I', 'A', 'D', 'E', 'F'],
+        };
+        const shrunk = setDays(lastDayPicked, 1, recipes, seededRandom(seed));
+        const afterShrink = otherSuggestions(shrunk, DINNER, recipes, seededRandom(seed));
+        expect(
+          [...afterShrink.days[0].dinner.suggestions].sort(),
+          `seed ${seed}, shrinking`,
+        ).toEqual(['G', 'H', 'I']);
+      }
+    });
   });
 
   describe('pickRecipe', () => {
@@ -219,6 +436,7 @@ describe('plan', () => {
           people: 2,
           accepted: false,
           ticked: [],
+          shown: [],
         };
         const result = pickRecipe(plan, LUNCH, 'Chili', RECIPES, seededRandom(seed));
         const dinner = result.days[0].dinner;
@@ -230,6 +448,33 @@ describe('plan', () => {
       }
     });
 
+    it('replaces the picked recipe in every other open meal showing it with a different recipe not shown yet', () => {
+      const plan: Plan = {
+        days: [
+          day('2026-10-24', open('Chili', 'Curry', 'Dal'), open('Chili', 'Fajitas', 'Goulash')),
+          day('2026-10-25', open('Chili', 'Lasagne', 'Minestrone'), picked('Pesto')),
+        ],
+        people: 2,
+        accepted: false,
+        ticked: [],
+        shown: ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne', 'Minestrone', 'Pesto'],
+      };
+      // Always takes the first fresh candidate, so drawing the second replacement before the first
+      // is recorded in shown would repeat it
+      const result = pickRecipe(plan, LUNCH, 'Chili', RECIPES, () => 0);
+      const dinner = result.days[0].dinner;
+      const nextLunch = result.days[1].lunch;
+      expect(dinner.suggestions).toEqual(expect.arrayContaining(['Fajitas', 'Goulash']));
+      expect(nextLunch.suggestions).toEqual(expect.arrayContaining(['Lasagne', 'Minestrone']));
+      const replacements = [
+        ...dinner.suggestions.filter((name) => !['Fajitas', 'Goulash'].includes(name)),
+        ...nextLunch.suggestions.filter((name) => !['Lasagne', 'Minestrone'].includes(name)),
+      ];
+      expect(replacements).toHaveLength(2);
+      expect(new Set(replacements).size, replacements.join(', ')).toBe(2);
+      expectNoneOf(replacements, plan.shown);
+    });
+
     it('leaves the suggestions of open meals not showing the picked recipe unchanged', () => {
       const plan: Plan = {
         days: [
@@ -239,22 +484,44 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        shown: [],
       };
       const result = pickRecipe(plan, LUNCH, 'Chili', RECIPES, seededRandom(1));
       expect(result.days[1]).toEqual(plan.days[1]);
     });
 
+    it('replaces the picked recipe in another open meal with the unpicked recipe shown longest ago when every recipe has been shown', () => {
+      const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      for (const seed of SEEDS) {
+        const plan = oneDayPlan(open('A', 'B', 'C'), open('D', 'A', 'E'), [
+          'G',
+          'F',
+          'A',
+          'B',
+          'C',
+          'D',
+          'E',
+        ]);
+        const result = pickRecipe(plan, LUNCH, 'A', recipes, seededRandom(seed));
+        expect([...result.days[0].dinner.suggestions].sort(), `seed ${seed}`).toEqual([
+          'D',
+          'E',
+          'G',
+        ]);
+      }
+    });
+
     it('never uses a recipe twice when all 10 meals of a 5-day plan are filled from their suggestions', () => {
       for (const seed of SEEDS) {
         const random = seededRandom(seed);
-        let plan = createPlan('2026-10-24', THIRTY_RECIPES, random);
+        let plan = createPlan('2026-10-24', FORTY_RECIPES, random);
         expect(plan.days, `seed ${seed}`).toHaveLength(5);
         plan.days.forEach((_, dayIndex) => {
           for (const kind of ['lunch', 'dinner'] as const) {
             const suggestions = plan.days[dayIndex][kind].suggestions;
             expect(suggestions, `seed ${seed}, day ${dayIndex} ${kind}`).toHaveLength(3);
             const recipe = suggestions[Math.floor(random() * suggestions.length)];
-            plan = pickRecipe(plan, { day: dayIndex, kind }, recipe, THIRTY_RECIPES, random);
+            plan = pickRecipe(plan, { day: dayIndex, kind }, recipe, FORTY_RECIPES, random);
           }
         });
         const recipes = pickedRecipes(plan);
@@ -283,17 +550,222 @@ describe('plan', () => {
       const plan = oneDayPlan(open('Chili', 'Curry', 'Dal'), picked('Fajitas'));
       expectUnchanged(plan, (p) => otherSuggestions(p, DINNER, RECIPES, seededRandom(1)));
     });
+
+    it('brings only recipes not suggested anywhere in the plan yet, click after click, while such recipes are left', () => {
+      for (const seed of SEEDS) {
+        const random = seededRandom(seed);
+        // Minestrone and Pesto were suggested earlier for the lunch; six recipes were never shown
+        const seen = [
+          'Minestrone',
+          'Pesto',
+          'Chili',
+          'Curry',
+          'Dal',
+          'Fajitas',
+          'Goulash',
+          'Lasagne',
+        ];
+        const dinner = open('Fajitas', 'Goulash', 'Lasagne');
+        let plan = oneDayPlan(open('Chili', 'Curry', 'Dal'), dinner, [...seen]);
+        for (let click = 1; click <= 2; click++) {
+          plan = otherSuggestions(plan, LUNCH, FOURTEEN_RECIPES, random);
+          const lunch = plan.days[0].lunch;
+          expectValidSuggestions(lunch, plan, FOURTEEN_RECIPES, seed);
+          expectNoneOf(lunch.suggestions, seen, `seed ${seed}, click ${click}:`);
+          seen.push(...lunch.suggestions);
+        }
+        expect(plan.days[0].dinner).toEqual(dinner);
+      }
+    });
+
+    it('does not bring back a recipe that was picked and cleared while recipes not shown yet are left', () => {
+      for (const seed of SEEDS) {
+        const random = seededRandom(seed);
+        const shown = ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash'];
+        const plan = oneDayPlan(picked('Chili'), open('Dal', 'Fajitas', 'Goulash'), [...shown]);
+        const cleared = clearMeal(plan, LUNCH, RECIPES, random);
+        const seen = [...shown, ...cleared.days[0].lunch.suggestions];
+        const result = otherSuggestions(cleared, DINNER, RECIPES, random);
+        expectValidSuggestions(result.days[0].dinner, result, RECIPES, seed);
+        expectNoneOf(result.days[0].dinner.suggestions, seen, `seed ${seed}:`);
+      }
+    });
+
+    it('brings exactly the three recipes not shown yet when only three are left', () => {
+      for (const seed of SEEDS) {
+        const plan = oneDayPlan(
+          open('Chili', 'Curry', 'Dal'),
+          open('Fajitas', 'Goulash', 'Lasagne'),
+          [
+            'Minestrone',
+            'Pesto',
+            'Quiche',
+            'Chili',
+            'Curry',
+            'Dal',
+            'Fajitas',
+            'Goulash',
+            'Lasagne',
+          ],
+        );
+        const result = otherSuggestions(plan, LUNCH, RECIPES, seededRandom(seed));
+        expect([...result.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'Risotto',
+          'Shakshuka',
+          'Tacos',
+        ]);
+      }
+    });
+
+    it('brings the one recipe not shown yet and fills the other slots with the recipes shown longest ago', () => {
+      const recipes = [
+        'Chili',
+        'Curry',
+        'Dal',
+        'Fajitas',
+        'Goulash',
+        'Lasagne',
+        'Minestrone',
+        'Pesto',
+      ];
+      for (const seed of SEEDS) {
+        const plan = oneDayPlan(open('Chili', 'Curry', 'Dal'), picked('Fajitas'), [
+          'Goulash',
+          'Lasagne',
+          'Fajitas',
+          'Minestrone',
+          'Chili',
+          'Curry',
+          'Dal',
+        ]);
+        const result = otherSuggestions(plan, LUNCH, recipes, seededRandom(seed));
+        expect([...result.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'Goulash',
+          'Lasagne',
+          'Pesto',
+        ]);
+      }
+    });
+
+    it('takes the unpicked recipes shown longest ago once every recipe has been shown', () => {
+      const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+      for (const seed of SEEDS) {
+        const shown = ['E', 'F', 'D', 'G', 'H', 'A', 'B', 'C'];
+        const plan = oneDayPlan(open('A', 'B', 'C'), picked('D'), shown);
+        const result = otherSuggestions(plan, LUNCH, recipes, seededRandom(seed));
+        expect(result.days[0].lunch.recipe, `seed ${seed}`).toBeNull();
+        expect([...result.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'E',
+          'F',
+          'G',
+        ]);
+      }
+    });
+
+    it('never brings back a recipe the meal is showing, even when it was shown longest ago', () => {
+      const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+      for (const seed of SEEDS) {
+        const shown = ['A', 'B', 'C', 'E', 'F', 'G', 'H', 'D'];
+        const plan = oneDayPlan(open('A', 'B', 'C'), picked('D'), shown);
+        const result = otherSuggestions(plan, LUNCH, recipes, seededRandom(seed));
+        expect([...result.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'E',
+          'F',
+          'G',
+        ]);
+      }
+    });
+
+    it('never brings back a picked recipe, even when it was shown longest ago', () => {
+      const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+      for (const seed of SEEDS) {
+        const shown = ['D', 'E', 'F', 'G', 'H', 'A', 'B', 'C'];
+        const plan = oneDayPlan(open('A', 'B', 'C'), picked('D'), shown);
+        const result = otherSuggestions(plan, LUNCH, recipes, seededRandom(seed));
+        expect([...result.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'E',
+          'F',
+          'G',
+        ]);
+      }
+    });
+
+    it('counts a recipe brought back as shown just now, so the ones not brought back come first next time', () => {
+      const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+      for (const seed of SEEDS) {
+        const random = seededRandom(seed);
+        const shown = ['E', 'F', 'G', 'H', 'D', 'A', 'B', 'C'];
+        let plan = oneDayPlan(open('A', 'B', 'C'), picked('D'), shown);
+        plan = otherSuggestions(plan, LUNCH, recipes, random);
+        expect([...plan.days[0].lunch.suggestions].sort(), `seed ${seed}, click 1`).toEqual([
+          'E',
+          'F',
+          'G',
+        ]);
+        plan = otherSuggestions(plan, LUNCH, recipes, random);
+        expect([...plan.days[0].lunch.suggestions].sort(), `seed ${seed}, click 2`).toEqual([
+          'A',
+          'B',
+          'H',
+        ]);
+        // E, F and G were brought back after C was shown, so C is now the one shown longest ago
+        plan = otherSuggestions(plan, LUNCH, recipes, random);
+        expect(plan.days[0].lunch.suggestions, `seed ${seed}, click 3`).toContain('C');
+        expectNoneOf(
+          plan.days[0].lunch.suggestions,
+          ['A', 'B', 'D', 'H'],
+          `seed ${seed}, click 3:`,
+        );
+      }
+    });
+
+    it('takes the recipes shown longest ago that no other open meal is showing first, and only then those other open meals show', () => {
+      const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+      for (const seed of SEEDS) {
+        const lunch = open('A', 'B', 'C');
+        const dinner = open('D', 'E', 'F');
+        const plan = oneDayPlan(lunch, dinner, ['D', 'E', 'F', 'G', 'H', 'I', 'A', 'B', 'C']);
+        const result = otherSuggestions(plan, LUNCH, recipes, seededRandom(seed));
+        expect([...result.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'G',
+          'H',
+          'I',
+        ]);
+
+        // Only G and H are shown by no other open meal, so the dinner's recipe shown longest ago
+        // fills the set
+        const twoLeft = oneDayPlan(lunch, dinner, ['E', 'D', 'F', 'G', 'H', 'A', 'B', 'C']);
+        const fewer = otherSuggestions(twoLeft, LUNCH, recipes.slice(0, 8), seededRandom(seed));
+        expect([...fewer.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'E',
+          'G',
+          'H',
+        ]);
+      }
+    });
   });
 
   describe('clearMeal', () => {
-    it('opens the meal again with three suggestions, which can include its own recipe', () => {
-      const recipes = ['A', 'B', 'C', 'D'];
-      const plan = oneDayPlan(picked('A'), picked('B'));
-      const result = clearMeal(plan, LUNCH, recipes, seededRandom(1));
-      expect(result.days[0].lunch.recipe).toBeNull();
-      // B stays picked, so A, C and D are the only possible suggestions
-      expect([...result.days[0].lunch.suggestions].sort()).toEqual(['A', 'C', 'D']);
-      expect(result.days[0].dinner).toEqual(picked('B'));
+    it('opens the meal again with three suggestions, which include its own recipe only once the recipes not shown yet run out', () => {
+      for (const seed of SEEDS) {
+        const plan = oneDayPlan(picked('A'), picked('B'), ['A', 'B']);
+        const result = clearMeal(plan, LUNCH, ['A', 'B', 'C', 'D', 'E'], seededRandom(seed));
+        expect(result.days[0].lunch.recipe, `seed ${seed}`).toBeNull();
+        expect([...result.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'C',
+          'D',
+          'E',
+        ]);
+        expect(result.days[0].dinner).toEqual(picked('B'));
+
+        // B stays picked, so A, C and D are the only possible suggestions
+        const fewer = clearMeal(plan, LUNCH, ['A', 'B', 'C', 'D'], seededRandom(seed));
+        expect([...fewer.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'A',
+          'C',
+          'D',
+        ]);
+      }
     });
 
     it('rejects a meal that is already open', () => {
@@ -315,6 +787,29 @@ describe('plan', () => {
         expect(result.days[1].dinner).toEqual(plan.days[1].dinner);
       }
     });
+
+    it('suggests neither the cleared recipe nor a shown one, and no recipe twice, for a cleared "Cook extra" dinner and the lunch it reopens', () => {
+      for (const seed of SEEDS) {
+        const shown = ['Minestrone', 'Pesto', 'Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash'];
+        const plan: Plan = { ...cookExtraPlan(), shown: [...shown] };
+        const result = clearMeal(plan, DINNER, FOURTEEN_RECIPES, seededRandom(seed));
+        const drawn = [...result.days[0].dinner.suggestions, ...result.days[1].lunch.suggestions];
+        expect(new Set(drawn).size, `seed ${seed}: ${drawn.join(', ')}`).toBe(6);
+        expectNoneOf(drawn, shown, `seed ${seed}:`);
+      }
+    });
+
+    it('counts the cleared recipe as shown just now, so the recipes shown after it come back first once every recipe has been shown', () => {
+      for (const seed of SEEDS) {
+        const plan = oneDayPlan(picked('A'), picked('B'), ['A', 'C', 'D', 'E', 'F', 'B']);
+        const result = clearMeal(plan, LUNCH, ['A', 'B', 'C', 'D', 'E', 'F'], seededRandom(seed));
+        expect([...result.days[0].lunch.suggestions].sort(), `seed ${seed}`).toEqual([
+          'C',
+          'D',
+          'E',
+        ]);
+      }
+    });
   });
 
   describe('setCookExtra', () => {
@@ -328,6 +823,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        shown: [],
       };
       const result = setCookExtra(plan, 0, true, recipes, seededRandom(1));
       expect(result.days[0]).toEqual({ ...plan.days[0], cookExtra: true });
@@ -358,6 +854,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        shown: [],
       };
       expectUnchanged(off, (p) => setCookExtra(p, 0, false, RECIPES, seededRandom(1)));
     });
@@ -375,6 +872,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        shown: [],
       };
       const result = setCookExtra(plan, 0, true, RECIPES, seededRandom(1));
       expect(result.days[0].cookExtra).toBe(true);
@@ -403,6 +901,7 @@ describe('plan', () => {
         people: 2,
         accepted: false,
         ticked: [],
+        shown: [],
       };
       expectUnchanged(lastDay, (p) => setCookExtra(p, 1, true, RECIPES, seededRandom(1)));
       const oneDay = oneDayPlan(picked('Chili'), picked('Curry'));
@@ -421,6 +920,7 @@ describe('plan', () => {
         people: 2,
         accepted: true,
         ticked: [],
+        shown: [],
       };
       expectUnchanged(accepted, (p) => setCookExtra(p, 0, true, RECIPES, seededRandom(1)));
       const acceptedCookExtra = completeCookExtraPlan(true);
@@ -597,6 +1097,66 @@ describe('plan', () => {
       });
     });
 
+    it('reads back the recipes a plan has shown, in the order they were shown', () => {
+      const plan = oneDayPlan(open('Chili', 'Curry', 'Fajitas'), picked('Dal'), [
+        'Lasagne',
+        'Dal',
+        'Goulash',
+        'Chili',
+        'Curry',
+        'Fajitas',
+      ]);
+      expect(parsePlan(JSON.parse(JSON.stringify(plan)), RECIPES)).toEqual(plan);
+    });
+
+    it('reads back a plan saved before shown recipes were recorded as it was, with the suggestions it shows counted as shown', () => {
+      for (const saved of [storedPlan(), cookExtraPlan()]) {
+        const savedBefore: any = structuredClone(saved);
+        delete savedBefore.shown;
+        const parsed = parsePlan(savedBefore, RECIPES);
+        expect(parsed, JSON.stringify(savedBefore)).not.toBeNull();
+        expect(parsed!.days).toEqual(saved.days);
+        expect(parsed!.people).toBe(saved.people);
+        expect(parsed!.accepted).toBe(saved.accepted);
+        expect(parsed!.shown).toEqual(expect.arrayContaining(suggestionsOf(saved)));
+        expect(new Set(parsed!.shown).size, parsed!.shown.join(', ')).toBe(parsed!.shown.length);
+        expectNoneOf(
+          parsed!.shown,
+          RECIPES.filter((name) => !recipesOf(saved).includes(name)),
+        );
+      }
+    });
+
+    it('reads back a plan whose shown recipes miss some of its suggestions with the missing ones added last, in day and meal order', () => {
+      const plan = storedPlan();
+      plan.shown = ['Quiche', 'Minestrone'];
+      const parsed = parsePlan(JSON.parse(JSON.stringify(plan)), RECIPES);
+      expect(parsed).toEqual({
+        ...plan,
+        shown: ['Quiche', 'Minestrone', 'Dal', 'Fajitas', 'Goulash', 'Lasagne', 'Pesto'],
+      });
+    });
+
+    it('returns null for a plan whose shown recipes are not a list of recipe names', () => {
+      for (const shown of ['Chili', 42, { Chili: true }, [42], ['Chili', null]]) {
+        const plan: any = storedPlan();
+        plan.shown = shown;
+        expect(parsePlan(plan, RECIPES), JSON.stringify(shown)).toBeNull();
+      }
+    });
+
+    it('returns null for a plan whose shown recipes name a recipe that does not exist', () => {
+      const plan = storedPlan();
+      plan.shown = ['Pizza', ...plan.shown];
+      expect(parsePlan(plan, RECIPES)).toBeNull();
+    });
+
+    it('returns null for a plan whose shown recipes name a recipe twice', () => {
+      const plan = storedPlan();
+      plan.shown = [...plan.shown, 'Dal'];
+      expect(parsePlan(plan, RECIPES)).toBeNull();
+    });
+
     it('returns null for values that are not a plan', () => {
       for (const value of [null, undefined, 'plan', 42, [], {}]) {
         expect(parsePlan(value, RECIPES), JSON.stringify(value)).toBeNull();
@@ -716,6 +1276,17 @@ describe('plan', () => {
       people: 2,
       accepted: false,
       ticked: [],
+      shown: [
+        'Chili',
+        'Quiche',
+        'Dal',
+        'Fajitas',
+        'Goulash',
+        'Lasagne',
+        'Minestrone',
+        'Pesto',
+        'Curry',
+      ],
     };
   }
 
@@ -729,6 +1300,7 @@ describe('plan', () => {
       people: 2,
       accepted: false,
       ticked: [],
+      shown: ['Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash'],
     };
   }
 
@@ -738,8 +1310,14 @@ describe('plan', () => {
     return { ...plan, accepted };
   }
 
-  function oneDayPlan(lunch: Meal, dinner: Meal): Plan {
-    return { days: [day('2026-10-24', lunch, dinner)], people: 2, accepted: false, ticked: [] };
+  function oneDayPlan(lunch: Meal, dinner: Meal, shown: string[] = []): Plan {
+    return {
+      days: [day('2026-10-24', lunch, dinner)],
+      people: 2,
+      accepted: false,
+      ticked: [],
+      shown,
+    };
   }
 
   function expectUnchanged(plan: Plan, change: (plan: Plan) => Plan) {
@@ -761,11 +1339,7 @@ describe('plan', () => {
       meal.suggestions.every((name) => recipes.includes(name)),
       context,
     ).toBe(true);
-    const picks = pickedRecipes(plan);
-    expect(
-      meal.suggestions.filter((name) => picks.includes(name)),
-      context,
-    ).toEqual([]);
+    expectNoneOf(meal.suggestions, pickedRecipes(plan), context);
   }
 
   function meals(plan: Plan): Meal[] {
@@ -774,6 +1348,17 @@ describe('plan', () => {
 
   function openMealsOf(plan: Plan): Meal[] {
     return meals(plan).filter((meal) => meal.recipe === null);
+  }
+
+  function recipesOf(plan: Plan): string[] {
+    return [...pickedRecipes(plan), ...suggestionsOf(plan)];
+  }
+
+  function expectNoneOf(suggestions: readonly string[], excluded: readonly string[], context = '') {
+    expect(
+      suggestions.filter((name) => excluded.includes(name)),
+      `${context} ${suggestions.join(', ')}`,
+    ).toEqual([]);
   }
 
   function pickedRecipes(plan: Plan): string[] {

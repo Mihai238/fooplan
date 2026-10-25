@@ -1,8 +1,12 @@
-import { Meal, MealRef, PlanDay, Random } from './plan';
+import { Meal, MealRef, Plan, PlanDay, Random } from './plan';
 import { PlanStore } from './plan-store';
 
 export const LUNCH: MealRef = { day: 0, kind: 'lunch' };
 export const DINNER: MealRef = { day: 0, kind: 'dinner' };
+
+export function suggestionsOf(plan: Plan): string[] {
+  return plan.days.flatMap((day) => [...day.lunch.suggestions, ...day.dinner.suggestions]);
+}
 
 // A linear congruential generator, so every run draws the same numbers
 export function seededRandom(seed: number): Random {

@@ -3,7 +3,7 @@ import { groceryList, itemKey } from '../groceries/groceries';
 import { RECIPES } from '../recipes/recipes';
 import { DEFAULT_DAYS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
-import { acceptOneDayPlan, DINNER, LUNCH, seededRandom } from './testing';
+import { acceptOneDayPlan, DINNER, LUNCH, seededRandom, suggestionsOf } from './testing';
 
 const STORAGE_KEY = 'fooplan.plan';
 
@@ -56,6 +56,28 @@ describe('PlanStore', () => {
     expect(reload().plan()).toEqual(before);
   });
 
+  it('does not suggest the recipes a plan has shown again after a reload, while recipes not shown yet are left', () => {
+    const seen = suggestionsOf(store.plan());
+    for (let click = 0; click < 5; click++) {
+      store.otherSuggestions(LUNCH);
+      seen.push(...store.plan().days[0].lunch.suggestions);
+    }
+    const before = store.plan();
+
+    store = reload();
+    expect(store.plan()).toEqual(before);
+    // 45 of the 60 recipes were shown, so the next 5 clicks still bring only recipes not shown yet
+    for (let click = 1; click <= 5; click++) {
+      store.otherSuggestions(LUNCH);
+      const suggestions = store.plan().days[0].lunch.suggestions;
+      expect(
+        suggestions.filter((name) => seen.includes(name)),
+        `click ${click}: ${suggestions.join(', ')}`,
+      ).toEqual([]);
+      seen.push(...suggestions);
+    }
+  });
+
   it('keeps the start date of a stored plan when reloaded on a later day', () => {
     store.setDays(2);
     const before = store.plan();
@@ -86,6 +108,7 @@ describe('PlanStore', () => {
       people: 2,
       accepted: false,
       ticked: [],
+      shown: [],
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
     expectFreshPlan(reload().plan(), '2026-10-24');
@@ -98,6 +121,16 @@ describe('PlanStore', () => {
     store.newPlan();
     expectFreshPlan(store.plan(), '2026-10-26');
     expect(reload().plan()).toEqual(store.plan());
+  });
+
+  it('forgets the recipes the old plan has shown on "New plan", so only the new suggestions count as shown', () => {
+    for (let click = 0; click < 20; click++) {
+      store.otherSuggestions(LUNCH);
+    }
+
+    store.newPlan();
+    expectFreshPlan(store.plan(), '2026-10-24');
+    expect([...store.plan().shown].sort()).toEqual([...suggestionsOf(store.plan())].sort());
   });
 
   it('keeps the people on "New plan"', () => {

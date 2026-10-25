@@ -268,7 +268,7 @@ describe('groceries', () => {
   }
 
   function planFor(people: number, ...days: PlanDay[]): Plan {
-    return { days, people, accepted: false, ticked: [] };
+    return { days, people, accepted: false, ticked: [], shown: [] };
   }
 
   function item(
