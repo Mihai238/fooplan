@@ -195,6 +195,53 @@ describe('RecipePage', () => {
     expect(stepCounters()).toEqual(['Step 1 of 5']);
   });
 
+  it('shows "Pizza toast", "2 servings", its 6 ingredient lines and "Step 1 of 4" with its first step at /recipes/pizza-toast, and "Step 1 of 6" at /recipes/spaghetti-with-meatballs', async () => {
+    harness = await RouterTestingHarness.create('/recipes/pizza-toast');
+    expect(router().url).toBe('/recipes/pizza-toast');
+    expect(headings().map(textOf)).toEqual(['Pizza toast']);
+    expect(textOf(page())).toContain('2 servings');
+    expect(ingredientLines()).toEqual([
+      '200 g bread',
+      '3 tbsp tomato paste',
+      '1 tsp oregano',
+      '150 g mozzarella',
+      '100 g cherry tomato',
+      '1 tbsp olive oil',
+    ]);
+    expect(stepCounters()).toEqual(['Step 1 of 4']);
+    elementShowing('Heat the oven to 220 °C and lay the bread slices on a baking tray.');
+
+    await harness.navigateByUrl('/recipes/spaghetti-with-meatballs');
+    expect(headings().map(textOf)).toEqual(['Spaghetti with meatballs']);
+    expect(stepCounters()).toEqual(['Step 1 of 6']);
+  });
+
+  it('shows each of the 10 family recipes of #32 at its slug with its name and "Step 1 of N" for its N steps', async () => {
+    const pages: [string, string, number][] = [
+      ['chicken-schnitzel-with-cucumber-salad', 'Chicken schnitzel with cucumber salad', 5],
+      [
+        'fish-fingers-with-mashed-potatoes-and-peas',
+        'Fish fingers with mashed potatoes and peas',
+        5,
+      ],
+      ['spaghetti-with-zucchini-and-parmesan', 'Spaghetti with zucchini and parmesan', 5],
+      ['chicken-and-rice-with-carrots-and-peas', 'Chicken and rice with carrots and peas', 5],
+      ['pizza-toast', 'Pizza toast', 4],
+      ['potato-pancakes-with-sour-cream', 'Potato pancakes with sour cream', 5],
+      ['spaghetti-with-meatballs', 'Spaghetti with meatballs', 6],
+      ['creamy-salmon-pasta-with-spinach', 'Creamy salmon pasta with spinach', 5],
+      ['chicken-and-vegetable-skewers-with-rice', 'Chicken and vegetable skewers with rice', 5],
+      ['pasta-with-broccoli-and-parmesan', 'Pasta with broccoli and parmesan', 5],
+    ];
+    harness = await RouterTestingHarness.create();
+    for (const [slug, name, steps] of pages) {
+      await harness.navigateByUrl(`/recipes/${slug}`);
+      expect(router().url, name).toBe(`/recipes/${slug}`);
+      expect(headings().map(textOf), slug).toEqual([name]);
+      expect(stepCounters(), name).toEqual([`Step 1 of ${steps}`]);
+    }
+  });
+
   it('shows only the current step, never the others, on every step', async () => {
     harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');

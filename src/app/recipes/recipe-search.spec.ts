@@ -4,7 +4,13 @@ import { RECIPES } from './recipes';
 
 describe('searchRecipes', () => {
   it('finds the recipes whose name contains the search text, ignoring case, accents and surrounding spaces, in RECIPES order', () => {
-    const spaghetti = ['Spaghetti pomodoro', 'Spaghetti carbonara', 'Spaghetti aglio e olio'];
+    const spaghetti = [
+      'Spaghetti pomodoro',
+      'Spaghetti carbonara',
+      'Spaghetti aglio e olio',
+      'Spaghetti with zucchini and parmesan',
+      'Spaghetti with meatballs',
+    ];
     expect(namesFor('spaghetti')).toEqual(spaghetti);
     expect(namesFor('  SPAGHETTI ')).toEqual(spaghetti);
     expect(namesFor('nicoise')).toEqual(['Niçoise salad']);
@@ -66,6 +72,7 @@ describe('searchRecipes', () => {
       'Pesto pasta with cherry tomatoes',
       'Couscous salad with halloumi',
       'Hummus plate with bread and vegetables',
+      'Pizza toast',
     ]);
   });
 

@@ -508,6 +508,30 @@ describe('GroceryList', () => {
     ).toEqual([]);
   });
 
+  it('lists "350 g pea", "600 g potato" and "2 pc carrot" under "Fruit & vegetables", "1 pc egg" under "Dairy & eggs", "400 g cod" and "400 g chicken thigh" under "Meat & fish", and no vegetable oil, for "Fish fingers with mashed potatoes and peas" and "Chicken and rice with carrots and peas" accepted for 2', async () => {
+    await openAccepted(
+      'Fish fingers with mashed potatoes and peas',
+      'Chicken and rice with carrots and peas',
+    );
+
+    expect(
+      sections().map((section) => [textOf(section.querySelector('h2')), labelsIn(section)]),
+    ).toEqual([
+      ['Fruit & vegetables', ['2 pc carrot', '1 pc onion', '350 g pea', '600 g potato']],
+      ['Meat & fish', ['400 g chicken thigh', '400 g cod']],
+      ['Dairy & eggs', ['30 g butter', '1 pc egg', '100 ml milk']],
+      ['Bread & bakery', ['80 g breadcrumbs']],
+      ['Pasta, rice & grains', ['50 g flour', '200 g rice']],
+      ['Cans & jars', ['500 ml vegetable stock']],
+      ['Spices & sauces', ['1 tsp paprika']],
+    ]);
+    expect(
+      listed()
+        .map(labelOf)
+        .filter((line) => line.includes('vegetable oil')),
+    ).toEqual([]);
+  });
+
   it('follows an edit of "Quick Dal" in an accepted plan for 2 at once: its ticked 100 g canned chickpeas become 150 g, still ticked, after changing 200 g to 300 g, and 150 pc unticked, with no g line, after changing the unit to pc', async () => {
     storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
     const chickpeas = itemKey({ name: 'canned chickpeas', unit: 'g' });
@@ -650,11 +674,11 @@ describe('GroceryList', () => {
       expect(labelsIn(sectionHeaded('Other'))).toContain('leek');
     });
 
-    it('says "Added … to Other." for chive, cream, pumpkin, pumpkin seed and red lentil, the other ingredients only the soups used, and lists each under "Other"', async () => {
+    it('says "Added … to Other." for pumpkin, pumpkin seed and red lentil, the other ingredients only the soups used, and lists each under "Other"', async () => {
       acceptOneDayPlan(store);
       await open();
 
-      for (const name of ['chive', 'cream', 'pumpkin', 'pumpkin seed', 'red lentil']) {
+      for (const name of ['pumpkin', 'pumpkin seed', 'red lentil']) {
         await add(name);
         expect(statusText()).toBe(`Added "${name}" to Other.`);
         expect(labelsIn(sectionHeaded('Other')), `${name} not under "Other"`).toContain(name);
@@ -671,6 +695,18 @@ describe('GroceryList', () => {
       await add('sesame seed');
       expect(statusText()).toBe('Added "sesame seed" to Nuts & seeds.');
       expect(labelsIn(sectionHeaded('Nuts & seeds'))).toContain('sesame seed');
+    });
+
+    it('says "Added "cream" to Dairy & eggs." and "Added "chive" to Fruit & vegetables.", as recipes use them again', async () => {
+      acceptOneDayPlan(store);
+      await open();
+
+      await add('cream');
+      expect(statusText()).toBe('Added "cream" to Dairy & eggs.');
+      expect(labelsIn(sectionHeaded('Dairy & eggs'))).toContain('cream');
+      await add('chive');
+      expect(statusText()).toBe('Added "chive" to Fruit & vegetables.');
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain('chive');
     });
 
     it('keeps the inner spaces of the entry in the text', async () => {

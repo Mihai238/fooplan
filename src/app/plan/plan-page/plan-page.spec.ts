@@ -790,6 +790,36 @@ describe('PlanPage', () => {
       ]);
     });
 
+    it('shows the suggestions "Pizza toast 15 minutes", "Pasta with broccoli and parmesan 20 minutes" and "Chicken schnitzel with cucumber salad 25 minutes", and the picked "Pizza toast" linking to /recipes/pizza-toast with a p.minutes "15 minutes"', async () => {
+      await openWith(
+        planOf([
+          planDay(
+            '2026-10-24',
+            open(
+              'Pizza toast',
+              'Pasta with broccoli and parmesan',
+              'Chicken schnitzel with cucumber salad',
+            ),
+            picked('Spaghetti carbonara'),
+          ),
+        ]),
+      );
+      expect(suggestionsOf(meal(0)).map(textOf)).toEqual([
+        'Pizza toast 15 minutes',
+        'Pasta with broccoli and parmesan 20 minutes',
+        'Chicken schnitzel with cucumber salad 25 minutes',
+      ]);
+
+      await click(suggestionsOf(meal(0))[0]);
+      const link = recipeLink(meal(0));
+      expect(textOf(link)).toBe('Pizza toast');
+      expect(link.getAttribute('href')).toBe('/recipes/pizza-toast');
+      expect(partOf(meal(0).querySelector('p.recipe')?.nextElementSibling)).toEqual([
+        'p.minutes',
+        '15 minutes',
+      ]);
+    });
+
     it("puts no link in or around a picked meal's time, and keeps the time out of the recipe name's link", async () => {
       await openWith(
         planOf([planDay('2026-10-24', OPEN_SHAKSHUKA, picked('Spaghetti carbonara'))]),

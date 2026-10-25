@@ -38,6 +38,16 @@ const SPEC_NAMES = [
   'Caprese salad with bread',
   'Spinach and feta omelette',
   'Tuna and white bean salad with bread',
+  'Chicken schnitzel with cucumber salad',
+  'Fish fingers with mashed potatoes and peas',
+  'Spaghetti with zucchini and parmesan',
+  'Chicken and rice with carrots and peas',
+  'Pizza toast',
+  'Potato pancakes with sour cream',
+  'Spaghetti with meatballs',
+  'Creamy salmon pasta with spinach',
+  'Chicken and vegetable skewers with rice',
+  'Pasta with broccoli and parmesan',
 ];
 
 const SPEC_TIMES: Record<string, { minutes: number; workMinutes: number }> = {
@@ -75,6 +85,16 @@ const SPEC_TIMES: Record<string, { minutes: number; workMinutes: number }> = {
   'Caprese salad with bread': { minutes: 10, workMinutes: 10 },
   'Spinach and feta omelette': { minutes: 15, workMinutes: 15 },
   'Tuna and white bean salad with bread': { minutes: 10, workMinutes: 5 },
+  'Chicken schnitzel with cucumber salad': { minutes: 25, workMinutes: 25 },
+  'Fish fingers with mashed potatoes and peas': { minutes: 35, workMinutes: 25 },
+  'Spaghetti with zucchini and parmesan': { minutes: 25, workMinutes: 20 },
+  'Chicken and rice with carrots and peas': { minutes: 35, workMinutes: 15 },
+  'Pizza toast': { minutes: 15, workMinutes: 10 },
+  'Potato pancakes with sour cream': { minutes: 35, workMinutes: 30 },
+  'Spaghetti with meatballs': { minutes: 40, workMinutes: 25 },
+  'Creamy salmon pasta with spinach': { minutes: 25, workMinutes: 20 },
+  'Chicken and vegetable skewers with rice': { minutes: 35, workMinutes: 25 },
+  'Pasta with broccoli and parmesan': { minutes: 20, workMinutes: 15 },
 };
 
 // #29's data, so a changed amount or a typo in a step fails, not just a broken rule
@@ -183,7 +203,238 @@ const EASY_RECIPES: Recipe[] = [
   },
 ];
 
-const EASY_START = SPEC_NAMES.length - EASY_RECIPES.length;
+// #32's data, checked the same way
+const FAMILY_RECIPES: Recipe[] = [
+  {
+    name: 'Chicken schnitzel with cucumber salad',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'chicken breast', amount: 300, unit: 'g' },
+      { name: 'flour', amount: 50, unit: 'g' },
+      { name: 'egg', amount: 1, unit: 'pc' },
+      { name: 'breadcrumbs', amount: 80, unit: 'g' },
+      { name: 'vegetable oil', amount: 60, unit: 'ml' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'cucumber', amount: 1, unit: 'pc' },
+      { name: 'sour cream', amount: 100, unit: 'g' },
+      { name: 'dill', amount: 10, unit: 'g' },
+    ],
+    steps: [
+      'Slice the cucumber thinly, chop the dill and mix both with the sour cream, salt and pepper for the salad.',
+      'Halve the chicken breast lengthwise and flatten each half to about 1 cm with a rolling pin.',
+      'Season the chicken with salt and pepper, then coat it in the flour, the beaten egg and the breadcrumbs in turn.',
+      'Heat the vegetable oil in a large pan over medium-high heat and fry the schnitzels for 3 to 4 minutes per side until golden.',
+      'Serve with the cucumber salad and a wedge of the lemon to squeeze over.',
+    ],
+  },
+  {
+    name: 'Fish fingers with mashed potatoes and peas',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'potato', amount: 600, unit: 'g' },
+      { name: 'milk', amount: 100, unit: 'ml' },
+      { name: 'butter', amount: 30, unit: 'g' },
+      { name: 'cod', amount: 400, unit: 'g' },
+      { name: 'flour', amount: 50, unit: 'g' },
+      { name: 'egg', amount: 1, unit: 'pc' },
+      { name: 'breadcrumbs', amount: 80, unit: 'g' },
+      { name: 'vegetable oil', amount: 60, unit: 'ml' },
+      { name: 'pea', amount: 200, unit: 'g' },
+    ],
+    steps: [
+      'Peel the potatoes, cut them into chunks and boil them in salted water for 20 minutes until soft.',
+      'Meanwhile cut the cod into finger-sized strips and coat them in the flour, the beaten egg and the breadcrumbs in turn.',
+      'Heat the vegetable oil in a large pan over medium heat and fry the fish fingers for 2 to 3 minutes per side until golden and cooked through.',
+      'Cook the peas in boiling water for 3 minutes and drain them.',
+      'Drain the potatoes, mash them with the milk and the butter, season with salt and serve with the fish fingers and the peas.',
+    ],
+  },
+  {
+    name: 'Spaghetti with zucchini and parmesan',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'spaghetti', amount: 200, unit: 'g' },
+      { name: 'zucchini', amount: 2, unit: 'pc' },
+      { name: 'garlic clove', amount: 1, unit: 'pc' },
+      { name: 'olive oil', amount: 3, unit: 'tbsp' },
+      { name: 'parmesan', amount: 50, unit: 'g' },
+      { name: 'basil', amount: 10, unit: 'g' },
+    ],
+    steps: [
+      'Bring a large pot of salted water to the boil and cook the spaghetti until al dente, about 9 minutes.',
+      'Meanwhile slice the zucchini into thin rounds and finely chop the garlic clove.',
+      'Heat the olive oil in a large pan over medium-high heat and fry the zucchini for 6 to 8 minutes until golden, adding the garlic for the last minute.',
+      'Scoop out a cup of the pasta water, drain the spaghetti and toss it in the pan with half of the grated parmesan and a splash of the pasta water.',
+      'Tear the basil over the pasta, season with salt and pepper and serve with the rest of the parmesan.',
+    ],
+  },
+  {
+    name: 'Chicken and rice with carrots and peas',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'chicken thigh', amount: 400, unit: 'g' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'carrot', amount: 2, unit: 'pc' },
+      { name: 'rice', amount: 200, unit: 'g' },
+      { name: 'vegetable stock', amount: 500, unit: 'ml' },
+      { name: 'pea', amount: 150, unit: 'g' },
+      { name: 'vegetable oil', amount: 30, unit: 'ml' },
+      { name: 'paprika', amount: 1, unit: 'tsp' },
+    ],
+    steps: [
+      'Cut the chicken thighs into bite-sized pieces, dice the onion and the carrots.',
+      'Heat the vegetable oil in a wide pot over medium-high heat and brown the chicken for 4 minutes, then add the onion and the carrots and cook for 3 more minutes.',
+      'Stir in the rice and the paprika, pour in the vegetable stock, season with salt and bring to the boil.',
+      'Cover, turn the heat to low and simmer for 15 minutes until the rice has absorbed the stock.',
+      'Stir in the peas, cover again for 3 minutes and serve.',
+    ],
+  },
+  {
+    name: 'Pizza toast',
+    servings: 2,
+    minutes: 15,
+    workMinutes: 10,
+    ingredients: [
+      { name: 'bread', amount: 200, unit: 'g' },
+      { name: 'tomato paste', amount: 3, unit: 'tbsp' },
+      { name: 'oregano', amount: 1, unit: 'tsp' },
+      { name: 'mozzarella', amount: 150, unit: 'g' },
+      { name: 'cherry tomato', amount: 100, unit: 'g' },
+      { name: 'olive oil', amount: 1, unit: 'tbsp' },
+    ],
+    steps: [
+      'Heat the oven to 220 °C and lay the bread slices on a baking tray.',
+      'Spread the tomato paste thinly over the bread and sprinkle it with the oregano.',
+      'Tear the mozzarella over the slices, halve the cherry tomatoes and scatter them on top, then drizzle with the olive oil.',
+      'Bake for 8 to 10 minutes until the cheese bubbles and the edges are crisp, and serve hot.',
+    ],
+  },
+  {
+    name: 'Potato pancakes with sour cream',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 30,
+    ingredients: [
+      { name: 'potato', amount: 600, unit: 'g' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'egg', amount: 1, unit: 'pc' },
+      { name: 'flour', amount: 40, unit: 'g' },
+      { name: 'vegetable oil', amount: 90, unit: 'ml' },
+      { name: 'sour cream', amount: 150, unit: 'g' },
+      { name: 'chive', amount: 10, unit: 'g' },
+    ],
+    steps: [
+      'Peel and coarsely grate the potatoes and the onion, then squeeze the mixture in a clean towel to wring out the liquid.',
+      'Mix the potatoes and the onion with the egg, the flour, salt and pepper.',
+      'Heat a third of the vegetable oil in a large pan over medium-high heat, drop in heaped spoonfuls of the mixture, flatten them and fry for 3 to 4 minutes per side until golden and crisp.',
+      'Fry the rest in two more batches with the remaining vegetable oil, keeping the done pancakes warm.',
+      'Chop the chives, stir them into the sour cream and serve it with the pancakes.',
+    ],
+  },
+  {
+    name: 'Spaghetti with meatballs',
+    servings: 2,
+    minutes: 40,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'ground beef', amount: 300, unit: 'g' },
+      { name: 'breadcrumbs', amount: 40, unit: 'g' },
+      { name: 'egg', amount: 1, unit: 'pc' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'garlic clove', amount: 1, unit: 'pc' },
+      { name: 'olive oil', amount: 2, unit: 'tbsp' },
+      { name: 'canned tomatoes', amount: 400, unit: 'g' },
+      { name: 'spaghetti', amount: 200, unit: 'g' },
+      { name: 'parmesan', amount: 30, unit: 'g' },
+    ],
+    steps: [
+      'Finely dice the onion and chop the garlic clove.',
+      'Mix the ground beef with the breadcrumbs, the egg, half of the onion, salt and pepper, and roll it into 12 meatballs.',
+      'Heat the olive oil in a wide pan over medium-high heat and brown the meatballs on all sides for 5 minutes, then take them out.',
+      'Fry the rest of the onion and the garlic in the pan for 2 minutes, add the canned tomatoes, season with salt and pepper, return the meatballs and simmer for 15 minutes.',
+      'Meanwhile cook the spaghetti in salted boiling water until al dente, about 9 minutes, and drain it.',
+      'Serve the spaghetti with the meatballs and their sauce, with the parmesan grated over.',
+    ],
+  },
+  {
+    name: 'Creamy salmon pasta with spinach',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'penne', amount: 200, unit: 'g' },
+      { name: 'salmon', amount: 300, unit: 'g' },
+      { name: 'garlic clove', amount: 1, unit: 'pc' },
+      { name: 'olive oil', amount: 1, unit: 'tbsp' },
+      { name: 'cream', amount: 200, unit: 'ml' },
+      { name: 'spinach', amount: 100, unit: 'g' },
+      { name: 'lemon', amount: 0.5, unit: 'pc' },
+      { name: 'parmesan', amount: 30, unit: 'g' },
+    ],
+    steps: [
+      'Bring a large pot of salted water to the boil and cook the penne until al dente, about 11 minutes.',
+      'Meanwhile cut the salmon into 2 cm cubes and chop the garlic clove.',
+      'Heat the olive oil in a large pan over medium heat and fry the salmon for 3 minutes, turning it once, then add the garlic for 30 seconds.',
+      'Pour in the cream, add the spinach and let it wilt for 2 minutes, then season with salt, pepper and the juice of the lemon.',
+      'Drain the penne, toss it in the sauce and serve with the parmesan grated over.',
+    ],
+  },
+  {
+    name: 'Chicken and vegetable skewers with rice',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'chicken breast', amount: 300, unit: 'g' },
+      { name: 'bell pepper', amount: 1, unit: 'pc' },
+      { name: 'zucchini', amount: 1, unit: 'pc' },
+      { name: 'red onion', amount: 1, unit: 'pc' },
+      { name: 'olive oil', amount: 2, unit: 'tbsp' },
+      { name: 'paprika', amount: 1, unit: 'tsp' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'rice', amount: 200, unit: 'g' },
+    ],
+    steps: [
+      'Cook the rice in salted water according to its packet, about 15 minutes, and keep it warm.',
+      'Cut the chicken breast, the bell pepper, the zucchini and the red onion into 3 cm pieces.',
+      'Toss them with the olive oil, the paprika, the juice of half the lemon, salt and pepper, and thread them onto skewers, alternating chicken and vegetables.',
+      'Grill the skewers in a hot grill pan over medium-high heat for 10 to 12 minutes, turning them every 3 minutes, until the chicken is cooked through.',
+      'Serve the skewers on the rice with the other half of the lemon cut into wedges.',
+    ],
+  },
+  {
+    name: 'Pasta with broccoli and parmesan',
+    servings: 2,
+    minutes: 20,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'penne', amount: 200, unit: 'g' },
+      { name: 'broccoli', amount: 400, unit: 'g' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'olive oil', amount: 3, unit: 'tbsp' },
+      { name: 'butter', amount: 20, unit: 'g' },
+      { name: 'parmesan', amount: 50, unit: 'g' },
+    ],
+    steps: [
+      'Bring a large pot of salted water to the boil and cook the penne until al dente, about 11 minutes.',
+      'Cut the broccoli into small florets and add them to the pasta water for the last 4 minutes.',
+      'Meanwhile slice the garlic cloves and warm them in the olive oil and the butter in a large pan over low heat for 2 minutes without browning.',
+      'Scoop out a cup of the pasta water, drain the penne and the broccoli and toss them in the pan with the grated parmesan and a splash of the pasta water until creamy.',
+      'Season with salt and pepper and serve.',
+    ],
+  },
+];
+
+const FAMILY_START = SPEC_NAMES.length - FAMILY_RECIPES.length;
+const EASY_START = FAMILY_START - EASY_RECIPES.length;
 
 const REMOVED_NAMES = [
   'Lasagne',
@@ -230,7 +481,8 @@ const NOT_KID_FRIENDLY = [
   'Avocado toast with fried egg',
 ];
 
-const SOUP_INGREDIENTS = ['chive', 'cream', 'leek', 'pumpkin', 'pumpkin seed', 'red lentil'];
+// #24's list without "chive" and "cream", which #32's recipes use again
+const SOUP_INGREDIENTS = ['leek', 'pumpkin', 'pumpkin seed', 'red lentil'];
 
 describe('RECIPES', () => {
   it('has a unique name, servings > 0 and at least one ingredient with amount > 0 and a known unit per recipe', () => {
@@ -264,7 +516,7 @@ describe('RECIPES', () => {
     expect(problems).toEqual([]);
   });
 
-  it('contains exactly the 34 recipes of the spec table, in its order, each with its minutes and workMinutes', () => {
+  it('contains exactly the 44 recipes of the spec table, in its order, each with its minutes and workMinutes', () => {
     expect(Object.keys(SPEC_TIMES), 'recipes in the times table').toEqual(SPEC_NAMES);
     expect(
       RECIPES.map(({ name, minutes, workMinutes }) => ({ name, minutes, workMinutes })),
@@ -272,16 +524,46 @@ describe('RECIPES', () => {
   });
 
   it('holds the 5 easy recipes of #29 after the first 29, in their order, each with exactly its servings, minutes, workMinutes, ingredients and steps', () => {
-    expect(RECIPES.slice(EASY_START)).toEqual(EASY_RECIPES);
+    expect(RECIPES.slice(EASY_START, FAMILY_START)).toEqual(EASY_RECIPES);
   });
 
-  it('has exactly the 11 recipes of #31 and #29 that are not kid-friendly, the other 23 kid-friendly, at least MIN_SUGGESTED of them', () => {
+  it('holds the 10 family recipes of #32 after the first 34, in their order, each with exactly its servings, minutes, workMinutes, ingredients and steps', () => {
+    expect(RECIPES.slice(FAMILY_START)).toEqual(FAMILY_RECIPES);
+  });
+
+  it('gives none of the 10 family recipes of #32 the name of one of the 27 recipes the spec removes', () => {
+    const family = RECIPES.slice(FAMILY_START).map((recipe) => recipe.name);
+    expect(family, 'family recipes loaded').toHaveLength(10);
+    expect(family.filter((name) => REMOVED_NAMES.includes(name))).toEqual([]);
+  });
+
+  it('uses "broccoli", "chive", "cream", "pea" and "zucchini" as the only ingredient names in the 10 family recipes that the first 34 recipes do not use', () => {
+    const known = new Set(
+      RECIPES.slice(0, FAMILY_START).flatMap((recipe) =>
+        recipe.ingredients.map((ingredient) => ingredient.name),
+      ),
+    );
+    const family = RECIPES.slice(FAMILY_START).flatMap((recipe) =>
+      recipe.ingredients.map((ingredient) => ingredient.name),
+    );
+    expect(family.length, 'no family recipes loaded').toBeGreaterThan(0);
+    expect([...new Set(family.filter((name) => !known.has(name)))].sort()).toEqual([
+      'broccoli',
+      'chive',
+      'cream',
+      'pea',
+      'zucchini',
+    ]);
+  });
+
+  it('has exactly the 11 recipes of #31 and #29 that are not kid-friendly, the other 33 kid-friendly, the 10 of #32 among them, at least MIN_SUGGESTED of them', () => {
     expect(RECIPES.filter((recipe) => !isKidFriendly(recipe)).map((recipe) => recipe.name)).toEqual(
       SPEC_NAMES.filter((name) => NOT_KID_FRIENDLY.includes(name)),
     );
     const kidFriendly = RECIPES.filter(isKidFriendly).map((recipe) => recipe.name);
     expect(kidFriendly).toEqual(SPEC_NAMES.filter((name) => !NOT_KID_FRIENDLY.includes(name)));
-    expect(kidFriendly).toHaveLength(23);
+    expect(kidFriendly).toHaveLength(33);
+    expect(kidFriendly.slice(-10), 'family recipes').toEqual(SPEC_NAMES.slice(FAMILY_START));
     expect(kidFriendly.length).toBeGreaterThanOrEqual(MIN_SUGGESTED);
   });
 
@@ -291,7 +573,7 @@ describe('RECIPES', () => {
         recipe.ingredients.map((ingredient) => ingredient.name),
       ),
     );
-    const easy = RECIPES.slice(EASY_START).flatMap((recipe) =>
+    const easy = RECIPES.slice(EASY_START, FAMILY_START).flatMap((recipe) =>
       recipe.ingredients.map((ingredient) => ingredient.name),
     );
     expect(easy.length, 'no easy recipes loaded').toBeGreaterThan(0);
@@ -329,7 +611,7 @@ describe('RECIPES', () => {
     expect(RECIPES.map((recipe) => recipe.name).filter((name) => /soup/i.test(name))).toEqual([]);
   });
 
-  it('uses none of the 6 ingredients only the soups used in any recipe', () => {
+  it('uses none of the 4 ingredients only the soups used in any recipe', () => {
     expectRecipesLoaded();
     const problems = RECIPES.flatMap((recipe) =>
       recipe.ingredients

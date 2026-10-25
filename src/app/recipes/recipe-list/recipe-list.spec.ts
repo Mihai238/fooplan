@@ -19,6 +19,19 @@ const EASY_RECIPES = [
   'Tuna and white bean salad with bread',
 ];
 
+const FAMILY_RECIPES = [
+  'Chicken schnitzel with cucumber salad',
+  'Fish fingers with mashed potatoes and peas',
+  'Spaghetti with zucchini and parmesan',
+  'Chicken and rice with carrots and peas',
+  'Pizza toast',
+  'Potato pancakes with sour cream',
+  'Spaghetti with meatballs',
+  'Creamy salmon pasta with spinach',
+  'Chicken and vegetable skewers with rice',
+  'Pasta with broccoli and parmesan',
+];
+
 describe('RecipeList', () => {
   let fixture: ComponentFixture<RecipeList>;
   let element: HTMLElement;
@@ -81,6 +94,8 @@ describe('RecipeList', () => {
       'Spaghetti pomodoro',
       'Spaghetti carbonara',
       'Spaghetti aglio e olio',
+      'Spaghetti with zucchini and parmesan',
+      'Spaghetti with meatballs',
     ]);
   });
 
@@ -100,7 +115,7 @@ describe('RecipeList', () => {
 
   it('lists all recipes again in RECIPES order when the user clears the search', async () => {
     await search('spaghetti');
-    expect(articles(), 'search not applied').toHaveLength(3);
+    expect(articles(), 'search not applied').toHaveLength(5);
     await search('');
     expect(listedNames()).toEqual(RECIPES.map((recipe) => recipe.name));
   });
@@ -232,7 +247,7 @@ describe('RecipeList', () => {
       field.focus();
       expect(document.activeElement, 'field not focused before typing').toBe(field);
       await search('spag');
-      expect(statusText(), 'count not shown').toBe('3 recipes match "spag".');
+      expect(statusText(), 'count not shown').toBe('5 recipes match "spag".');
       expect(document.activeElement, 'focus after typing').toBe(field);
       statusElement().focus();
       expect(document.activeElement, 'status element took the focus').toBe(field);
@@ -247,10 +262,10 @@ describe('RecipeList', () => {
       expectStatusShownAndEmpty('with a search of only spaces');
     });
 
-    it('says "3 recipes match "spaghetti"." and lists 3 recipes when the user types "spaghetti"', async () => {
+    it('says "5 recipes match "spaghetti"." and lists 5 recipes when the user types "spaghetti"', async () => {
       await search('spaghetti');
-      expect(statusText()).toBe('3 recipes match "spaghetti".');
-      expect(articles()).toHaveLength(3);
+      expect(statusText()).toBe('5 recipes match "spaghetti".');
+      expect(articles()).toHaveLength(5);
     });
 
     it('places the status element after the search field and before the first card', async () => {
@@ -268,11 +283,11 @@ describe('RecipeList', () => {
     });
 
     it('uses the plural for a search matching exactly 2 recipes', async () => {
-      await search('mozzarella');
-      expect(statusText()).toBe('2 recipes match "mozzarella".');
+      await search('salmon');
+      expect(statusText()).toBe('2 recipes match "salmon".');
       expect(listedNames()).toEqual([
-        'Gnocchi with tomato sauce and mozzarella',
-        'Caprese salad with bread',
+        'Oven-baked salmon with potatoes and green beans',
+        'Creamy salmon pasta with spinach',
       ]);
     });
 
@@ -282,48 +297,48 @@ describe('RecipeList', () => {
       expect(listedNames()).toEqual(['Spaghetti carbonara']);
     });
 
-    it('says "34 recipes match "s"." and lists all recipes when the user types "s"', async () => {
+    it('says "44 recipes match "s"." and lists all recipes when the user types "s"', async () => {
       await search('s');
       expect(statusText()).toBe(`${RECIPES.length} recipes match "s".`);
-      expect(RECIPES.length, 'recipes loaded').toBe(34);
+      expect(RECIPES.length, 'recipes loaded').toBe(44);
       expectAllRecipesRendered();
     });
 
-    it('lists the 34 quick recipes on open, and says "34 recipes match "s".", "3 recipes match "spaghetti"." and "No recipe matches "kase"."', async () => {
-      expect(articles()).toHaveLength(34);
+    it('lists the 44 quick recipes on open, and says "44 recipes match "s".", "5 recipes match "spaghetti"." and "No recipe matches "kase"."', async () => {
+      expect(articles()).toHaveLength(44);
       await search('s');
-      expect(statusText()).toBe('34 recipes match "s".');
-      expect(articles(), 'cards for "s"').toHaveLength(34);
+      expect(statusText()).toBe('44 recipes match "s".');
+      expect(articles(), 'cards for "s"').toHaveLength(44);
       await search('spaghetti');
-      expect(statusText()).toBe('3 recipes match "spaghetti".');
+      expect(statusText()).toBe('5 recipes match "spaghetti".');
       await search('kase');
       expect(statusText()).toBe('No recipe matches "kase".');
       expect(articles(), 'cards for "kase"').toEqual([]);
     });
 
-    it('lists 34 built-in recipes on open, and says "34 recipes match "s"." for "s" and "No recipe matches "soup"." for "soup"', async () => {
-      expect(articles()).toHaveLength(34);
+    it('lists 44 built-in recipes on open, and says "44 recipes match "s"." for "s" and "No recipe matches "soup"." for "soup"', async () => {
+      expect(articles()).toHaveLength(44);
       await search('s');
-      expect(statusText()).toBe('34 recipes match "s".');
-      expect(articles(), 'cards for "s"').toHaveLength(34);
+      expect(statusText()).toBe('44 recipes match "s".');
+      expect(articles(), 'cards for "s"').toHaveLength(44);
       await search('soup');
       expect(statusText()).toBe('No recipe matches "soup".');
       expect(articles(), 'cards for "soup"').toEqual([]);
     });
 
-    it('lists no card whose name contains "soup", and says that no recipe matches "Soup" or the ingredients only the soups used, "lentil", "pumpkin", "leek" and "chive"', async () => {
+    it('lists no card whose name contains "soup", and says that no recipe matches "Soup" or the ingredients only the soups used, "lentil", "pumpkin" and "leek"', async () => {
       expect(listedNames().filter((name) => /soup/i.test(name))).toEqual([]);
-      for (const text of ['Soup', 'lentil', 'pumpkin', 'leek', 'chive']) {
+      for (const text of ['Soup', 'lentil', 'pumpkin', 'leek']) {
         await search(text);
         expect(statusText()).toBe(`No recipe matches "${text}".`);
         expect(articles(), `cards for "${text}"`).toEqual([]);
       }
     });
 
-    it('says "1 recipe matches "soup"." and lists only the own recipe "Grandma\'s Soup", listed after the 34 built-in recipes, when the user types "soup"', async () => {
+    it('says "1 recipe matches "soup"." and lists only the own recipe "Grandma\'s Soup", listed after the 44 built-in recipes, when the user types "soup"', async () => {
       recipeStore().add(ownRecipe("Grandma's Soup"));
       await reopenPage();
-      expect(articles(), 'cards on open').toHaveLength(35);
+      expect(articles(), 'cards on open').toHaveLength(45);
       expect(listedNames().at(-1)).toBe("Grandma's Soup");
 
       await search('soup');
@@ -331,11 +346,30 @@ describe('RecipeList', () => {
       expect(listedNames()).toEqual(["Grandma's Soup"]);
     });
 
-    it('lists 34 cards on open, the 30th to 34th "Hummus plate with bread and vegetables", "Avocado toast with fried egg", "Caprese salad with bread", "Spinach and feta omelette" and "Tuna and white bean salad with bread", and says "34 recipes match "s"." for "s"', async () => {
-      expect(articles()).toHaveLength(34);
-      expect(listedNames().slice(29)).toEqual(EASY_RECIPES);
+    it('lists 44 cards on open, the 30th to 34th "Hummus plate with bread and vegetables", "Avocado toast with fried egg", "Caprese salad with bread", "Spinach and feta omelette" and "Tuna and white bean salad with bread", and says "44 recipes match "s"." for "s"', async () => {
+      expect(articles()).toHaveLength(44);
+      expect(listedNames().slice(29, 34)).toEqual(EASY_RECIPES);
       await search('s');
-      expect(statusText()).toBe('34 recipes match "s".');
+      expect(statusText()).toBe('44 recipes match "s".');
+    });
+
+    it('lists 44 cards on open, the 35th to 44th the 10 family recipes of #32 in their order, says "44 recipes match "s"." for "s", and "1 recipe matches "broccoli"." with only "Pasta with broccoli and parmesan", "2 servings" and its 6 ingredient lines for "broccoli"', async () => {
+      expect(articles()).toHaveLength(44);
+      expect(listedNames().slice(34)).toEqual(FAMILY_RECIPES);
+      await search('s');
+      expect(statusText()).toBe('44 recipes match "s".');
+      await search('broccoli');
+      expect(statusText()).toBe('1 recipe matches "broccoli".');
+      expect(listedNames()).toEqual(['Pasta with broccoli and parmesan']);
+      expect(textOf(articles()[0])).toContain('2 servings');
+      expect(ingredientLinesOf('Pasta with broccoli and parmesan')).toEqual([
+        '200 g penne',
+        '400 g broccoli',
+        '2 pc garlic clove',
+        '3 tbsp olive oil',
+        '20 g butter',
+        '50 g parmesan',
+      ]);
     });
 
     it('says "1 recipe matches "hummus"." and lists only "Hummus plate with bread and vegetables" with "2 servings" and its 8 ingredient lines when the user types "hummus"', async () => {
@@ -355,9 +389,9 @@ describe('RecipeList', () => {
       ]);
     });
 
-    it('says "8 recipes match "bread"." and lists the 4 recipes with bread or breadcrumbs and the 4 easy ones with bread in RECIPES order when the user types "bread"', async () => {
+    it('says "12 recipes match "bread"." and lists the 4 recipes with bread or breadcrumbs, the 4 easy ones with bread and the 4 family ones with bread or breadcrumbs in RECIPES order when the user types "bread"', async () => {
       await search('bread');
-      expect(statusText()).toBe('8 recipes match "bread".');
+      expect(statusText()).toBe('12 recipes match "bread".');
       expect(listedNames()).toEqual([
         'Chicken Caesar salad',
         'Shakshuka with bread',
@@ -367,6 +401,10 @@ describe('RecipeList', () => {
         'Avocado toast with fried egg',
         'Caprese salad with bread',
         'Tuna and white bean salad with bread',
+        'Chicken schnitzel with cucumber salad',
+        'Fish fingers with mashed potatoes and peas',
+        'Pizza toast',
+        'Spaghetti with meatballs',
       ]);
     });
 
@@ -376,24 +414,27 @@ describe('RecipeList', () => {
       expect(listedNames()).toEqual(['Spinach and feta omelette']);
     });
 
-    it('lists the own recipe "Grandma\'s Soup" right after "Tuna and white bean salad with bread", the last built-in recipe', async () => {
+    it('lists the own recipe "Grandma\'s Soup" right after "Pasta with broccoli and parmesan", the last built-in recipe', async () => {
       recipeStore().add(ownRecipe("Grandma's Soup"));
       await reopenPage();
       expect(listedNames().slice(-2)).toEqual([
-        'Tuna and white bean salad with bread',
+        'Pasta with broccoli and parmesan',
         "Grandma's Soup",
       ]);
     });
 
-    it('says "5 recipes match "cream"." and lists the 5 recipes with sour cream when the user types "cream"', async () => {
+    it('says "8 recipes match "cream"." and lists the 7 recipes with sour cream and the one with cream when the user types "cream"', async () => {
       await search('cream');
-      expect(statusText()).toBe('5 recipes match "cream".');
+      expect(statusText()).toBe('8 recipes match "cream".');
       expect(listedNames()).toEqual([
         'Chicken fajitas',
         'Fish tacos',
         'Beef stroganoff with rice',
         'Chicken quesadillas',
         'Bean burritos',
+        'Chicken schnitzel with cucumber salad',
+        'Potato pancakes with sour cream',
+        'Creamy salmon pasta with spinach',
       ]);
     });
 
@@ -405,7 +446,7 @@ describe('RecipeList', () => {
 
     it('quotes the search without its surrounding spaces and with its case in the count', async () => {
       await search('  Spaghetti  ');
-      expect(statusText()).toBe('3 recipes match "Spaghetti".');
+      expect(statusText()).toBe('5 recipes match "Spaghetti".');
     });
 
     it('says "No recipe matches "xyzzy"." in the status element, once on the page, without listing any recipe', async () => {
@@ -429,25 +470,25 @@ describe('RecipeList', () => {
       expect(statusText()).toBe('No recipe matches "feta  quiche".');
     });
 
-    it('updates the count to "8 recipes match "sp"." and lists 8 recipes when the user deletes the "a" of "spa"', async () => {
+    it('updates the count from "5 recipes match "spa"." to "11 recipes match "sp"." and lists 11 recipes when the user deletes the "a" of "spa"', async () => {
       await search('spa');
-      expect(statusText(), 'count before deleting').toBe('3 recipes match "spa".');
+      expect(statusText(), 'count before deleting').toBe('5 recipes match "spa".');
       await search('sp');
-      expect(statusText()).toBe('8 recipes match "sp".');
-      expect(articles()).toHaveLength(8);
+      expect(statusText()).toBe('11 recipes match "sp".');
+      expect(articles()).toHaveLength(11);
     });
 
     it('replaces the no-match text with the count when a deletion makes recipes match again', async () => {
       await search('spaghettix');
       expect(statusText(), 'no-match text before deleting').toBe('No recipe matches "spaghettix".');
       await search('spaghetti');
-      expect(statusText()).toBe('3 recipes match "spaghetti".');
-      expect(articles()).toHaveLength(3);
+      expect(statusText()).toBe('5 recipes match "spaghetti".');
+      expect(articles()).toHaveLength(5);
     });
 
     it('empties the status element and lists all recipes when the user empties the field or types only spaces', async () => {
       await search('spaghetti');
-      expect(statusText(), 'count not shown').toBe('3 recipes match "spaghetti".');
+      expect(statusText(), 'count not shown').toBe('5 recipes match "spaghetti".');
       await search('');
       expectAllRecipesRendered();
       expect(statusText(), 'status after emptying the field').toBe('');
@@ -460,7 +501,7 @@ describe('RecipeList', () => {
       const status = statusElement();
       await search('spaghetti');
       expect(statusElement(), 'element after "spaghetti"').toBe(status);
-      expect(statusText()).toBe('3 recipes match "spaghetti".');
+      expect(statusText()).toBe('5 recipes match "spaghetti".');
       await search('xyzzy');
       expect(statusElement(), 'element after "xyzzy"').toBe(status);
       expect(statusText()).toBe('No recipe matches "xyzzy".');

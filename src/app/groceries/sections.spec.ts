@@ -27,7 +27,6 @@ const REMOVED_INGREDIENTS = [
   'mussel',
   'naan',
   'paella rice',
-  'pea',
   'pork cutlet',
   'pork shoulder',
   'quark',
@@ -40,10 +39,10 @@ const REMOVED_INGREDIENTS = [
   'thyme',
   'white wine',
   'yogurt',
-  'zucchini',
 ];
 
-const SOUP_INGREDIENTS = ['chive', 'cream', 'leek', 'pumpkin', 'pumpkin seed', 'red lentil'];
+// #24's list without "chive" and "cream", which #32's recipes use again
+const SOUP_INGREDIENTS = ['leek', 'pumpkin', 'pumpkin seed', 'red lentil'];
 
 describe('sections', () => {
   it('has a section for every ingredient of the recipes except the pantry staples', () => {
@@ -73,7 +72,7 @@ describe('sections', () => {
     expect(mapped.filter((name) => !used.has(name))).toEqual([]);
   });
 
-  it('maps none of the 39 ingredients only removed recipes used, and still every ingredient of the recipes except the pantry staples', () => {
+  it('maps none of the 37 ingredients only removed recipes used, and still every ingredient of the recipes except the pantry staples', () => {
     const mapped = Object.values(INGREDIENTS_BY_SECTION).flat();
     expect(mapped.filter((name) => REMOVED_INGREDIENTS.includes(name))).toEqual([]);
 
@@ -85,7 +84,7 @@ describe('sections', () => {
     expect(unmapped).toEqual([]);
   });
 
-  it('maps none of the 6 ingredients only the soups used, lists "Nuts & seeds" as peanut, pine nut and sesame seed, and still every ingredient of the recipes except the pantry staples', () => {
+  it('maps none of the 4 ingredients only the soups used, lists "Nuts & seeds" as peanut, pine nut and sesame seed, and still every ingredient of the recipes except the pantry staples', () => {
     const mapped = Object.values(INGREDIENTS_BY_SECTION).flat();
     expect(mapped.filter((name) => SOUP_INGREDIENTS.includes(name))).toEqual([]);
     expect(INGREDIENTS_BY_SECTION['Nuts & seeds']).toEqual(['peanut', 'pine nut', 'sesame seed']);
@@ -98,6 +97,37 @@ describe('sections', () => {
     expect(unmapped).toEqual([]);
   });
 
+  it('lists "broccoli" right after "bell pepper", "chive" right after "cherry tomato", "pea" right after "parsley" and "zucchini" last in "Fruit & vegetables", and "cream" right after "cheddar" in "Dairy & eggs"', () => {
+    const vegetables = INGREDIENTS_BY_SECTION['Fruit & vegetables'];
+    expect(vegetables[vegetables.indexOf('bell pepper') + 1], 'after bell pepper').toBe('broccoli');
+    expect(vegetables[vegetables.indexOf('cherry tomato') + 1], 'after cherry tomato').toBe(
+      'chive',
+    );
+    expect(vegetables[vegetables.indexOf('parsley') + 1], 'after parsley').toBe('pea');
+    expect(vegetables.at(-1), 'last').toBe('zucchini');
+    const dairy = INGREDIENTS_BY_SECTION['Dairy & eggs'];
+    expect(dairy[dairy.indexOf('cheddar') + 1], 'after cheddar').toBe('cream');
+  });
+
+  it('puts none of "broccoli", "pea", "zucchini", "chive" and "cream" under "Other", and lists none of them as an ingredient only removed recipes or the soups used', () => {
+    const names = ['broccoli', 'pea', 'zucchini', 'chive', 'cream'];
+    expect(names.map((name) => [name, sectionOf(name)])).toEqual([
+      ['broccoli', 'Fruit & vegetables'],
+      ['pea', 'Fruit & vegetables'],
+      ['zucchini', 'Fruit & vegetables'],
+      ['chive', 'Fruit & vegetables'],
+      ['cream', 'Dairy & eggs'],
+    ]);
+    expect(
+      names.filter((name) => REMOVED_INGREDIENTS.includes(name)),
+      'removed',
+    ).toEqual([]);
+    expect(
+      names.filter((name) => SOUP_INGREDIENTS.includes(name)),
+      'soups only',
+    ).toEqual([]);
+  });
+
   it('lists "canned white beans" right after "canned tuna" and "hummus" right after "green curry paste" in "Cans & jars", and puts both there', () => {
     const cansAndJars = INGREDIENTS_BY_SECTION['Cans & jars'];
     expect(cansAndJars[cansAndJars.indexOf('canned tuna') + 1]).toBe('canned white beans');
@@ -105,7 +135,7 @@ describe('sections', () => {
     expect(['hummus', 'canned white beans'].map(sectionOf)).toEqual(['Cans & jars', 'Cans & jars']);
   });
 
-  it('puts each of the 6 ingredients only the soups used under "Other", but keeps sour cream, pine nut, sesame seed, potato and red onion in their sections', () => {
+  it('puts each of the 4 ingredients only the soups used under "Other", but keeps sour cream, pine nut, sesame seed, potato and red onion in their sections', () => {
     expect(SOUP_INGREDIENTS.map((name) => [name, sectionOf(name)])).toEqual(
       SOUP_INGREDIENTS.map((name) => [name, 'Other']),
     );
