@@ -169,7 +169,11 @@ of in a merge commit. `main` may be checked out in another worktree, so don't sw
 
 1. `git fetch origin main` and `git rebase origin/main`. Resolve a conflict when the intent of both
    sides is clear; when it isn't, `git rebase --abort` and skip the ticket.
-2. If the rebase brought in new commits, rerun the gate runner (tests and build) on the result.
+2. Every time, run the whole suite (`npx ng test --watch=false`) and `npm run build` on the rebased
+   commit; when the rebase brought in new commits, also run the browser scenarios again, since the gate
+   tested the ticket on its old base. Push only when all of them pass. A failure is another gate round
+   (step 4's limit of three still applies): fix it, fold the fix into the ticket's commit with
+   `git commit --amend` (it isn't pushed yet), and go back to 1.
 3. `git push origin HEAD:main`. If it's rejected because `main` moved meanwhile, go back to 1.
 4. The push deploys (`.github/workflows/deploy.yml`): find the run with
    `gh run list --workflow deploy.yml --commit <the pushed commit>` and wait for it with
