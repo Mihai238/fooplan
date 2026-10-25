@@ -87,8 +87,10 @@
 
 <div class="days">
   @for (day of plan().days; track day.date; let dayIndex = $index, lastDay = $last) {
-    <section class="day">
-      <h2>{{ day.date | date: 'EEE d MMM' }}</h2>
+    @let isToday = day.date === today();
+    @let isPast = day.date < today();
+    <section class="day" [class.today]="isToday" [class.past]="isPast">
+      <h2 [attr.aria-current]="isToday ? 'date' : null">{{ day.date | date: 'EEE d MMM' }}</h2>
       @for (meal of meals; track meal.kind) {
         @let current = day[meal.kind];
         @let ref = { day: dayIndex, kind: meal.kind };

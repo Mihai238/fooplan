@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { groceryList, itemKey } from '../../groceries/groceries';
+import { recipeSlug } from '../../recipes/recipe-slug';
 import { RECIPES } from '../../recipes/recipes';
 import { QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
 import { installDialog, modalDialogs, TABBABLE } from '../../testing';
@@ -1403,15 +1404,509 @@ describe('PlanPage', () => {
       ).toBeDefined();
       return lost!;
     }
+  });
 
-    function openDialog(): HTMLDialogElement {
-      const dialog = openDialogOrNull();
-      expect(dialog, 'no open dialog').not.toBeNull();
-      return dialog!;
+  describe('today and past days', () => {
+    const NAMES = RECIPES.map((recipe) => recipe.name);
+    const AROUND_TODAY = ['2026-10-23', '2026-10-24', '2026-10-25', '2026-10-26', '2026-10-27'];
+    const AROUND_TODAY_MARKS = [
+      'Fri 23 Oct past',
+      'Sat 24 Oct past',
+      'Sun 25 Oct today',
+      'Mon 26 Oct',
+      'Tue 27 Oct',
+    ];
+    const BLOCKING = '[inert], [disabled], [aria-disabled], [tabindex="-1"]';
+
+    beforeEach(() => {
+      // A Sunday
+      today = '2026-10-25';
+    });
+
+    it('marks the first of the 5 cards, "Sun 25 Oct", as today with aria-current="date" on its heading, and no card as past, when the page opens on a cleared localStorage', async () => {
+      await reopen();
+      expect(marks()).toEqual([
+        'Sun 25 Oct today',
+        'Mon 26 Oct',
+        'Tue 27 Oct',
+        'Wed 28 Oct',
+        'Thu 29 Oct',
+      ]);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it("adds no element, text or attribute to today's card beyond its class and its heading's aria-current", async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      const card = cardOf('Sun 25 Oct');
+      expect(card.classList.contains('today'), 'class "today"').toBe(true);
+      expectNothingAdded(card, ['aria-current']);
+    });
+
+    it('marks the only card of a one-day plan for today as today and no card as past', async () => {
+      await openWith(openPlan('2026-10-25'));
+      expect(marks()).toEqual(['Sun 25 Oct today']);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('marks 23 and 24 Oct as past, 25 Oct as today with aria-current="date" on its heading, and 26 and 27 Oct as neither for a saved unaccepted plan from 23 to 27 Oct', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      expect(marks()).toEqual(AROUND_TODAY_MARKS);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('adds no element, text or attribute to a past card beyond its class, none for screen readers either', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      for (const heading of ['Fri 23 Oct', 'Sat 24 Oct']) {
+        const card = cardOf(heading);
+        expect(card.classList.contains('past'), `${heading}: class "past"`).toBe(true);
+        expectNothingAdded(card, []);
+      }
+    });
+
+    it('marks 30 and 31 Oct as past and 1 Nov as today for a plan from 30 Oct to 3 Nov on 1 Nov', async () => {
+      today = '2026-11-01';
+      await openWith(
+        openPlan('2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02', '2026-11-03'),
+      );
+      expect(marks()).toEqual([
+        'Fri 30 Oct past',
+        'Sat 31 Oct past',
+        'Sun 1 Nov today',
+        'Mon 2 Nov',
+        'Tue 3 Nov',
+      ]);
+      expectCurrent('Sun 1 Nov');
+    });
+
+    it('marks 30 and 31 Dec as past and 1 Jan as today for a plan from 30 Dec 2026 to 3 Jan 2027 on 1 Jan 2027', async () => {
+      today = '2027-01-01';
+      await openWith(
+        openPlan('2026-12-30', '2026-12-31', '2027-01-01', '2027-01-02', '2027-01-03'),
+      );
+      expect(marks()).toEqual([
+        'Wed 30 Dec past',
+        'Thu 31 Dec past',
+        'Fri 1 Jan today',
+        'Sat 2 Jan',
+        'Sun 3 Jan',
+      ]);
+      expectCurrent('Fri 1 Jan');
+    });
+
+    it('marks all 5 cards as past and none as today for a saved unaccepted plan from 20 to 24 Oct', async () => {
+      await openWith(
+        openPlan('2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24'),
+      );
+      expect(marks()).toEqual([
+        'Tue 20 Oct past',
+        'Wed 21 Oct past',
+        'Thu 22 Oct past',
+        'Fri 23 Oct past',
+        'Sat 24 Oct past',
+      ]);
+      expectCurrent(null);
+    });
+
+    it('marks the only card of a one-day plan for yesterday as past and none as today', async () => {
+      await openWith(openPlan('2026-10-24'));
+      expect(marks()).toEqual(['Sat 24 Oct past']);
+      expectCurrent(null);
+    });
+
+    it('marks every card as past for a plan from 26 to 30 Oct of the year before', async () => {
+      await openWith(
+        openPlan('2025-10-26', '2025-10-27', '2025-10-28', '2025-10-29', '2025-10-30'),
+      );
+      expect(marks()).toEqual([
+        'Sun 26 Oct past',
+        'Mon 27 Oct past',
+        'Tue 28 Oct past',
+        'Wed 29 Oct past',
+        'Thu 30 Oct past',
+      ]);
+      expectCurrent(null);
+    });
+
+    it('marks no card as past or today for a saved unaccepted plan from 26 to 30 Oct', async () => {
+      await openWith(
+        openPlan('2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30'),
+      );
+      expect(marks()).toEqual([
+        'Mon 26 Oct',
+        'Tue 27 Oct',
+        'Wed 28 Oct',
+        'Thu 29 Oct',
+        'Fri 30 Oct',
+      ]);
+      expectCurrent(null);
+    });
+
+    it('marks no card as past or today for a plan from 1 to 3 Jan of the year after', async () => {
+      await openWith(openPlan('2027-01-01', '2027-01-02', '2027-01-03'));
+      expect(marks()).toEqual(['Fri 1 Jan', 'Sat 2 Jan', 'Sun 3 Jan']);
+      expectCurrent(null);
+    });
+
+    it('marks 24 Oct as past, 25 Oct as today with aria-current="date" on its heading, and 26 Oct as neither for a saved accepted plan from 24 to 26 Oct', async () => {
+      await openWith(pickedPlan(['2026-10-24', '2026-10-25', '2026-10-26'], true));
+      expect(marks()).toEqual(['Sat 24 Oct past', 'Sun 25 Oct today', 'Mon 26 Oct']);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('keeps 24 Oct past and 25 Oct today when the user accepts a complete plan from 24 to 26 Oct', async () => {
+      await openWith(pickedPlan(['2026-10-24', '2026-10-25', '2026-10-26'], false));
+      expect(marks(), 'before accepting').toEqual([
+        'Sat 24 Oct past',
+        'Sun 25 Oct today',
+        'Mon 26 Oct',
+      ]);
+      await click(button(element, 'Accept plan'));
+      expect(store.plan().accepted, 'plan not accepted').toBe(true);
+      expect(marks(), 'after accepting').toEqual([
+        'Sat 24 Oct past',
+        'Sun 25 Oct today',
+        'Mon 26 Oct',
+      ]);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('marks every card as past and none as today for a saved accepted plan from 22 to 24 Oct', async () => {
+      await openWith(pickedPlan(['2026-10-22', '2026-10-23', '2026-10-24'], true));
+      expect(marks()).toEqual(['Thu 22 Oct past', 'Fri 23 Oct past', 'Sat 24 Oct past']);
+      expectCurrent(null);
+    });
+
+    it('picks the first suggestion of the 23 Oct lunch with "Undo", keeping its card past, and brings back its three suggestions on "Undo"', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      const suggested = suggestionsOf(meal(0)).map(recipeOf);
+      const recipe = await pickFirstSuggestion(0);
+      expect(textOf(meal(0).querySelector('p.recipe'))).toBe(recipe);
+      expect(buttonTexts(meal(0))).toContain('Undo');
+      expect(marks()[0]).toBe('Fri 23 Oct past');
+      await click(button(meal(0), 'Undo'));
+      expect(suggestionsOf(meal(0)).map(recipeOf)).toEqual(suggested);
+      expect(marks()[0]).toBe('Fri 23 Oct past');
+    });
+
+    it('shows other suggestions on "Other suggestions" and stops suggesting a recipe on its "×" in the past 23 Oct lunch, keeping its card past', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      const before = suggestionsOf(meal(0)).map(recipeOf);
+      await click(button(meal(0), 'Other suggestions'));
+      const others = suggestionsOf(meal(0)).map(recipeOf);
+      expect(others).toHaveLength(3);
+      expect(others.filter((name) => before.includes(name))).toEqual([]);
+      expect(marks()[0], 'after "Other suggestions"').toBe('Fri 23 Oct past');
+
+      const dontSuggest = meal(0).querySelector<HTMLButtonElement>('button.dont-suggest');
+      expect(dontSuggest, 'no "×" button').not.toBeNull();
+      await click(dontSuggest!);
+      expect(store.removed()).toEqual([others[0]]);
+      expect(suggestionsOf(meal(0)).map(recipeOf)).not.toContain(others[0]);
+      expect(marks()[0], 'after "×"').toBe('Fri 23 Oct past');
+    });
+
+    it('covers the past 24 Oct lunch with leftovers when the user turns on "Cook extra" on the picked past 23 Oct dinner, keeping both cards past', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      const recipe = await pickFirstSuggestion(1);
+      await setCookExtra(0, true);
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe(`Leftovers: ${recipe}`);
+      expect(marks().slice(0, 2)).toEqual(['Fri 23 Oct past', 'Sat 24 Oct past']);
+    });
+
+    it('picks and undoes a meal of today\'s card and opens a recipe from its "Recipe" link, keeping the card today', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      const suggested = suggestionsOf(meal(4)).map(recipeOf);
+      const recipe = await pickFirstSuggestion(4);
+      expect(textOf(meal(4).querySelector('p.recipe'))).toBe(recipe);
+      expect(marks()[2], 'after the pick').toBe('Sun 25 Oct today');
+      await click(button(meal(4), 'Undo'));
+      expect(suggestionsOf(meal(4)).map(recipeOf)).toEqual(suggested);
+      expect(marks()[2], 'after "Undo"').toBe('Sun 25 Oct today');
+
+      await click(recipeLinksOf(meal(4))[0]);
+      expect(router().url).toBe(`/recipes/${recipeSlug(suggested[0])}`);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('makes no element of the past or today\'s cards, nor any card, inert, disabled, aria-disabled or tabindex="-1"', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      expect(marks(), 'cards not marked').toEqual(AROUND_TODAY_MARKS);
+      for (const heading of ['Fri 23 Oct', 'Sat 24 Oct', 'Sun 25 Oct']) {
+        const blocked = Array.from(cardOf(heading).querySelectorAll(BLOCKING));
+        expect(
+          blocked.map((node) => node.outerHTML),
+          heading,
+        ).toEqual([]);
+      }
+      for (const card of days()) {
+        expect(card.matches(BLOCKING), textOf(card.querySelector('h2'))).toBe(false);
+      }
+    });
+
+    it("keeps every recipe link of the past and today's cards of an accepted plan in the tab order, with nothing inert, disabled or aria-disabled", async () => {
+      await openWith(pickedPlan(['2026-10-24', '2026-10-25', '2026-10-26'], true));
+      expect(marks(), 'cards not marked').toEqual([
+        'Sat 24 Oct past',
+        'Sun 25 Oct today',
+        'Mon 26 Oct',
+      ]);
+      for (const heading of ['Sat 24 Oct', 'Sun 25 Oct']) {
+        const card = cardOf(heading);
+        expect(card.matches(BLOCKING), heading).toBe(false);
+        expect(card.querySelectorAll(BLOCKING), heading).toHaveLength(0);
+        const links = Array.from(card.querySelectorAll('p.recipe a'));
+        expect(links, `${heading}: recipe links`).toHaveLength(2);
+        expect(
+          links.every((link) => link.matches(TABBABLE)),
+          heading,
+        ).toBe(true);
+      }
+    });
+
+    it('keeps 23 and 24 Oct past with no today when the user lowers Days to 2, and marks the new 25 Oct card as today when the user raises Days back to 3', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      await setDays(2);
+      expect(marks(), 'at 2 days').toEqual(['Fri 23 Oct past', 'Sat 24 Oct past']);
+      expectCurrent(null);
+      await click(arrow('One more day'));
+      expect(marks(), 'at 3 days').toEqual([
+        'Fri 23 Oct past',
+        'Sat 24 Oct past',
+        'Sun 25 Oct today',
+      ]);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('adds the 26 and 27 Oct cards as neither past nor today when the user raises Days from 3 to 5', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      await setDays(3);
+      await click(arrow('One more day'));
+      await click(arrow('One more day'));
+      expect(marks()).toEqual(AROUND_TODAY_MARKS);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('keeps the marking when the user raises or lowers People', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      await click(arrow('One more person'));
+      expect(marks(), 'at 3 people').toEqual(AROUND_TODAY_MARKS);
+      await click(arrow('One person fewer'));
+      await click(arrow('One person fewer'));
+      expect(marks(), 'at 1 person').toEqual(AROUND_TODAY_MARKS);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('keeps 25 Oct as today after a pick once TODAY returns 26 Oct, and marks the first card, "Mon 26 Oct", as today with no past card when the user starts a new plan in the dialog', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      today = '2026-10-26';
+      await pickFirstSuggestion(5);
+      expect(marks(), 'after the pick').toEqual(AROUND_TODAY_MARKS);
+      expectCurrent('Sun 25 Oct');
+
+      await click(button(element, 'New plan'));
+      await click(button(openDialog(), 'Start new plan'));
+      expect(marks(), 'new plan').toEqual([
+        'Mon 26 Oct today',
+        'Tue 27 Oct',
+        'Wed 28 Oct',
+        'Thu 29 Oct',
+        'Fri 30 Oct',
+      ]);
+      expectCurrent('Mon 26 Oct');
+    });
+
+    it('keeps 25 Oct as today once TODAY returns 26 Oct through a pick, "Undo", "Other suggestions", a Days change and a People change', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      today = '2026-10-26';
+      const steps: [string, () => Promise<unknown>, string[]][] = [
+        ['pick', () => pickFirstSuggestion(0), AROUND_TODAY_MARKS],
+        ['"Undo"', () => click(button(meal(0), 'Undo')), AROUND_TODAY_MARKS],
+        [
+          '"Other suggestions"',
+          () => click(button(meal(2), 'Other suggestions')),
+          AROUND_TODAY_MARKS,
+        ],
+        ['"One day fewer"', () => click(arrow('One day fewer')), AROUND_TODAY_MARKS.slice(0, 4)],
+        ['"One more day"', () => click(arrow('One more day')), AROUND_TODAY_MARKS],
+        ['"One more person"', () => click(arrow('One more person')), AROUND_TODAY_MARKS],
+      ];
+      for (const [name, step, expected] of steps) {
+        await step();
+        expect(marks(), `after ${name}`).toEqual(expected);
+      }
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('keeps 25 Oct as today once TODAY returns 26 Oct when the user clicks "New plan" and then "Keep this plan"', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      await pickFirstSuggestion(0);
+      today = '2026-10-26';
+      await click(button(element, 'New plan'));
+      await click(button(openDialog(), 'Keep this plan'));
+      expect(marks()).toEqual(AROUND_TODAY_MARKS);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('marks 25 Oct as past and 26 Oct as today when the user comes back to the Plan page once TODAY returns 26 Oct', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      today = '2026-10-26';
+      await openPageAgain();
+      expect(marks()).toEqual([
+        'Fri 23 Oct past',
+        'Sat 24 Oct past',
+        'Sun 25 Oct past',
+        'Mon 26 Oct today',
+        'Tue 27 Oct',
+      ]);
+      expectCurrent('Mon 26 Oct');
+    });
+
+    it('marks the first card, "Sun 25 Oct", as today and no card as past when the user clicks "New plan" on a past plan with no meal picked', async () => {
+      await openWith(
+        openPlan('2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24'),
+      );
+      await click(button(element, 'New plan'));
+      expect(openDialogOrNull(), 'dialog open').toBeNull();
+      expect(marks()).toEqual([
+        'Sun 25 Oct today',
+        'Mon 26 Oct',
+        'Tue 27 Oct',
+        'Wed 28 Oct',
+        'Thu 29 Oct',
+      ]);
+      expectCurrent('Sun 25 Oct');
+    });
+
+    it('marks the first card, "Tue 27 Oct", as today and no card as past when the user starts a new plan from an accepted plan once TODAY returns 27 Oct', async () => {
+      await openWith(pickedPlan(['2026-10-24', '2026-10-25', '2026-10-26'], true));
+      today = '2026-10-27';
+      await click(button(element, 'New plan'));
+      await click(button(openDialog(), 'Start new plan'));
+      expect(marks()).toEqual([
+        'Tue 27 Oct today',
+        'Wed 28 Oct',
+        'Thu 29 Oct',
+        'Fri 30 Oct',
+        'Sat 31 Oct',
+      ]);
+      expectCurrent('Tue 27 Oct');
+    });
+
+    it('saves the plan after a pick with the same keys as before: days, people, accepted, ticked, added and shown, and date, lunch, dinner and cookExtra on each day', async () => {
+      await openWith(openPlan(...AROUND_TODAY));
+      const recipe = await pickFirstSuggestion(0);
+      const saved = JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null') as Plan;
+      expect(saved.days[0].lunch.recipe, 'pick not saved').toBe(recipe);
+      expect(Object.keys(saved).sort()).toEqual([
+        'accepted',
+        'added',
+        'days',
+        'people',
+        'shown',
+        'ticked',
+      ]);
+      for (const savedDay of saved.days) {
+        expect(Object.keys(savedDay).sort(), savedDay.date).toEqual([
+          'cookExtra',
+          'date',
+          'dinner',
+          'lunch',
+        ]);
+      }
+    });
+
+    it('leaves a plan saved before the marking as it was and saves nothing else when the page opens', async () => {
+      const plan = openPlan(...AROUND_TODAY);
+      await openWith(plan);
+      expect(localStorage.getItem('fooplan.plan')).toBe(JSON.stringify(plan));
+      expect(Object.keys(localStorage)).toEqual(['fooplan.plan']);
+    });
+
+    // The page as it opens on a cleared localStorage, as on the first visit
+    async function reopen() {
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      await createPage();
     }
 
-    function openDialogOrNull(): HTMLDialogElement | null {
-      return element.querySelector('dialog[open]');
+    // Navigating to the Plan page creates it anew, with the plan kept in the store
+    async function openPageAgain() {
+      fixture.destroy();
+      fixture = TestBed.createComponent(PlanPage);
+      await fixture.whenStable();
+      element = fixture.nativeElement as HTMLElement;
+    }
+
+    // Each open meal suggests the next three recipes, wrapping around, so that parsePlan accepts
+    // the plan: there are fewer built-in recipes than 5 days have suggestions
+    function openPlan(...dates: string[]): Plan {
+      return planOf(
+        dates.map((date, i) =>
+          planDay(date, open(...threeFrom(6 * i)), open(...threeFrom(6 * i + 3))),
+        ),
+      );
+    }
+
+    function threeFrom(start: number): string[] {
+      return [0, 1, 2].map((offset) => NAMES[(start + offset) % NAMES.length]);
+    }
+
+    function pickedPlan(dates: string[], accepted: boolean): Plan {
+      return planOf(
+        dates.map((date, i) => planDay(date, picked(NAMES[2 * i]), picked(NAMES[2 * i + 1]))),
+        { accepted },
+      );
+    }
+
+    // Each card as its heading followed by its classes other than "day"
+    function marks(): string[] {
+      return days().map((card) =>
+        [
+          textOf(card.querySelector('h2')),
+          ...Array.from(card.classList).filter((name) => name !== 'day'),
+        ].join(' '),
+      );
+    }
+
+    function expectCurrent(heading: string | null) {
+      const current = Array.from(element.querySelectorAll('[aria-current]')).map(
+        (node) =>
+          `${node.tagName.toLowerCase()} "${textOf(node)}" ${node.getAttribute('aria-current')}`,
+      );
+      expect(current, 'elements with aria-current').toEqual(
+        heading === null ? [] : [`h2 "${heading}" date`],
+      );
+    }
+
+    function expectNothingAdded(card: HTMLElement, headingAttributes: string[]) {
+      const heading = card.querySelector('h2');
+      const name = textOf(heading);
+      expect(attributesOf(card), `${name}: card attributes`).toEqual(['class']);
+      expect(attributesOf(heading!), `${name}: heading attributes`).toEqual(headingAttributes);
+      expect(heading!.children, `${name}: elements in the heading`).toHaveLength(0);
+      expect(
+        Array.from(card.children).map((child) => child.tagName.toLowerCase()),
+        `${name}: elements in the card`,
+      ).toEqual(['h2', 'article', 'article']);
+      const looseText = Array.from(card.childNodes)
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => (node.textContent ?? '').trim())
+        .filter(Boolean);
+      expect(looseText, `${name}: text outside the heading and meals`).toEqual([]);
+    }
+
+    // Leaves out the attributes Angular's style encapsulation adds
+    function attributesOf(node: Element): string[] {
+      return Array.from(node.attributes)
+        .map((attribute) => attribute.name)
+        .filter((name) => !name.startsWith('_ng'))
+        .sort();
+    }
+
+    function cardOf(heading: string): HTMLElement {
+      const found = days().find((card) => textOf(card.querySelector('h2')) === heading);
+      expect(found, `no "${heading}" card`).toBeDefined();
+      return found!;
     }
   });
 
@@ -1553,6 +2048,16 @@ describe('PlanPage', () => {
 
   function router(): Router {
     return TestBed.inject(Router);
+  }
+
+  function openDialog(): HTMLDialogElement {
+    const dialog = openDialogOrNull();
+    expect(dialog, 'no open dialog').not.toBeNull();
+    return dialog!;
+  }
+
+  function openDialogOrNull(): HTMLDialogElement | null {
+    return element.querySelector('dialog[open]');
   }
 
   function button(root: HTMLElement, text: string): HTMLButtonElement {

@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RecipeStore } from '../../recipes/recipe-store';
@@ -13,7 +13,7 @@ import {
   MIN_DAYS,
   MIN_PEOPLE,
 } from '../plan';
-import { PlanStore } from '../plan-store';
+import { PlanStore, TODAY } from '../plan-store';
 
 @Component({
   imports: [DatePipe, RouterLink],
@@ -24,7 +24,11 @@ import { PlanStore } from '../plan-store';
 export class PlanPage {
   protected readonly store = inject(PlanStore);
   private readonly recipes = inject(RecipeStore);
+  private readonly readToday = inject(TODAY);
   protected readonly plan = this.store.plan;
+  // Not a live date: it is read when the page opens and taken from a new plan's first day when one
+  // starts, so a page left open past midnight keeps its marking until then
+  protected readonly today = signal(this.readToday());
   protected readonly complete = computed(() => isComplete(this.plan()));
   protected readonly filled = computed(() => filledMeals(this.plan()));
   protected readonly defaultDays = DEFAULT_DAYS;
@@ -84,12 +88,12 @@ export class PlanPage {
       this.pressedOnBackdrop = false;
       dialog.showModal();
     } else {
-      this.store.newPlan();
+      this.startPlan();
     }
   }
 
   protected startNewPlan(dialog: HTMLDialogElement): void {
-    this.store.newPlan();
+    this.startPlan();
     dialog.close();
   }
 
@@ -117,6 +121,11 @@ export class PlanPage {
     event.preventDefault();
     const [from, to] = event.shiftKey ? [last, first] : [first, last];
     (document.activeElement === from ? to : from).focus();
+  }
+
+  private startPlan(): void {
+    this.store.newPlan();
+    this.today.set(this.plan().days[0].date);
   }
 
   private isOnBackdrop(event: MouseEvent, dialog: HTMLDialogElement): boolean {

@@ -96,6 +96,20 @@ label,
   background: var(--surface);
 }
 
+.day.today {
+  border-color: var(--accent);
+}
+
+.day.past {
+  opacity: 0.6;
+}
+
+/* Back at full contrast while the user works in the card, so its text and focus ring read clearly */
+.day.past:hover,
+.day.past:focus-within {
+  opacity: 1;
+}
+
 h2 {
   margin: 0;
   font-size: 1.125rem;
