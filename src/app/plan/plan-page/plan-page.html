@@ -96,7 +96,11 @@
         <article class="meal">
           <h3>{{ meal.label }}</h3>
           @if (current.recipe) {
-            <p class="recipe">{{ current.recipe }}</p>
+            <p class="recipe">
+              <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
+                {{ current.recipe }}
+              </a>
+            </p>
             @if (meal.kind === 'dinner') {
               @if (plan().accepted) {
                 @if (day.cookExtra) {
@@ -119,12 +123,26 @@
               <button type="button" class="link" (click)="store.clear(ref)">Undo</button>
             }
           } @else if (leftoverRecipe) {
-            <p class="recipe">Leftovers: {{ leftoverRecipe }}</p>
+            <p class="recipe">
+              Leftovers:
+              <a class="name" [routerLink]="['/recipes', recipeSlug(leftoverRecipe)]">
+                {{ leftoverRecipe }}
+              </a>
+            </p>
           } @else if (!plan().accepted) {
             @for (recipe of current.suggestions; track $index) {
-              <button type="button" class="suggestion" (click)="store.pick(ref, recipe)">
-                {{ recipe }}
-              </button>
+              <div class="option">
+                <button type="button" class="suggestion" (click)="store.pick(ref, recipe)">
+                  {{ recipe }}
+                </button>
+                <a
+                  class="recipe-link"
+                  [routerLink]="['/recipes', recipeSlug(recipe)]"
+                  [attr.aria-label]="'Recipe for ' + recipe"
+                >
+                  Recipe
+                </a>
+              </div>
             }
             <button type="button" class="link" (click)="store.otherSuggestions(ref)">
               Other suggestions

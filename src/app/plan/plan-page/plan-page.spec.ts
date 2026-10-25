@@ -1,8 +1,11 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { groceryList, itemKey } from '../../groceries/groceries';
 import { RECIPES } from '../../recipes/recipes';
+import { Plan } from '../plan';
 import { PlanStore, RANDOM, TODAY } from '../plan-store';
-import { seededRandom } from '../testing';
+import { covered, day as planDay, open, picked, seededRandom } from '../testing';
 import { PlanPage } from './plan-page';
 
 const TABBABLE =
@@ -29,16 +32,7 @@ describe('PlanPage', () => {
     localStorage.clear();
     // A Saturday
     today = '2026-10-24';
-    TestBed.configureTestingModule({
-      providers: [
-        { provide: RANDOM, useValue: seededRandom(1) },
-        { provide: TODAY, useValue: () => today },
-      ],
-    });
-    fixture = TestBed.createComponent(PlanPage);
-    await fixture.whenStable();
-    element = fixture.nativeElement as HTMLElement;
-    store = TestBed.inject(PlanStore);
+    await createPage();
   });
 
   afterEach(() => {
@@ -472,6 +466,190 @@ describe('PlanPage', () => {
     expect(buttonTexts()).toContain('New plan');
   });
 
+  describe('recipe links', () => {
+    it("links a picked meal's recipe name to its recipe page, which a click opens at /recipes/<slug>", async () => {
+      await openWith(planWithOpenDinner());
+      const link = recipeLink(meal(0));
+      expect(textOf(link)).toBe("Shepherd's pie");
+      expect(link.getAttribute('href')).toBe('/recipes/shepherds-pie');
+      await click(link);
+      expect(router().url).toBe('/recipes/shepherds-pie');
+    });
+
+    it('links the recipe name in "Leftovers: <recipe>" to its recipe page, which a click opens', async () => {
+      await openWith(planWithLeftovers(false));
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe("Leftovers: Shepherd's pie");
+      const link = recipeLink(meal(2));
+      expect(textOf(link)).toBe("Shepherd's pie");
+      expect(link.getAttribute('href')).toBe('/recipes/shepherds-pie');
+      await click(link);
+      expect(router().url).toBe('/recipes/shepherds-pie');
+    });
+
+    it('offers a "Recipe" link named "Recipe for <name>" with each suggestion, which opens its recipe page, while a click on the suggestion itself still picks it', async () => {
+      await openWith(planWithOpenDinner());
+      const links = recipeLinksOf(meal(1));
+      expect(links.map(nameOf)).toEqual([
+        'Recipe for Niçoise salad',
+        'Recipe for Käsespätzle',
+        'Recipe for Spaghetti carbonara',
+      ]);
+      expect(links.map((link) => link.getAttribute('href'))).toEqual([
+        '/recipes/nicoise-salad',
+        '/recipes/kasespatzle',
+        '/recipes/spaghetti-carbonara',
+      ]);
+      await click(links[0]);
+      expect(router().url).toBe('/recipes/nicoise-salad');
+
+      await click(suggestionsOf(meal(1))[0]);
+      expect(textOf(meal(1).querySelector('p.recipe'))).toBe('Niçoise salad');
+      expect(store.plan().days[0].dinner.recipe).toBe('Niçoise salad');
+    });
+
+    it('picks nothing and keeps the suggestions when the user clicks a suggestion\'s "Recipe" link', async () => {
+      await openWith(planWithOpenDinner());
+      const before = store.plan();
+      const saved = localStorage.getItem('fooplan.plan');
+      const links = recipeLinksOf(meal(1));
+      expect(links, '"Recipe" links of the open dinner').toHaveLength(3);
+      await click(links[1]);
+      expect(router().url, 'link not followed').toBe('/recipes/kasespatzle');
+      expect(store.plan()).toBe(before);
+      expect(localStorage.getItem('fooplan.plan')).toBe(saved);
+      expect(meal(1).querySelector('p.recipe')).toBeNull();
+      expect(suggestionsOf(meal(1)).map(textOf)).toEqual([
+        'Niçoise salad',
+        'Käsespätzle',
+        'Spaghetti carbonara',
+      ]);
+    });
+
+    it('keeps each suggestion a button that holds no link and is in none, with its "Recipe" link after it and before the next suggestion', async () => {
+      await openWith(planWithOpenDinner());
+      const suggestions = suggestionsOf(meal(1));
+      const links = recipeLinksOf(meal(1));
+      expect(suggestions, 'suggestions of the open dinner').toHaveLength(3);
+      expect(links, '"Recipe" links of the open dinner').toHaveLength(3);
+      suggestions.forEach((suggestion, i) => {
+        const name = textOf(suggestion);
+        expect(suggestion.closest('a'), `${name} in a link`).toBeNull();
+        expect(suggestion.querySelector('a'), `${name} holds a link`).toBeNull();
+        expect(links[i].closest('button'), `"Recipe" link of ${name} in a button`).toBeNull();
+        expect(follows(links[i], suggestion), `"Recipe" link of ${name} after it`).toBe(true);
+        const next = suggestions[i + 1] ?? button(meal(1), 'Other suggestions');
+        expect(follows(next, links[i]), `"Recipe" link of ${name} before what follows`).toBe(true);
+      });
+      expect(
+        Array.from(meal(1).querySelectorAll('a')).map(textOf),
+        'links of the open dinner',
+      ).toEqual(['Recipe', 'Recipe', 'Recipe']);
+    });
+
+    it('gives the 30 "Recipe" links of a 5-day plan the visible text "Recipe" and 30 different names, each "Recipe for" its suggestion', () => {
+      expect(days(), 'days of the plan').toHaveLength(5);
+      const names: string[] = [];
+      for (let index = 0; index < 10; index++) {
+        const suggestions = suggestionsOf(meal(index));
+        const links = recipeLinksOf(meal(index));
+        expect(suggestions, `suggestions of meal ${index}`).toHaveLength(3);
+        expect(links.map(nameOf), `"Recipe" links of meal ${index}`).toEqual(
+          suggestions.map((suggestion) => `Recipe for ${textOf(suggestion)}`),
+        );
+        for (const link of links) {
+          expect(link.getAttribute('href'), nameOf(link)).toMatch(
+            /^\/recipes\/[a-z0-9]+(-[a-z0-9]+)*$/,
+          );
+        }
+        names.push(...links.map(nameOf));
+      }
+      expect(new Set(names).size).toBe(30);
+    });
+
+    it('moves the "Recipe" links to the new suggestions when the user clicks "Other suggestions"', async () => {
+      await click(button(meal(0), 'Other suggestions'));
+      const suggestions = suggestionsOf(meal(0)).map(textOf);
+      expect(suggestions, 'suggestions of the first meal').toHaveLength(3);
+      expect(recipeLinksOf(meal(0)).map(nameOf)).toEqual(
+        suggestions.map((name) => `Recipe for ${name}`),
+      );
+    });
+
+    it("links each recipe name of an accepted plan, its leftovers' too, to its recipe page, which a click opens", async () => {
+      await openWith(planWithLeftovers(true));
+      expect(
+        [0, 1, 2, 3].map((index) => {
+          const link = recipeLink(meal(index));
+          return [textOf(link), link.getAttribute('href')];
+        }),
+      ).toEqual([
+        ['Käsespätzle', '/recipes/kasespatzle'],
+        ["Shepherd's pie", '/recipes/shepherds-pie'],
+        ["Shepherd's pie", '/recipes/shepherds-pie'],
+        ['Niçoise salad', '/recipes/nicoise-salad'],
+      ]);
+      await click(recipeLink(meal(3)));
+      expect(router().url).toBe('/recipes/nicoise-salad');
+    });
+
+    it('shows an accepted plan with its recipe links but without "Recipe" links, suggestions, "Undo" or "Other suggestions", and following a link changes nothing', async () => {
+      await openWith(planWithLeftovers(true));
+      const before = store.plan();
+      const links = Array.from(element.querySelectorAll<HTMLAnchorElement>('.days a'));
+      expect(links.map(textOf)).toEqual([
+        'Käsespätzle',
+        "Shepherd's pie",
+        "Shepherd's pie",
+        'Niçoise salad',
+      ]);
+      expect(element.querySelectorAll('button.suggestion')).toHaveLength(0);
+      expect(buttonTexts()).not.toContain('Undo');
+      expect(buttonTexts()).not.toContain('Other suggestions');
+      await click(links[0]);
+      expect(router().url, 'link not followed').toBe('/recipes/kasespatzle');
+      expect(store.plan()).toBe(before);
+    });
+
+    function planWithOpenDinner(): Plan {
+      return {
+        days: [
+          planDay(
+            '2026-10-24',
+            picked("Shepherd's pie"),
+            open('Niçoise salad', 'Käsespätzle', 'Spaghetti carbonara'),
+          ),
+        ],
+        people: 2,
+        accepted: false,
+        ticked: [],
+        added: [],
+        shown: ["Shepherd's pie", 'Niçoise salad', 'Käsespätzle', 'Spaghetti carbonara'],
+      };
+    }
+
+    // The dinner of the first day covers the lunch of the second; a plan in progress leaves the
+    // last dinner open
+    function planWithLeftovers(accepted: boolean): Plan {
+      return {
+        days: [
+          planDay('2026-10-24', picked('Käsespätzle'), picked("Shepherd's pie"), true),
+          planDay(
+            '2026-10-25',
+            covered(),
+            accepted ? picked('Niçoise salad') : open('Niçoise salad', 'Lasagne', 'Minestrone'),
+          ),
+        ],
+        people: 2,
+        accepted,
+        ticked: [],
+        added: [],
+        shown: accepted
+          ? ['Käsespätzle', "Shepherd's pie", 'Niçoise salad']
+          : ['Käsespätzle', "Shepherd's pie", 'Niçoise salad', 'Lasagne', 'Minestrone'],
+      };
+    }
+  });
+
   describe('"New plan" dialog', () => {
     // jsdom lays out nothing, so the dialog's box is stubbed, and these points are placed around it
     const BOX = { left: 100, top: 100, right: 400, bottom: 300 } as DOMRect;
@@ -864,6 +1042,28 @@ describe('PlanPage', () => {
     }
   });
 
+  // The page as it opens with this plan saved, as after a reload
+  async function openWith(plan: Plan) {
+    TestBed.resetTestingModule();
+    localStorage.setItem('fooplan.plan', JSON.stringify(plan));
+    await createPage();
+    expect(store.plan(), 'saved plan not loaded').toEqual(plan);
+  }
+
+  async function createPage() {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([{ path: '**', component: Blank }]),
+        { provide: RANDOM, useValue: seededRandom(1) },
+        { provide: TODAY, useValue: () => today },
+      ],
+    });
+    fixture = TestBed.createComponent(PlanPage);
+    await fixture.whenStable();
+    element = fixture.nativeElement as HTMLElement;
+    store = TestBed.inject(PlanStore);
+  }
+
   async function acceptOneDayPlan(): Promise<string[]> {
     await setDays(1);
     const recipes = [await pickFirstSuggestion(0), await pickFirstSuggestion(1)];
@@ -923,11 +1123,6 @@ describe('PlanPage', () => {
     return found!;
   }
 
-  function labelOf(node: Element): string {
-    const ids = (node.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean);
-    return ids.map((id) => textOf(document.getElementById(id))).join(' ');
-  }
-
   function follows(node: Element, other: Element): boolean {
     return (other.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
   }
@@ -952,6 +1147,35 @@ describe('PlanPage', () => {
     return Array.from(article.querySelectorAll('button.suggestion'));
   }
 
+  function recipeLink(article: HTMLElement): HTMLAnchorElement {
+    const links = article.querySelectorAll<HTMLAnchorElement>('p.recipe a');
+    expect(links, 'links in the recipe name').toHaveLength(1);
+    return links[0];
+  }
+
+  function recipeLinksOf(article: HTMLElement): HTMLAnchorElement[] {
+    return Array.from(article.querySelectorAll<HTMLAnchorElement>('a')).filter(
+      (link) => textOf(link) === 'Recipe',
+    );
+  }
+
+  // The accessible name, as far as these links can get one
+  function nameOf(node: Element): string {
+    if (node.hasAttribute('aria-labelledby')) {
+      return labelOf(node);
+    }
+    return node.getAttribute('aria-label')?.trim() || textOf(node);
+  }
+
+  function labelOf(node: Element): string {
+    const ids = (node.getAttribute('aria-labelledby') ?? '').split(/\s+/).filter(Boolean);
+    return ids.map((id) => textOf(document.getElementById(id))).join(' ');
+  }
+
+  function router(): Router {
+    return TestBed.inject(Router);
+  }
+
   function button(root: HTMLElement, text: string): HTMLButtonElement {
     const found = Array.from(root.querySelectorAll('button')).find((b) => textOf(b) === text);
     expect(found, `no "${text}" button`).toBeDefined();
@@ -966,6 +1190,9 @@ describe('PlanPage', () => {
     return (node?.textContent ?? '').replace(/\s+/g, ' ').trim();
   }
 });
+
+@Component({ template: '' })
+class Blank {}
 
 // jsdom has no showModal() or close(). These follow the browser as far as the tests need: opening
 // focuses the dialog's autofocus element, else its first focusable one; closing puts the focus back

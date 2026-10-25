@@ -7,7 +7,9 @@
   <div class="grid">
     @for (recipe of recipes(); track recipe.name) {
       <article>
-        <h2>{{ recipe.name }}</h2>
+        <h2>
+          <a [routerLink]="['/recipes', recipeSlug(recipe.name)]">{{ recipe.name }}</a>
+        </h2>
         <p class="servings">{{ recipe.servings }} servings</p>
         <ul>
           @for (ingredient of recipe.ingredients; track ingredient.name) {

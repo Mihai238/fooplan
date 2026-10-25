@@ -1,0 +1,12 @@
+@let recipe = page().recipe;
+<a class="back" [routerLink]="page().back">Back</a>
+<article>
+  <h1>{{ recipe.name }}</h1>
+  <p class="servings">{{ recipe.servings }} servings</p>
+  <ul>
+    @for (ingredient of recipe.ingredients; track ingredient.name) {
+      @let shown = displayAmount(ingredient);
+      <li>{{ shown.amount }} {{ shown.unit }} {{ ingredient.name }}</li>
+    }
+  </ul>
+</article>

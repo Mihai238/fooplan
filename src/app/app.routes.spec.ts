@@ -1,7 +1,9 @@
+import { Location } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from './app.routes';
+import { RECIPES } from './recipes/recipes';
 
 describe('routes', () => {
   beforeEach(() => {
@@ -27,6 +29,63 @@ describe('routes', () => {
     const harness = await RouterTestingHarness.create('/recipes');
     expect(TestBed.inject(Router).url).toBe('/recipes');
     expect(harness.routeNativeElement!.querySelectorAll('article').length).toBeGreaterThan(0);
+  });
+
+  it('shows the recipe at /recipes/<slug> when opened directly, and again after a reload', async () => {
+    for (const [url, name] of [
+      ['/recipes/shepherds-pie', "Shepherd's pie"],
+      ['/recipes/nicoise-salad', 'Niçoise salad'],
+    ]) {
+      for (const open of ['opened', 'reloaded']) {
+        const harness = await RouterTestingHarness.create(url);
+        expect(TestBed.inject(Router).url, `${url} ${open}`).toBe(url);
+        expect(
+          harness.routeNativeElement!.querySelector('h1')?.textContent?.trim(),
+          `${url} ${open}`,
+        ).toBe(name);
+        // A fresh app on the same URL, as a reload makes
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+      }
+    }
+  });
+
+  it('redirects an unknown recipe slug to /recipes, showing the recipes and no recipe page', async () => {
+    const harness = await RouterTestingHarness.create('/recipes/pizza-hawaii');
+    expect(TestBed.inject(Router).url).toBe('/recipes');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Recipes');
+    expect(harness.routeNativeElement!.querySelectorAll('article').length).toBeGreaterThan(0);
+  });
+
+  it('redirects a recipe slug in another case to /recipes', async () => {
+    const harness = await RouterTestingHarness.create('/recipes/Spaghetti-Carbonara');
+    expect(TestBed.inject(Router).url).toBe('/recipes');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Recipes');
+  });
+
+  it('leaves no history entry for an unknown recipe slug, so going back skips it', async () => {
+    const harness = await RouterTestingHarness.create('/plan');
+    await harness.navigateByUrl('/groceries');
+    await harness.navigateByUrl('/recipes/pizza-hawaii');
+    expect(TestBed.inject(Router).url, 'not redirected').toBe('/recipes');
+    const location = TestBed.inject(Location);
+    expect(location.path()).toBe('/recipes');
+    location.back();
+    await harness.fixture.whenStable();
+    expect(location.path()).toBe('/groceries');
+  });
+
+  it("opens the recipe page of every recipe from its name's link on /recipes", async () => {
+    const harness = await RouterTestingHarness.create('/recipes');
+    const links = Array.from(
+      harness.routeNativeElement!.querySelectorAll<HTMLAnchorElement>('article h2 a'),
+    ).map((link) => [link.getAttribute('href')!, link.textContent!.trim()]);
+    expect(links, 'recipes linked').toHaveLength(RECIPES.length);
+    for (const [href, name] of links) {
+      await harness.navigateByUrl(href);
+      expect(TestBed.inject(Router).url, name).toBe(href);
+      expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim(), href).toBe(name);
+    }
   });
 
   it('shows the grocery list at /groceries', async () => {

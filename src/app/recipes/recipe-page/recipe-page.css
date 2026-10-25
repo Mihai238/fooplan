@@ -1,0 +1,52 @@
+:host {
+  display: block;
+  max-width: 36rem;
+}
+
+.back {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.back::before {
+  content: '← ' / '';
+}
+
+.back:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.back:focus-visible {
+  border-radius: 0.25rem;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+article {
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.75rem;
+}
+
+.servings {
+  margin: 0.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}

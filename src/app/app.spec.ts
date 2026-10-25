@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
 
 describe('App', () => {
   beforeEach(async () => {
+    localStorage.clear();
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [provideRouter(routes)],
@@ -46,5 +47,33 @@ describe('App', () => {
     );
     expect(link, 'no "Grocery list" link').toBeDefined();
     expect(link!.getAttribute('href')).toBe('/groceries');
+  });
+
+  it('marks the "Recipes" link as the current page on /recipes, and only as current on a recipe page', async () => {
+    const fixture = TestBed.createComponent(App);
+    const compiled = fixture.nativeElement as HTMLElement;
+    const recipes = () =>
+      Array.from(compiled.querySelectorAll('nav a')).find(
+        (a) => a.textContent?.trim() === 'Recipes',
+      )!;
+
+    await navigate('/recipes');
+    expect(recipes().getAttribute('aria-current'), 'on /recipes').toBe('page');
+    expect(recipes().classList, 'on /recipes').toContain('active');
+
+    await navigate('/recipes/shepherds-pie');
+    expect(recipes().getAttribute('aria-current'), 'on a recipe page').toBe('true');
+    expect(recipes().classList, 'on a recipe page').toContain('active');
+
+    await navigate('/plan');
+    expect(recipes().hasAttribute('aria-current'), 'on /plan').toBe(false);
+    expect(compiled.querySelector('nav a[aria-current]')?.textContent?.trim()).toBe('Plan');
+
+    async function navigate(url: string) {
+      await TestBed.inject(Router).navigateByUrl(url);
+      await fixture.whenStable();
+      // RouterLinkActive applies its class and aria-current in a microtask after the navigation
+      await Promise.resolve();
+    }
   });
 });

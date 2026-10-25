@@ -5,7 +5,13 @@
     <a routerLink="/groceries" routerLinkActive="active" ariaCurrentWhenActive="page">
       Grocery list
     </a>
-    <a routerLink="/recipes" routerLinkActive="active" ariaCurrentWhenActive="page">Recipes</a>
+    <a
+      routerLink="/recipes"
+      routerLinkActive="active"
+      [ariaCurrentWhenActive]="onRecipesPage() ? 'page' : true"
+    >
+      Recipes
+    </a>
   </nav>
 </header>
 <main>

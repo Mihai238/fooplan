@@ -1,4 +1,6 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
 import { displayAmount } from '../amount';
 import { RECIPES } from '../recipes';
 import { RecipeList } from './recipe-list';
@@ -8,6 +10,9 @@ describe('RecipeList', () => {
   let element: HTMLElement;
 
   beforeEach(async () => {
+    TestBed.configureTestingModule({
+      providers: [provideRouter([{ path: '**', component: Blank }])],
+    });
     fixture = TestBed.createComponent(RecipeList);
     await fixture.whenStable();
     element = fixture.nativeElement as HTMLElement;
@@ -109,6 +114,36 @@ describe('RecipeList', () => {
     expect(ingredientLinesOf('Baked potatoes with herb quark')).toContain('50 ml milk');
   });
 
+  it("links each recipe's name to its recipe page, which a click opens", async () => {
+    expectAllRecipesRendered();
+    const links = articles().map((article, i) => {
+      const found = article.querySelectorAll<HTMLAnchorElement>('h2 a');
+      expect(found, `links in the name of "${RECIPES[i].name}"`).toHaveLength(1);
+      expect(textOf(found[0]), `link text of "${RECIPES[i].name}"`).toBe(RECIPES[i].name);
+      return found[0];
+    });
+    const hrefs = links.map((link) => link.getAttribute('href'));
+    for (const href of hrefs) {
+      expect(href).toMatch(/^\/recipes\/[a-z0-9]+(-[a-z0-9]+)*$/);
+    }
+    expect(new Set(hrefs).size, 'recipes sharing a link').toBe(RECIPES.length);
+    expect(nameLinkOf("Shepherd's pie").getAttribute('href')).toBe('/recipes/shepherds-pie');
+    expect(nameLinkOf('Käsespätzle').getAttribute('href')).toBe('/recipes/kasespatzle');
+    expect(nameLinkOf('Spaghetti carbonara').getAttribute('href')).toBe(
+      '/recipes/spaghetti-carbonara',
+    );
+
+    nameLinkOf("Shepherd's pie").click();
+    await fixture.whenStable();
+    expect(TestBed.inject(Router).url).toBe('/recipes/shepherds-pie');
+  });
+
+  it('links the name of a recipe the search lists to its recipe page', async () => {
+    await search('nicoise');
+    expect(listedNames()).toEqual(['Niçoise salad']);
+    expect(nameLinkOf('Niçoise salad').getAttribute('href')).toBe('/recipes/nicoise-salad');
+  });
+
   async function search(text: string) {
     const field = searchField();
     field.value = text;
@@ -134,6 +169,14 @@ describe('RecipeList', () => {
     return Array.from(article!.querySelectorAll('li')).map(textOf);
   }
 
+  function nameLinkOf(name: string): HTMLAnchorElement {
+    const article = articles().find((candidate) => textOf(candidate.querySelector('h2')!) === name);
+    expect(article, `"${name}" not shown`).toBeDefined();
+    const link = article!.querySelector<HTMLAnchorElement>('h2 a');
+    expect(link, `no link in the name of "${name}"`).not.toBeNull();
+    return link!;
+  }
+
   function listedNames(): string[] {
     return articles().map((article) => textOf(article.querySelector('h2')!));
   }
@@ -151,3 +194,6 @@ describe('RecipeList', () => {
     expect(articles()).toHaveLength(RECIPES.length);
   }
 });
+
+@Component({ template: '' })
+class Blank {}

@@ -125,6 +125,17 @@ h3 {
   font-weight: 600;
 }
 
+.name {
+  color: inherit;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 0.2em;
+}
+
+.name:hover {
+  color: var(--accent);
+  text-decoration-color: currentColor;
+}
+
 .cook-extra {
   display: flex;
   align-items: center;
@@ -159,10 +170,35 @@ button {
   color: var(--text);
 }
 
-.suggestion {
+/* The smaller gap and the link's negative margins make up for its larger touch target, so at the
+   default font size the text and the rows' spacing stay as they were */
+.option {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
   width: 100%;
+}
+
+.suggestion {
+  flex: 1;
+  min-width: 0;
   padding: 0.5rem 0.75rem;
   text-align: left;
+}
+
+.recipe-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: -0.25rem -0.5rem -0.25rem 0;
+  padding: 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.recipe-link:hover {
+  color: var(--accent);
 }
 
 .suggestion:hover,
@@ -226,6 +262,7 @@ button {
    :focus-visible, yet the ring must show which button Enter presses */
 button:focus-visible,
 input:focus-visible,
+a:focus-visible,
 .value:focus-visible,
 dialog button:focus {
   outline: 2px solid var(--accent);

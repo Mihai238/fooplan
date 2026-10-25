@@ -1,5 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { recipeSlug } from '../../recipes/recipe-slug';
 import {
   DEFAULT_DAYS,
   filledMeals,
@@ -13,7 +15,7 @@ import {
 import { PlanStore } from '../plan-store';
 
 @Component({
-  imports: [DatePipe],
+  imports: [DatePipe, RouterLink],
   selector: 'app-plan-page',
   styleUrl: './plan-page.css',
   templateUrl: './plan-page.html',
@@ -30,6 +32,7 @@ export class PlanPage {
   protected readonly fewestDays = computed(() => this.plan().days.length <= MIN_DAYS);
   protected readonly mostDays = computed(() => this.plan().days.length >= MAX_DAYS);
   protected readonly fewestPeople = computed(() => this.plan().people <= MIN_PEOPLE);
+  protected readonly recipeSlug = recipeSlug;
   protected readonly meals: readonly { kind: MealKind; label: string }[] = [
     { kind: 'lunch', label: 'Lunch' },
     { kind: 'dinner', label: 'Dinner' },
