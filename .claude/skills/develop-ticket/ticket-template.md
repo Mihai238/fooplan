@@ -36,8 +36,4 @@ Reviewed: (commit the last review round covered; later rounds review only what c
 
 (what was decided, by whom, and why)
 
-## Corrections
-
-(every time the user corrected Claude: what was wrong and the right way - input for the retro)
-
 ## Progress log

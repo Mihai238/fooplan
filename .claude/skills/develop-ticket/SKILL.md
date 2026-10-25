@@ -1,6 +1,6 @@
 ---
 name: develop-ticket
-description: Develop a GitHub issue from its spec and acceptance criteria - tests first, implementation, quality gate (tests + browser check + review by agents), one squashed commit, retro. Also resumes a ticket in progress. Use when asked to work on, implement, develop or continue an issue or ticket.
+description: Develop a GitHub issue from its spec and acceptance criteria - tests first, implementation, quality gate (tests + browser check + review by agents), one squashed commit. Also resumes a ticket in progress. Use when asked to work on, implement, develop or continue an issue or ticket.
 argument-hint: <issue number>
 ---
 
@@ -18,9 +18,8 @@ The user has created this worktree for the ticket. Never create, switch or remov
 ## Rules for the whole flow
 
 - `.ticket.md` (gitignored, from `ticket-template.md` next to this file) is the state. After every step,
-  update its `Step:` line and add a line to the progress log. Write decisions to `## Decisions`, and
-  every correction the user makes to `## Corrections`. Agents get their context from `.ticket.md` and
-  report back short results, never file dumps.
+  update its `Step:` line and add a line to the progress log. Write decisions to `## Decisions`. Agents
+  get their context from `.ticket.md` and report back short results, never file dumps.
 - Everything the flow produces lives in `.ticket.md`, never only in the scratchpad: the scratchpad is
   under `/tmp` and gone after a machine restart. That includes criteria written retroactively for work
   that was committed without them.
@@ -147,7 +146,9 @@ on as they decide.
 
 1. `git reset --soft <Start>`, then commit everything as one commit in the CLAUDE.md format, ending in
    the issue reference. The `wip:` commits are gone; don't push.
-2. Show the user, in a few lines, and go on to the retro without waiting:
+2. Stop any dev server the flow started, and set `Step: done` in `.ticket.md`, so the next ticket in
+   this worktree starts fresh.
+3. Show the user, in a few lines:
    - what changed and the criteria table with results,
    - the rounds the gate took and the review findings counted by outcome, with every Important one
      not fixed and every Pre-existing one listed, so the user can decide whether it needs an issue,
@@ -157,16 +158,4 @@ on as they decide.
    - the open edge-case questions from the plan, which no test covers yet,
    - the commit.
 
-Corrections the user brings later go into `## Corrections`; fix them in a new commit and rerun the
-affected part of the gate.
-
-## 6. Retro
-
-Go through `## Corrections`, `## Decisions` and the session for what the user had to correct or
-explain. Go through `## Review findings` too: many `wrong` or `not worth it` outcomes mean the reviewer
-needs a rule that would have kept them out. Propose concrete changes to CLAUDE.md or this skill, each as
-a one-line rule with its reason.
-Apply the ones the user picks and leave them uncommitted.
-Stop any dev server the flow started.
-
-When the retro is over, set `Step: done` in `.ticket.md`, so the next ticket in this worktree starts fresh.
+Fix corrections the user brings later in a new commit and rerun the affected part of the gate.
