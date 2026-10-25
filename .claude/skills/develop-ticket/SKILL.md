@@ -24,9 +24,9 @@ The user has created this worktree for the ticket. Never create, switch or remov
 - Everything the flow produces lives in `.ticket.md`, never only in the scratchpad: the scratchpad is
   under `/tmp` and gone after a machine restart. That includes criteria written retroactively for work
   that was committed without them.
-- There are two stops: unclear criteria at step 1 (only if needed), and step 4 when the gate hasn't
-  passed after three rounds. The plan at step 3 is published but approved automatically. Between the
-  stops, work without asking unless something blocks you.
+- There is one stop: step 4 when the gate hasn't passed after three rounds. Unclear criteria at step 1
+  are decided, and the plan at step 3 is published but approved automatically. Otherwise work without
+  asking unless something blocks you.
 - Commit `wip: <slice>` freely as checkpoints; step 5 squashes them into one commit. Never push, never
   force anything.
 - The GitHub issue is read only: read it with `gh issue view <number> --comments`, never comment, label,
@@ -54,8 +54,9 @@ The argument is the issue number (`12` or `#12`).
    | What a component shows or does on input | component | Vitest spec of the component (TestBed) |
    | A user workflow across screens, or anything a spec can't see (routing, real rendering, the console) | browser | Scenario in `## Browser scenarios`, run with the `browser-test` skill |
 
-4. If a criterion is ambiguous, contradicts the spec or can't be tested, **STOP** and ask, all
-   questions at once. Otherwise go on without asking.
+4. If a criterion is ambiguous, contradicts the spec or can't be tested, don't ask: take the reading
+   that fits the spec best, write it into the table as a testable criterion, and the original wording
+   and the reason into `## Decisions`.
 
 ## 2. Tests first
 
@@ -77,10 +78,11 @@ tests they make pass, and which slices can run in parallel. Check CLAUDE.md and 
 constraints. Before the approach names a component, route, input, CSS class or label, check how sibling
 code names the same thing and reuse that name.
 
-Publish the plan (spec, criteria with their edge-case rows, open edge-case questions, approach, risks)
-as an HTML artifact and go on without waiting: the plan is approved automatically. If the user objects
-to it while the work runs, adjust the approach and drop the edge-case tests they reject. Fixes from the
-quality gate and from the user's feedback go ahead without a new plan.
+Publish the plan (spec, criteria with their edge-case rows, the readings decided at step 1, open
+edge-case questions, approach, risks) as an HTML artifact and go on without waiting: the plan is
+approved automatically. If the user objects to it while the work runs, adjust the approach and drop the
+edge-case tests they reject. Fixes from the quality gate and from the user's feedback go ahead without
+a new plan.
 
 Implementer agents work slice by slice. Per slice: write the code, make that slice's tests pass,
 commit `wip: <slice>`, log it. Slices run as parallel agents when they touch different files. Parallel
@@ -151,6 +153,7 @@ on as they decide.
      not fixed and every Pre-existing one listed, so the user can decide whether it needs an issue,
    - what the browser tester could not verify (see the end of the `browser-test` skill), for the user
      to check,
+   - the readings of unclear criteria decided at step 1,
    - the open edge-case questions from the plan, which no test covers yet,
    - the commit.
 

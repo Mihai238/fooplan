@@ -8,7 +8,7 @@ Reviewed: (commit the last review round covered; later rounds review only what c
 
 ## Spec
 
-(step 1: the spec from the issue and the user, open questions and their answers)
+(step 1: the spec from the issue and the user, open questions and the readings decided for them)
 
 ## Acceptance criteria
 
