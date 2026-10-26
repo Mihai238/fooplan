@@ -96,6 +96,28 @@ describe('GroceryList', () => {
     expect(listed().filter((item) => checkboxOf(item).checked)).toEqual([]);
   });
 
+  // jsdom has no Element.getAnimations, so Angular removes a leaving line at once, without its fade
+  it('takes a ticked line out of its section with the render and lists it in "In the cart (1)", leaving no fading line in the page', async () => {
+    await openAccepted(
+      'Fish fingers with mashed potatoes and peas',
+      'Chicken and rice with carrots and peas',
+    );
+    const onion = listedIn(sectionHeaded('Fruit & vegetables')).find(
+      (item) => labelOf(item) === '1 pc onion',
+    );
+    expect(onion, 'no "1 pc onion" under "Fruit & vegetables"').toBeDefined();
+
+    await click(checkboxOf(onion!));
+    expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toEqual([
+      '2 pc carrot',
+      '350 g pea',
+      '600 g potato',
+    ]);
+    expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('In the cart (1)');
+    expect(inCart().map(labelOf)).toEqual(['1 pc onion']);
+    expect(element.querySelectorAll('li.leaving')).toHaveLength(0);
+  });
+
   it('moves the focus to the next line of the section after ticking a line by keyboard', async () => {
     acceptOneDayPlan(store);
     await open();
@@ -569,6 +591,59 @@ describe('GroceryList', () => {
     expect(checkboxOf(listedIn(sectionHeaded('Cans & jars'))[0]).checked).toBe(false);
     expect(cart()).toBeNull();
     expect(textOf(element)).not.toContain('g canned chickpeas');
+  });
+
+  // jsdom has no Element.getAnimations, so Angular removes a leaving line at once; marking a line
+  // that stays on the list with the class Angular gives a leaving one stands for its fade
+  describe('focus past lines that are still fading', () => {
+    // "Fruit & vegetables": 2 pc carrot, 1 pc onion, 350 g pea, 600 g potato; "Bread & bakery": 80 g
+    // breadcrumbs; "Pasta, rice & grains": 50 g flour, 200 g rice; "Cans & jars": 500 ml vegetable
+    // stock
+    beforeEach(async () => {
+      await openAccepted(
+        'Fish fingers with mashed potatoes and peas',
+        'Chicken and rice with carrots and peas',
+      );
+    });
+
+    it('moves the focus past a fading line to the next line after ticking a line by keyboard', async () => {
+      fade(line('350 g pea'));
+
+      await press(checkboxOf(line('1 pc onion')));
+      expect(document.activeElement).toBe(checkboxOf(line('600 g potato')));
+    });
+
+    it('moves the focus past a section whose lines are all fading to the first line of the section after it', async () => {
+      listedIn(sectionHeaded('Pasta, rice & grains')).forEach(fade);
+
+      await press(checkboxOf(line('80 g breadcrumbs')));
+      expect(document.activeElement).toBe(checkboxOf(line('500 ml vegetable stock')));
+    });
+
+    it("moves the focus to the line's checkbox back in its section, not to the cart, after unticking the cart's last line not fading by keyboard", async () => {
+      await tick('2 pc carrot');
+      await tick('1 pc onion');
+      cart()!.open = true;
+      fade(cartLine('2 pc carrot'));
+
+      await press(checkboxOf(cartLine('1 pc onion')));
+      expect(document.activeElement).toBe(checkboxOf(line('1 pc onion')));
+    });
+
+    it('moves the focus past a fading line to the previous line after removing an added item by keyboard', async () => {
+      for (const text of ['batteries', 'coffee', 'toilet paper']) {
+        store.addItem(text);
+      }
+      await stable();
+      fade(line('toilet paper'));
+
+      await pressRemove(line('coffee'));
+      expect(document.activeElement).toBe(checkboxOf(line('batteries')));
+    });
+
+    function fade(item: HTMLElement) {
+      item.classList.add('leaving');
+    }
   });
 
   describe('status after "Add"', () => {
@@ -1520,10 +1595,6 @@ describe('GroceryList', () => {
       await open();
     }
 
-    async function tick(label: string) {
-      await click(checkboxOf(line(label)));
-    }
-
     async function wait(ms: number) {
       vi.advanceTimersByTime(ms);
       await stable();
@@ -1552,18 +1623,6 @@ describe('GroceryList', () => {
     async function blurUndo() {
       undoButton().blur();
       await stable();
-    }
-
-    function line(label: string): HTMLElement {
-      const found = listed().find((item) => labelOf(item) === label);
-      expect(found, `no line "${label}" in the sections`).toBeDefined();
-      return found!;
-    }
-
-    function cartLine(label: string): HTMLElement {
-      const found = inCart().find((item) => labelOf(item) === label);
-      expect(found, `no line "${label}" in the cart`).toBeDefined();
-      return found!;
     }
 
     function undoButton(): HTMLButtonElement {
@@ -2000,6 +2059,22 @@ describe('GroceryList', () => {
     const section = sections().find((candidate) => listedIn(candidate).length > 1);
     expect(section, 'no section with several lines').toBeDefined();
     return section!;
+  }
+
+  async function tick(label: string) {
+    await click(checkboxOf(line(label)));
+  }
+
+  function line(label: string): HTMLElement {
+    const found = listed().find((item) => labelOf(item) === label);
+    expect(found, `no line "${label}" in the sections`).toBeDefined();
+    return found!;
+  }
+
+  function cartLine(label: string): HTMLElement {
+    const found = inCart().find((item) => labelOf(item) === label);
+    expect(found, `no line "${label}" in the cart`).toBeDefined();
+    return found!;
   }
 
   function listed(): HTMLElement[] {

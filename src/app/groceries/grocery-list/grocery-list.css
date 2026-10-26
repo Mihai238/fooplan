@@ -118,6 +118,27 @@ h2 {
   border-top: 1px solid var(--border);
 }
 
+/* A fading line is already off the list, so a click on it mustn't toggle it a second time */
+.items li.leaving {
+  animation: fade-out 150ms ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .items li.leaving {
+    animation: none;
+  }
+}
+
 .items label {
   flex: 1;
   display: flex;

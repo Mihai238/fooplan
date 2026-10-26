@@ -24,6 +24,8 @@ import {
 } from '../groceries';
 
 const UNDO_SECONDS = 5;
+// A line leaving its list stays in the page until its fade ends, but is no longer on the list
+const LISTED_CHECKBOX = 'li:not(.leaving) input[type="checkbox"]';
 
 interface UndoLine {
   key: string;
@@ -111,10 +113,8 @@ export class GroceryList {
     }
     // Read before the render, which removes the toggled line from this list
     const line = checkbox.closest('li');
-    const sibling =
-      this.firstCheckboxIn(line?.nextElementSibling) ??
-      this.firstCheckboxIn(line?.previousElementSibling);
-    const nextSection = this.firstCheckboxIn(checkbox.closest('section')?.nextElementSibling);
+    const sibling = this.checkboxAfter(line, 'next') ?? this.checkboxAfter(line, 'previous');
+    const nextSection = this.checkboxAfter(checkbox.closest('section'), 'next');
     afterNextRender(
       () => {
         const fallback = fromCart
@@ -134,9 +134,7 @@ export class GroceryList {
       return;
     }
     const line = button.closest('li');
-    const sibling =
-      this.firstCheckboxIn(line?.nextElementSibling) ??
-      this.firstCheckboxIn(line?.previousElementSibling);
+    const sibling = this.checkboxAfter(line, 'next') ?? this.checkboxAfter(line, 'previous');
     afterNextRender(() => (sibling ?? this.addField())?.focus(), { injector: this.injector });
   }
 
@@ -208,8 +206,20 @@ export class GroceryList {
     return this.view().inCart.some((item) => itemKey(item) === key);
   }
 
-  private firstCheckboxIn(element: Element | null | undefined): HTMLInputElement | null {
-    return element?.querySelector('input') ?? null;
+  // Past the siblings without one: a line or a section that is only still there for its fade
+  private checkboxAfter(
+    element: Element | null,
+    direction: 'next' | 'previous',
+  ): HTMLInputElement | null {
+    const step = (from: Element) =>
+      direction === 'next' ? from.nextElementSibling : from.previousElementSibling;
+    for (let sibling = element && step(element); sibling; sibling = step(sibling)) {
+      const checkbox = this.firstCheckboxIn(sibling);
+      if (checkbox !== null) {
+        return checkbox;
+      }
+    }
+    return null;
   }
 
   private addField(): HTMLInputElement | null {
@@ -217,12 +227,19 @@ export class GroceryList {
   }
 
   private cartSummary(): HTMLElement | null {
-    return this.host.querySelector('.cart summary');
+    const cart = this.host.querySelector('.cart');
+    return cart !== null && this.firstCheckboxIn(cart) !== null
+      ? cart.querySelector('summary')
+      : null;
   }
 
   private checkboxOf(key: string): HTMLInputElement | undefined {
-    return Array.from(this.host.querySelectorAll('input')).find(
+    return Array.from(this.host.querySelectorAll<HTMLInputElement>(LISTED_CHECKBOX)).find(
       (checkbox) => checkbox.dataset['key'] === key,
     );
+  }
+
+  private firstCheckboxIn(element: Element): HTMLInputElement | null {
+    return element.querySelector(LISTED_CHECKBOX);
   }
 }
