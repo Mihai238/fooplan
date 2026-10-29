@@ -12,10 +12,22 @@ import { planStage, todayMeals } from './overview';
 
 const DATE_FORMATS: Record<Language, string> = { en: 'EEEE, MMMM d', de: 'EEEE, d. MMMM' };
 
+const PHOTO_CREDITS: readonly PhotoCredit[] = [
+  { photographer: 'Katie Smith', page: 'https://unsplash.com/photos/uQs1802D0CQ' },
+  { photographer: 'Ella Olsson', page: 'https://unsplash.com/photos/lMcRyBx4G50' },
+  { photographer: 'Peter Wendt', page: 'https://unsplash.com/photos/-r5KSMkyoSc' },
+  { photographer: 'Kevin McCutcheon', page: 'https://unsplash.com/photos/APDMfLHZiRA' },
+];
+
 interface MainLink {
   label: MessageId;
   link: string;
   detail: string;
+}
+
+interface PhotoCredit {
+  photographer: string;
+  page: string;
 }
 
 @Component({
@@ -70,6 +82,7 @@ export class Home {
     return `${recipes}, ${this.language.t(own === 1 ? 'home.own.one' : 'home.own.other', { count: own })}`;
   });
   protected readonly recipeSlug = recipeSlug;
+  protected readonly photoCredits = PHOTO_CREDITS;
   protected readonly meals: readonly { kind: MealKind; label: MessageId }[] = [
     { kind: 'lunch', label: 'meal.lunch' },
     { kind: 'dinner', label: 'meal.dinner' },

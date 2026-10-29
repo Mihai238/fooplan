@@ -1,73 +1,93 @@
-<section class="intro">
-  <h1>{{ language.t('home.title') }}</h1>
-  <p class="lead">{{ language.t('home.intro') }}</p>
-  <a class="primary" [routerLink]="main().link">
-    {{ language.t(main().label) }}
-    @if (main().detail) {
-      <span class="detail"><span aria-hidden="true">·</span> {{ main().detail }}</span>
-    }
-  </a>
-</section>
-
-<section class="today" aria-labelledby="today-title">
-  <h2 id="today-title">{{ language.t('home.today') }}</h2>
-  <p class="date">{{ today | date: dateFormat() : undefined : language.locale() }}</p>
-  @if (todayMeals(); as planned) {
-    <dl>
-      @for (meal of meals; track meal.kind) {
-        @let current = planned[meal.kind];
-        <div class="meal">
-          <dt>{{ language.t(meal.label) }}</dt>
-          <dd>
-            @if (current.shows === 'recipe') {
-              <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
-                {{ displayName(current.recipe) }}
-              </a>
-              @if (minutes(current.recipe); as recipeMinutes) {
-                <span class="minutes">
-                  {{ language.t('plan.minutes', { minutes: recipeMinutes }) }}
-                </span>
-              }
-            } @else if (current.shows === 'leftovers') {
-              {{ language.t('plan.leftovers') }}
-              <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
-                {{ displayName(current.recipe) }}
-              </a>
-            } @else if (current.shows === 'eatingOut') {
-              {{ language.t('plan.eatingOut') }}
-            } @else {
-              <span class="open">{{ language.t('home.notPicked') }}</span>
-            }
-          </dd>
-        </div>
+<div class="top">
+  <section class="intro">
+    <h1>{{ language.t('home.title') }}</h1>
+    <p class="lead">{{ language.t('home.intro') }}</p>
+    <a class="primary" [routerLink]="main().link">
+      {{ language.t(main().label) }}
+      @if (main().detail) {
+        <span class="detail"><span aria-hidden="true">·</span> {{ main().detail }}</span>
       }
-    </dl>
-  } @else {
-    <p class="not-today">
-      {{ language.t('home.notToday') }}
-      <a routerLink="/plan">{{ language.t('home.goToPlan') }}</a>
-    </p>
-  }
-</section>
+    </a>
+  </section>
+
+  <img
+    class="hero"
+    src="images/home/hero.jpg"
+    alt=""
+    width="1200"
+    height="1200"
+    fetchpriority="high"
+  />
+
+  <section class="today" aria-labelledby="today-title">
+    <h2 id="today-title">{{ language.t('home.today') }}</h2>
+    <p class="date">{{ today | date: dateFormat() : undefined : language.locale() }}</p>
+    @if (todayMeals(); as planned) {
+      <dl>
+        @for (meal of meals; track meal.kind) {
+          @let current = planned[meal.kind];
+          <div class="meal">
+            <dt>{{ language.t(meal.label) }}</dt>
+            <dd>
+              @if (current.shows === 'recipe') {
+                <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
+                  {{ displayName(current.recipe) }}
+                </a>
+                @if (minutes(current.recipe); as recipeMinutes) {
+                  <span class="minutes">
+                    {{ language.t('plan.minutes', { minutes: recipeMinutes }) }}
+                  </span>
+                }
+              } @else if (current.shows === 'leftovers') {
+                {{ language.t('plan.leftovers') }}
+                <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
+                  {{ displayName(current.recipe) }}
+                </a>
+              } @else if (current.shows === 'eatingOut') {
+                {{ language.t('plan.eatingOut') }}
+              } @else {
+                <span class="open">{{ language.t('home.notPicked') }}</span>
+              }
+            </dd>
+          </div>
+        }
+      </dl>
+    } @else {
+      <p class="not-today">
+        {{ language.t('home.notToday') }}
+        <a routerLink="/plan">{{ language.t('home.goToPlan') }}</a>
+      </p>
+    }
+  </section>
+</div>
 
 <!-- role="list": Safari drops the list role of a list drawn without markers -->
 <ul class="cards" role="list">
   <li>
     <a class="card" routerLink="/plan">
-      <h2>{{ language.t('nav.plan') }}</h2>
-      <p>{{ planFact() }}</p>
+      <img src="images/home/plan.jpg" alt="" width="800" height="534" loading="lazy" />
+      <div class="card-text">
+        <h2>{{ language.t('nav.plan') }}</h2>
+        <p>{{ planFact() }}</p>
+      </div>
     </a>
   </li>
   <li>
     <a class="card" routerLink="/groceries">
-      <h2>{{ language.t('nav.groceries') }}</h2>
-      <p>{{ groceriesFact() }}</p>
+      <img src="images/home/groceries.jpg" alt="" width="800" height="534" loading="lazy" />
+      <div class="card-text">
+        <h2>{{ language.t('nav.groceries') }}</h2>
+        <p>{{ groceriesFact() }}</p>
+      </div>
     </a>
   </li>
   <li>
     <a class="card" routerLink="/recipes">
-      <h2>{{ language.t('nav.recipes') }}</h2>
-      <p>{{ recipesFact() }}</p>
+      <img src="images/home/recipes.jpg" alt="" width="800" height="534" loading="lazy" />
+      <div class="card-text">
+        <h2>{{ language.t('nav.recipes') }}</h2>
+        <p>{{ recipesFact() }}</p>
+      </div>
     </a>
   </li>
 </ul>
@@ -89,3 +109,12 @@
     </li>
   </ol>
 </section>
+
+<p class="credits">
+  {{ language.t('home.photos') }}
+  @for (credit of photoCredits; track credit.page; let last = $last) {
+    <a [href]="credit.page" target="_blank" rel="noopener">{{ credit.photographer }}</a
+    >{{ last ? '' : ',' }}
+  }
+  {{ language.t('home.onUnsplash') }}
+</p>

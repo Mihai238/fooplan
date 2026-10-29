@@ -208,6 +208,9 @@ describe('Home', () => {
       ['Rezepte', '46 Rezepte, davon 2 eigene'],
     ]);
     expect(textOf(element.querySelector('.how h2'))).toBe('So geht’s');
+    expect(textOf(element.querySelector('.credits'))).toBe(
+      'Fotos: Katie Smith, Ella Olsson, Peter Wendt, Kevin McCutcheon auf Unsplash',
+    );
   });
 
   it('explains how it works in three ordered steps', async () => {
@@ -222,6 +225,30 @@ describe('Home', () => {
       ['Pick the meals', 'Three suggestions for each lunch and dinner.'],
       ['Accept the plan', 'Once every meal is filled.'],
       ['Shop the list', 'Amounts scaled to your people, grouped by shop section.'],
+    ]);
+  });
+
+  it('shows the hero and card photos, credited to their photographers on Unsplash', async () => {
+    await openHome();
+    expect(element.querySelector('img.hero')?.getAttribute('src')).toBe('images/home/hero.jpg');
+    expect(
+      Array.from(element.querySelectorAll('a.card img')).map((image) => image.getAttribute('src')),
+    ).toEqual(['images/home/plan.jpg', 'images/home/groceries.jpg', 'images/home/recipes.jpg']);
+    const credits = element.querySelector('.credits');
+    expect(textOf(credits)).toBe(
+      'Photos: Katie Smith, Ella Olsson, Peter Wendt, Kevin McCutcheon on Unsplash',
+    );
+    expect(
+      Array.from(credits!.querySelectorAll('a')).map((link) => [
+        textOf(link),
+        link.getAttribute('href'),
+        link.getAttribute('target'),
+      ]),
+    ).toEqual([
+      ['Katie Smith', 'https://unsplash.com/photos/uQs1802D0CQ', '_blank'],
+      ['Ella Olsson', 'https://unsplash.com/photos/lMcRyBx4G50', '_blank'],
+      ['Peter Wendt', 'https://unsplash.com/photos/-r5KSMkyoSc', '_blank'],
+      ['Kevin McCutcheon', 'https://unsplash.com/photos/APDMfLHZiRA', '_blank'],
     ]);
   });
 
