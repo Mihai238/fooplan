@@ -113,3 +113,15 @@ main {
   margin: 0 auto;
   padding: 1.5rem 1rem 3rem;
 }
+
+/* A mask rather than an <img>, so the mark takes the brand's accent in both colour schemes */
+.brand::before {
+  content: '';
+  display: inline-block;
+  width: 1.5em;
+  height: 1.5em;
+  margin-right: 0.375rem;
+  vertical-align: -0.375em;
+  background: currentColor;
+  mask: url('../../public/logo.svg') center / contain no-repeat;
+}
