@@ -10,6 +10,7 @@ import {
   byName,
   byShownName,
   bySection,
+  cartCount,
   GroceryItem,
   groceryList,
   itemKey,
@@ -154,6 +155,35 @@ const RECIPES: readonly Recipe[] = [
 const STAPLES = ['olive oil', 'sesame oil', 'vegetable oil', 'salt', 'pepper', 'black pepper'];
 
 describe('groceries', () => {
+  describe('cartCount', () => {
+    it("counts the plan's lines and the added items, and those of them ticked into the cart", () => {
+      const plan = withAdded(
+        acceptedPlanFor(2, day('2026-10-24', picked('Spaghetti'), picked('Chili'))),
+        'coffee',
+        'toilet paper',
+      );
+      const lines = groceryList(plan, RECIPES);
+      expect(lines.map((line) => line.name)).toEqual(['onion', 'spaghetti', 'tomatoes']);
+      expect(cartCount(plan, RECIPES)).toEqual({ inCart: 0, total: 5 });
+
+      const ticked = { ...plan, ticked: [itemKey(lines[0]), addedKey('coffee')] };
+      expect(cartCount(ticked, RECIPES)).toEqual({ inCart: 2, total: 5 });
+    });
+
+    it('counts nothing for a plan that is not accepted yet', () => {
+      const plan = planFor(2, day('2026-10-24', picked('Spaghetti'), picked('Chili')));
+      expect(cartCount(plan, RECIPES)).toEqual({ inCart: 0, total: 0 });
+    });
+
+    it('leaves out a tick whose item is not on the list', () => {
+      const plan = {
+        ...acceptedPlanFor(2, day('2026-10-24', picked('Rice'), eatingOut())),
+        ticked: [itemKey(item('dragon fruit', 1, 'pc')), itemKey(item('rice', 150, 'g'))],
+      };
+      expect(cartCount(plan, RECIPES)).toEqual({ inCart: 1, total: 1 });
+    });
+  });
+
   describe('groceryList', () => {
     it('lists nothing for a plan that is not accepted yet, even a complete one', () => {
       const plan = planFor(2, day('2026-10-24', picked('Spaghetti'), picked('Chili')));

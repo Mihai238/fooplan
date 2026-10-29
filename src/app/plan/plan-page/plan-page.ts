@@ -56,15 +56,7 @@ export class PlanPage {
   );
   protected readonly filled = computed(() => filledMeals(this.plan()));
   protected readonly dateFormat = computed(() => DATE_FORMATS[this.language.language()]);
-  protected readonly summary = computed(() => {
-    const { days, people, kidFriendly } = this.plan();
-    return this.language.t(kidFriendly ? 'plan.summaryKidFriendly' : 'plan.summary', {
-      days: days.length,
-      dayWord: this.language.t(days.length === 1 ? 'day.one' : 'day.other'),
-      people,
-      personWord: this.personWord(people),
-    });
-  });
+  protected readonly summary = computed(() => this.language.planSummary(this.plan()));
   protected readonly nextPlan = computed(() => {
     const people = this.plan().people;
     return this.language.t(this.store.kidFriendly() ? 'newPlan.nextKidFriendly' : 'newPlan.next', {

@@ -3,7 +3,11 @@ import { ActivatedRouteSnapshot, Router, Routes, UrlTree } from '@angular/router
 import type { Recipe } from './recipes/recipe';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'plan' },
+  {
+    path: '',
+    pathMatch: 'full',
+    loadComponent: () => import('./home/home').then((m) => m.Home),
+  },
   {
     path: 'plan',
     loadComponent: () => import('./plan/plan-page/plan-page').then((m) => m.PlanPage),
@@ -30,7 +34,7 @@ export const routes: Routes = [
     path: 'groceries',
     loadComponent: () => import('./groceries/grocery-list/grocery-list').then((m) => m.GroceryList),
   },
-  { path: '**', redirectTo: 'plan' },
+  { path: '**', redirectTo: '' },
 ];
 
 function knownRecipe(route: ActivatedRouteSnapshot): Promise<true | UrlTree> {

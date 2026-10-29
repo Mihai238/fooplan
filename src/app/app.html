@@ -1,5 +1,13 @@
 <header>
-  <span class="brand">Fooplan</span>
+  <a
+    class="brand"
+    routerLink="/"
+    routerLinkActive
+    [routerLinkActiveOptions]="{ exact: true }"
+    ariaCurrentWhenActive="page"
+  >
+    Fooplan
+  </a>
   <nav>
     <a routerLink="/plan" routerLinkActive="active" ariaCurrentWhenActive="page">
       {{ language.t('nav.plan') }}

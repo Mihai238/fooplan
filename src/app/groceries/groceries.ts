@@ -29,11 +29,23 @@ export interface ShoppingView {
   inCart: ListItem[];
 }
 
+export interface CartCount {
+  inCart: number;
+  total: number;
+}
+
 export type ItemOrder = (a: ListItem, b: ListItem) => number;
 
 export type AddFeedback =
   | { id: 'groceries.added'; params: { item: string; section: Section } }
   | { id: 'groceries.alreadyInCart' | 'groceries.alreadyOnList'; params: { item: string } };
+
+// Counted as shoppingView sorts them, so a tick whose item isn't on the list counts for nothing
+export function cartCount(plan: Plan, recipes: readonly Recipe[]): CartCount {
+  const ticked = new Set(plan.ticked);
+  const keys = listItems(plan, recipes).map(itemKey);
+  return { inCart: keys.filter((key) => ticked.has(key)).length, total: keys.length };
+}
 
 export function listItems(
   plan: Plan,

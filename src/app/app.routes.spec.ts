@@ -16,14 +16,24 @@ describe('routes', () => {
     });
   });
 
-  it('opens the plan page at the root URL', async () => {
+  it('opens the home page at the root URL', async () => {
     const harness = await RouterTestingHarness.create('/');
-    expect(TestBed.inject(Router).url).toBe('/plan');
-    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Plan');
+    expect(TestBed.inject(Router).url).toBe('/');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+      'Lunch and dinner, planned in a few minutes',
+    );
   });
 
-  it('redirects an unknown URL to /plan', async () => {
+  it('redirects an unknown URL to the home page', async () => {
     const harness = await RouterTestingHarness.create('/nope');
+    expect(TestBed.inject(Router).url).toBe('/');
+    expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+      'Lunch and dinner, planned in a few minutes',
+    );
+  });
+
+  it('shows the plan page at /plan', async () => {
+    const harness = await RouterTestingHarness.create('/plan');
     expect(TestBed.inject(Router).url).toBe('/plan');
     expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Plan');
   });

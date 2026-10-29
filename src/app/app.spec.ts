@@ -20,6 +20,26 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
+  it('renders the brand "Fooplan" as a link to the home page, marked as the current page there only', async () => {
+    const fixture = TestBed.createComponent(App);
+    const compiled = fixture.nativeElement as HTMLElement;
+    const brand = compiled.querySelector('header a.brand');
+    expect(brand, 'no brand link').not.toBeNull();
+    await navigate('/');
+    expect(brand!.textContent?.trim()).toBe('Fooplan');
+    expect(brand!.getAttribute('href')).toBe('/');
+    expect(brand!.getAttribute('aria-current'), 'on /').toBe('page');
+    await navigate('/plan');
+    expect(brand!.hasAttribute('aria-current'), 'on /plan').toBe(false);
+
+    async function navigate(url: string) {
+      await TestBed.inject(Router).navigateByUrl(url);
+      await fixture.whenStable();
+      // RouterLinkActive applies its class and aria-current in a microtask after the navigation
+      await Promise.resolve();
+    }
+  });
+
   it('renders a "Recipes" link to /recipes', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();
@@ -125,7 +145,7 @@ describe('App', () => {
       document.documentElement.lang = 'en';
     });
 
-    it('puts a group named "Language" right after the nav, last in the header, with the buttons "English" (text "EN") and "Deutsch" (text "DE"), in this order; tabs through "Plan", "Grocery list", "Recipes", "EN", "DE" and then the page, never the brand; and writes nothing to localStorage when the user clicks the pressed "EN"', async () => {
+    it('puts a group named "Language" right after the nav, last in the header, with the buttons "English" (text "EN") and "Deutsch" (text "DE"), in this order; tabs through "Fooplan", "Plan", "Grocery list", "Recipes", "EN", "DE" and then the page; and writes nothing to localStorage when the user clicks the pressed "EN"', async () => {
       const fixture = TestBed.createComponent(App);
       await TestBed.inject(Router).navigateByUrl('/plan');
       await fixture.whenStable();
@@ -151,15 +171,15 @@ describe('App', () => {
       const tabbable = Array.from(compiled.querySelectorAll<HTMLElement>(TABBABLE)).filter(
         (candidate) => !candidate.closest('dialog'),
       );
-      expect(tabbable.slice(0, 5).map((candidate) => candidate.textContent?.trim())).toEqual([
+      expect(tabbable.slice(0, 6).map((candidate) => candidate.textContent?.trim())).toEqual([
+        'Fooplan',
         'Plan',
         'Grocery list',
         'Recipes',
         'EN',
         'DE',
       ]);
-      expect(tabbable[5]?.closest('main'), 'the page after "DE"').not.toBeNull();
-      expect(compiled.querySelector('.brand')?.matches(TABBABLE), 'brand focusable').toBe(false);
+      expect(tabbable[6]?.closest('main'), 'the page after "DE"').not.toBeNull();
 
       const setItem = vi.spyOn(Storage.prototype, 'setItem');
       (group.children[0] as HTMLButtonElement).click();

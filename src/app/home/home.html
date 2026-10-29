@@ -1,0 +1,91 @@
+<section class="intro">
+  <h1>{{ language.t('home.title') }}</h1>
+  <p class="lead">{{ language.t('home.intro') }}</p>
+  <a class="primary" [routerLink]="main().link">
+    {{ language.t(main().label) }}
+    @if (main().detail) {
+      <span class="detail"><span aria-hidden="true">·</span> {{ main().detail }}</span>
+    }
+  </a>
+</section>
+
+<section class="today" aria-labelledby="today-title">
+  <h2 id="today-title">{{ language.t('home.today') }}</h2>
+  <p class="date">{{ today | date: dateFormat() : undefined : language.locale() }}</p>
+  @if (todayMeals(); as planned) {
+    <dl>
+      @for (meal of meals; track meal.kind) {
+        @let current = planned[meal.kind];
+        <div class="meal">
+          <dt>{{ language.t(meal.label) }}</dt>
+          <dd>
+            @if (current.shows === 'recipe') {
+              <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
+                {{ displayName(current.recipe) }}
+              </a>
+              @if (minutes(current.recipe); as recipeMinutes) {
+                <span class="minutes">
+                  {{ language.t('plan.minutes', { minutes: recipeMinutes }) }}
+                </span>
+              }
+            } @else if (current.shows === 'leftovers') {
+              {{ language.t('plan.leftovers') }}
+              <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
+                {{ displayName(current.recipe) }}
+              </a>
+            } @else if (current.shows === 'eatingOut') {
+              {{ language.t('plan.eatingOut') }}
+            } @else {
+              <span class="open">{{ language.t('home.notPicked') }}</span>
+            }
+          </dd>
+        </div>
+      }
+    </dl>
+  } @else {
+    <p class="not-today">
+      {{ language.t('home.notToday') }}
+      <a routerLink="/plan">{{ language.t('home.goToPlan') }}</a>
+    </p>
+  }
+</section>
+
+<!-- role="list": Safari drops the list role of a list drawn without markers -->
+<ul class="cards" role="list">
+  <li>
+    <a class="card" routerLink="/plan">
+      <h2>{{ language.t('nav.plan') }}</h2>
+      <p>{{ planFact() }}</p>
+    </a>
+  </li>
+  <li>
+    <a class="card" routerLink="/groceries">
+      <h2>{{ language.t('nav.groceries') }}</h2>
+      <p>{{ groceriesFact() }}</p>
+    </a>
+  </li>
+  <li>
+    <a class="card" routerLink="/recipes">
+      <h2>{{ language.t('nav.recipes') }}</h2>
+      <p>{{ recipesFact() }}</p>
+    </a>
+  </li>
+</ul>
+
+<section class="how" aria-labelledby="how-title">
+  <h2 id="how-title">{{ language.t('home.howItWorks') }}</h2>
+  <ol role="list">
+    <li>
+      <h3>{{ language.t('home.pickStep') }}</h3>
+      <p>{{ language.t('home.pickText') }}</p>
+    </li>
+    <li>
+      <h3>{{ language.t('home.acceptStep') }}</h3>
+      <p>{{ language.t('home.acceptText') }}</p>
+    </li>
+    <li>
+      <h3>{{ language.t('home.shopStep') }}</h3>
+      <p>{{ language.t('home.shopText') }}</p>
+    </li>
+  </ol>
+</section>
