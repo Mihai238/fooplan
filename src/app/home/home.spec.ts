@@ -208,6 +208,9 @@ describe('Home', () => {
       ['Rezepte', '46 Rezepte, davon 2 eigene'],
     ]);
     expect(textOf(element.querySelector('.how h2'))).toBe('So geht’s');
+    expect(textOf(element.querySelector('.how-intro'))).toBe(
+      'In drei Schritten von der leeren Woche zum vollen Einkaufswagen.',
+    );
     expect(textOf(element.querySelector('.credits'))).toBe(
       'Fotos: Katie Smith, Ella Olsson, Peter Wendt, Kevin McCutcheon auf Unsplash',
     );
@@ -216,6 +219,9 @@ describe('Home', () => {
   it('explains how it works in three ordered steps', async () => {
     await openHome();
     expect(textOf(element.querySelector('.how h2'))).toBe('How it works');
+    expect(textOf(element.querySelector('.how-intro'))).toBe(
+      'From an empty week to a full cart in three steps.',
+    );
     expect(
       Array.from(element.querySelectorAll('.how ol > li')).map((step) => [
         textOf(step.querySelector('h3')),

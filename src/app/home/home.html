@@ -94,16 +94,38 @@
 
 <section class="how" aria-labelledby="how-title">
   <h2 id="how-title">{{ language.t('home.howItWorks') }}</h2>
+  <p class="how-intro">{{ language.t('home.howIntro') }}</p>
   <ol role="list">
     <li>
+      <span class="step-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path d="M3 10h18M8 3v4M16 3v4" />
+          <path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" />
+        </svg>
+      </span>
       <h3>{{ language.t('home.pickStep') }}</h3>
       <p>{{ language.t('home.pickText') }}</p>
     </li>
     <li>
+      <span class="step-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="12" r="9" />
+          <path d="m8.5 12.5 2.5 2.5 4.5-5" />
+        </svg>
+      </span>
       <h3>{{ language.t('home.acceptStep') }}</h3>
       <p>{{ language.t('home.acceptText') }}</p>
     </li>
     <li>
+      <span class="step-icon">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M3 10h18" />
+          <path d="m4.5 10 1.6 8.4A2 2 0 0 0 8.06 20h7.88a2 2 0 0 0 1.96-1.6L19.5 10" />
+          <path d="M8 10V8a4 4 0 0 1 8 0v2" />
+          <path d="M10 13.5v3M14 13.5v3" />
+        </svg>
+      </span>
       <h3>{{ language.t('home.shopStep') }}</h3>
       <p>{{ language.t('home.shopText') }}</p>
     </li>
