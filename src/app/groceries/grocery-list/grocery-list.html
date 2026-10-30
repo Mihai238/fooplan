@@ -9,6 +9,21 @@
     <label for="new-item">{{ language.t('groceries.addItem') }}</label>
     <input #itemInput type="text" id="new-item" autocomplete="off" />
     <button type="submit" class="primary">{{ language.t('groceries.add') }}</button>
+    @if (offered().length > 0) {
+      <div class="recent" role="group" aria-labelledby="recent-label">
+        <span id="recent-label" class="recent-label">{{ language.t('groceries.addAgain') }}</span>
+        @for (item of offered(); track item) {
+          <button
+            #recentButton
+            type="button"
+            class="recent-item"
+            (click)="addAgain($event, item, recentButton)"
+          >
+            {{ item }}
+          </button>
+        }
+      </div>
+    }
   </form>
   <!-- Screen readers announce changes inside a live region already on the page, not a region
        added along with its text, so this one stays, empty until the first "Add" -->

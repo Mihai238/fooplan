@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { isKidFriendly } from '../recipes/kid-friendly';
 import { RecipeStore } from '../recipes/recipe-store';
-import { readStored, writeStored } from '../storage';
+import { isStringList, readStored, writeStored } from '../storage';
 import {
   acceptPlan,
   addItem,
@@ -252,7 +252,7 @@ export class PlanStore {
 }
 
 function parseRemoved(value: unknown, names: readonly string[]): string[] {
-  if (!Array.isArray(value) || !value.every((name) => typeof name === 'string')) {
+  if (!isStringList(value)) {
     return [];
   }
   const removed = [...new Set(value.filter((name) => names.includes(name)))];

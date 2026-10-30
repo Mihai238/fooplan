@@ -1,4 +1,4 @@
-import { isRecord } from '../storage';
+import { isRecord, isStringList } from '../storage';
 
 export type MealKind = 'lunch' | 'dinner';
 
@@ -407,10 +407,6 @@ function isItemList(value: unknown): value is string[] {
     value.every((item) => item !== '' && item === item.trim()) &&
     value.every((item, i) => value.findIndex((other) => sameItem(other, item)) === i)
   );
-}
-
-function isStringList(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 function isRecipeList(value: unknown, recipes: readonly string[]): value is string[] {

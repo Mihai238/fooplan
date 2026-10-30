@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LanguageStore } from '../../language-store';
+import { sameItem } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
 import { RecipeStore } from '../../recipes/recipe-store';
 import {
@@ -22,8 +23,10 @@ import {
   listItems,
   shoppingView,
 } from '../groceries';
+import { RecentItemsStore } from '../recent-items-store';
 
 const UNDO_SECONDS = 5;
+const MAX_OFFERED = 10;
 // A line leaving its list stays in the page until its fade ends, but is no longer on the list
 const LISTED_CHECKBOX = 'li:not(.leaving) input[type="checkbox"]';
 
@@ -42,6 +45,7 @@ interface UndoLine {
 export class GroceryList {
   private readonly store = inject(PlanStore);
   private readonly recipes = inject(RecipeStore);
+  private readonly recentItems = inject(RecentItemsStore);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
   protected readonly language = inject(LanguageStore);
@@ -54,6 +58,13 @@ export class GroceryList {
       byShownName((item) => this.nameOf(item), this.language.language()),
     ),
   );
+  protected readonly offered = computed(() => {
+    const added = this.plan().added;
+    return this.recentItems
+      .items()
+      .filter((item) => !added.some((other) => sameItem(other, item)))
+      .slice(0, MAX_OFFERED);
+  });
   private readonly feedback = signal<AddFeedback | null>(null);
   // Rendered from the message, so the status follows a change of language
   protected readonly feedbackText = computed(() => {
@@ -91,10 +102,29 @@ export class GroceryList {
   // back to the field after a click on "Add", so several items can be added in a row
   protected add(event: SubmitEvent, input: HTMLInputElement): void {
     event.preventDefault();
-    this.feedback.set(addFeedback(this.plan(), input.value, this.language.language()));
-    this.store.addItem(input.value);
+    this.addItem(input.value);
     input.value = '';
     input.focus();
+  }
+
+  // Like remove: the button goes with the render. A click or tap leaves the focus alone, as a
+  // focused field would open the keyboard on a phone
+  protected addAgain(event: MouseEvent, item: string, button: HTMLButtonElement): void {
+    // The next button slides under the pointer at once, so the second click of a double-click
+    // would add an item the user never chose
+    if (event.detail > 1) {
+      return;
+    }
+    this.addItem(item);
+    if (!button.matches(':focus-visible')) {
+      return;
+    }
+    const buttons = Array.from(
+      button.parentElement?.querySelectorAll<HTMLButtonElement>('.recent-item') ?? [],
+    );
+    const index = buttons.indexOf(button);
+    const sibling: HTMLElement | undefined = buttons[index + 1] ?? buttons[index - 1];
+    afterNextRender(() => (sibling ?? this.addField())?.focus(), { injector: this.injector });
   }
 
   // Toggling moves the item's row to the other list, which drops the focus to <body> and sends
@@ -130,6 +160,7 @@ export class GroceryList {
   // the field the item came from
   protected remove(item: AddedItem, button: HTMLButtonElement): void {
     this.store.removeItem(item.name);
+    this.recentItems.forget(item.name);
     if (!button.matches(':focus-visible')) {
       return;
     }
@@ -172,6 +203,15 @@ export class GroceryList {
   protected endPress(event: PointerEvent): void {
     if (event.pointerId === this.undoPress()) {
       this.undoPress.set(null);
+    }
+  }
+
+  private addItem(text: string): void {
+    const feedback = addFeedback(this.plan(), text, this.language.language());
+    this.feedback.set(feedback);
+    this.store.addItem(text);
+    if (feedback?.id === 'groceries.added') {
+      this.recentItems.remember(text);
     }
   }
 
