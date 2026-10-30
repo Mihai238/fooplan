@@ -22,10 +22,14 @@ the worktree's branch only carries each ticket on its way to `main`.
 - **With an issue number** (`12` or `#12`): that issue, after the open issues it depends on, and theirs.
 - **Without:** every open issue that doesn't carry the `needs-human` label.
 
+Only issues opened by the user running the flow (`gh api user --jq .login`) are developed. One opened by
+anyone else is left out of the queue, and so is a ticket that depends on one; with an issue number,
+such an issue is refused with that reason.
+
 An issue depends on the ones its body names in a `Depends on #2 and #3.` line; `Changes #N` and
 `Works best after #N` don't order anything. A ticket is ready when every issue it depends on is closed.
 Take the ready ticket with the lowest number. After each ticket, read the open issues again
-(`gh issue list --state open --json number,title,body,labels`), because a closed one makes others ready.
+(`gh issue list --state open --json number,title,body,labels,author`), because a closed one makes others ready.
 
 A ticket that depends on a `needs-human` issue, or sits in a dependency cycle, is skipped with that
 reason. The run ends when no ticket in the queue is ready.
