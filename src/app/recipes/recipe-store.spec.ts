@@ -1,10 +1,12 @@
 import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LanguageStore } from '../language-store';
+import { SaveStatus } from '../save-status';
 import { DEFAULT_SETTINGS } from '../plan/plan';
 import { PlanStore, RANDOM, TODAY } from '../plan/plan-store';
 import { seededRandom } from '../plan/testing';
 import { LocalStorageBackend, StorageBackend } from '../storage';
+import { deferred } from '../auth/testing';
 import { RejectingBackend, ThrowingOnceBackend, unhandledRejections } from '../testing';
 import { checkRecipe } from './own-recipe';
 import { Ingredient, Recipe } from './recipe';
@@ -436,6 +438,59 @@ describe('RecipeStore', () => {
         expect(loaded.own()).toEqual([QUICK_DAL]);
         expect(backend.writes).toEqual([[RECIPES_KEY, [stored(QUICK_DAL)]]]);
         expect(unhandled).toEqual([]);
+      });
+
+      it('starts a new read on reload() while a load runs, applies only its result, and settles the earlier load once the store is ready (#45 4h)', async () => {
+        const held = deferred<void>();
+        const backend = new LocalStorageBackend();
+        const read = vi
+          .spyOn(backend, 'read')
+          .mockImplementationOnce(() => held.promise.then(() => [stored(PLAIN_RICE)]));
+        const loaded = unloaded({ provide: StorageBackend, useValue: backend });
+        storeOwnRecipes(QUICK_DAL);
+
+        const first = loaded.load();
+        const second = loaded.reload();
+        expect(second, 'a new load').not.toBe(first);
+        await second;
+        expect(read).toHaveBeenCalledTimes(2);
+        expect(loaded.own()).toEqual([QUICK_DAL]);
+
+        held.resolve();
+        await first;
+        expect(loaded.own(), 'after the earlier read ended').toEqual([QUICK_DAL]);
+        expect(loaded.ready()).toBe(true);
+      });
+
+      it('settles an earlier load with the failure of the reload() that replaced it, rather than resolving while not ready (#45 4i)', async () => {
+        const held = deferred<void>();
+        const backend = new LocalStorageBackend();
+        vi.spyOn(backend, 'read')
+          .mockImplementationOnce(() => held.promise.then(() => []))
+          .mockRejectedValueOnce(new Error('not read'));
+        const loaded = unloaded({ provide: StorageBackend, useValue: backend });
+
+        const first = loaded.load();
+        await expect(loaded.reload()).rejects.toThrow('not read');
+        held.resolve();
+        await expect(first).rejects.toThrow('not read');
+        expect(loaded.ready()).toBe(false);
+      });
+
+      it('reports a rejected write to SaveStatus as failed, and the next write that resolves as saved (#45 7b)', async () => {
+        const backend = new RejectingBackend();
+        const loaded = unloaded({ provide: StorageBackend, useValue: backend });
+        await loaded.load();
+        const status = TestBed.inject(SaveStatus);
+
+        loaded.add(QUICK_DAL);
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(status.failed(), 'after the rejected write').toBe(true);
+
+        vi.spyOn(backend, 'write').mockResolvedValue();
+        loaded.add(PLAIN_RICE);
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(status.failed(), 'after the resolved write').toBe(false);
       });
     });
 

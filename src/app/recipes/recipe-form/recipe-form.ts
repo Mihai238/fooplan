@@ -1,6 +1,7 @@
 import {
   afterNextRender,
   Component,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -18,7 +19,7 @@ import {
   RecipeProblems,
   RowProblems,
 } from '../own-recipe';
-import { Ingredient, Unit, UNITS } from '../recipe';
+import { Ingredient, Recipe, Unit, UNITS } from '../recipe';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
 
@@ -49,25 +50,25 @@ export class RecipeForm {
   private saved = false;
   protected readonly units = UNITS;
   protected readonly maxRows = MAX_INGREDIENTS;
-  // Only the edit route has a slug. The router reuses this form for another slug, and that route's
-  // guard lets in only an own recipe's
+  // Only the edit route has a slug. The router reuses this form for another slug. That route's guard
+  // lets in only an own recipe's, unless loading the recipes failed
   protected readonly editing = toSignal(
     inject(ActivatedRoute).paramMap.pipe(
       map((params) => {
         const slug = params.get('slug');
-        return slug === null ? undefined : { slug, recipe: this.recipes.bySlug(slug)! };
+        return slug === null ? undefined : { slug, recipe: this.ownRecipe(slug) };
       }),
     ),
     { requireSync: true },
   );
   // The edited recipe's name in RecipeStore, which a save changes, also when its navigation fails
   // and the form stays
-  private readonly savedName = linkedSignal(() => this.editing()?.recipe.name);
-  protected readonly name = linkedSignal(() => this.editing()?.recipe.name ?? '');
-  protected readonly servings = linkedSignal(() => String(this.editing()?.recipe.servings ?? 2));
+  private readonly savedName = linkedSignal(() => this.editing()?.recipe?.name);
+  protected readonly name = linkedSignal(() => this.editing()?.recipe?.name ?? '');
+  protected readonly servings = linkedSignal(() => String(this.editing()?.recipe?.servings ?? 2));
   protected readonly rows = linkedSignal<readonly Row[]>(
     () =>
-      this.editing()?.recipe.ingredients.map((ingredient) => this.rowOf(ingredient)) ?? [
+      this.editing()?.recipe?.ingredients.map((ingredient) => this.rowOf(ingredient)) ?? [
         this.emptyRow(),
       ],
   );
@@ -77,6 +78,18 @@ export class RecipeForm {
     source: this.editing,
     computation: (): ShownProblems => ({ rows: new Map() }),
   });
+
+  // The form shows once the stores are loaded, also after its guard let it in because loading
+  // failed, and again after the session changed: a recipe to edit that isn't there leads to the
+  // Recipes page, unless a navigation under way leaves the form anyway
+  constructor() {
+    effect(() => {
+      const editing = this.editing();
+      if (editing && !editing.recipe && this.router.currentNavigation() === null) {
+        void this.router.navigateByUrl('/recipes', { replaceUrl: true });
+      }
+    });
+  }
 
   // Without preventDefault the browser would submit the form and reload the page
   protected save(event: SubmitEvent): void {
@@ -147,6 +160,11 @@ export class RecipeForm {
     if (hadFocus) {
       this.focusAmount(this.rows()[index] ?? this.rows()[index - 1]);
     }
+  }
+
+  private ownRecipe(slug: string): Recipe | undefined {
+    const recipe = this.recipes.bySlug(slug);
+    return recipe?.own ? recipe : undefined;
   }
 
   private emptyRow(): Row {

@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { isKidFriendly } from '../recipes/kid-friendly';
 import { RecipeStore } from '../recipes/recipe-store';
+import { SaveStatus } from '../save-status';
 import { isStringList, StorageBackend } from '../storage';
 import {
   acceptPlan,
@@ -66,6 +67,7 @@ export class PlanStore {
   private readonly today = inject(TODAY);
   private readonly recipes = inject(RecipeStore);
   private readonly backend = inject(StorageBackend);
+  private readonly saves = inject(SaveStatus);
   private readonly removedState = signal<string[]>([]);
   readonly removed = this.removedState.asReadonly();
   private readonly suggested = computed(() => {
@@ -86,17 +88,21 @@ export class PlanStore {
   private readonly readyState = signal(false);
   readonly ready = this.readyState.asReadonly();
   private loading: Promise<void> | undefined;
+  private latest: Promise<void> = Promise.resolve();
+  private loads = 0;
   readonly kidFriendly = computed(() => this.plan().kidFriendly && this.canBeKidFriendly());
   private readonly candidates = computed(() => this.candidatesOf(this.kidFriendly()));
   readonly canRemove = computed(() => this.candidates().length > MIN_SUGGESTED);
 
   load(): Promise<void> {
-    if (!this.loading) {
-      this.readyState.set(false);
-      // Read from a promise, so that a read failing at once ends the load after it is stored here
-      this.loading = Promise.resolve().then(() => this.read());
-    }
-    return this.loading;
+    return this.loading ?? this.start(false);
+  }
+
+  // Reads again, the recipes too, even while a load runs, for data that may differ from what that
+  // load reads, e.g. after the session changed: only the new read is applied, and the load running
+  // then settles with the new one
+  reload(): Promise<void> {
+    return this.start(true);
   }
 
   pick(meal: MealRef, recipe: string): void {
@@ -198,21 +204,42 @@ export class PlanStore {
     return true;
   }
 
+  private start(again: boolean): Promise<void> {
+    this.readyState.set(false);
+    const load = ++this.loads;
+    // Read from a promise, so that a read failing at once ends the load after it is stored here
+    this.loading = Promise.resolve().then(() => this.read(load, again));
+    this.latest = this.loading;
+    return this.loading;
+  }
+
   // The plan is validated against the recipe names, so it is parsed once the recipes are loaded,
   // and draws from the recipes not removed, so the removed ones are set before it. The load ends in
   // the step that makes the store ready, so a load() from then on reads again
-  private async read(): Promise<void> {
+  private async read(load: number, again: boolean): Promise<void> {
     try {
       const [, removed, plan] = await Promise.all([
-        this.recipes.load(),
+        again ? this.recipes.reload() : this.recipes.load(),
         this.backend.read(REMOVED_KEY),
         this.backend.read(STORAGE_KEY),
       ]);
-      this.removedState.set(parseRemoved(removed, this.recipeNames()));
-      this.state.set(this.planFrom(plan));
-      this.readyState.set(true);
+      if (load === this.loads) {
+        this.removedState.set(parseRemoved(removed, this.recipeNames()));
+        this.state.set(this.planFrom(plan));
+        this.readyState.set(true);
+      }
+    } catch (error) {
+      if (load === this.loads) {
+        throw error;
+      }
     } finally {
-      this.loading = undefined;
+      if (load === this.loads) {
+        this.loading = undefined;
+      }
+    }
+    // A load replaced by a newer one settles with it
+    if (load !== this.loads) {
+      return this.latest;
     }
   }
 
@@ -291,9 +318,10 @@ export class PlanStore {
     this.save(REMOVED_KEY, removed);
   }
 
-  // A failed write is ignored: the change lives until the page is reloaded
+  // A change that couldn't be saved stays in memory, until the page is reloaded or a later write
+  // saves it
   private save(key: string, value: unknown): void {
-    this.backend.write(key, value).catch(() => undefined);
+    this.saves.track(key, this.backend.write(key, value));
   }
 
   private recipeNames(): string[] {

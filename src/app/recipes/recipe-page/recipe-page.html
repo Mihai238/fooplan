@@ -1,159 +1,169 @@
-@let recipe = page().recipe;
-<a class="back" [routerLink]="page().back">{{ language.t('recipe.back') }}</a>
-<article>
-  <h1>{{ name() }}</h1>
-  <p class="servings">{{ servingsText(recipe.servings) }}</p>
-  @if (recipe.own) {
-    <p class="own">{{ language.t('recipes.own') }}</p>
-  }
-  @let removed = store.removed().includes(recipe.name);
-  @if (removed || store.canRemove()) {
-    <p class="suggest">
-      @if (removed) {
-        <span>{{ language.t('recipes.notSuggested') }}</span>
-        <button
-          #suggestAgainButton
-          type="button"
-          class="link"
-          (click)="suggestAgain(recipe.name, suggestAgainButton)"
-        >
-          {{ language.t('recipes.suggestAgain') }}
-        </button>
-      } @else {
-        <button
-          #dontSuggestButton
-          type="button"
-          class="link"
-          (click)="dontSuggest(recipe.name, dontSuggestButton)"
-        >
-          {{ language.t('recipes.dontSuggest') }}
-        </button>
-      }
-    </p>
-  } @else {
-    <p class="note">{{ language.t('recipes.limit', { min: minSuggested }) }}</p>
-  }
-  <ul>
-    @for (ingredient of ingredients(); track ingredient.name) {
-      <li>{{ language.amount(ingredient) }} {{ ingredient.name }}</li>
+@if (page().recipe; as recipe) {
+  <a class="back" [routerLink]="page().back">{{ language.t('recipe.back') }}</a>
+  <article>
+    <h1>{{ name() }}</h1>
+    <p class="servings">{{ servingsText(recipe.servings) }}</p>
+    @if (recipe.own) {
+      <p class="own">{{ language.t('recipes.own') }}</p>
     }
-  </ul>
-  @if (recipe.own) {
-    <div class="manage">
-      <a class="secondary" [routerLink]="['/recipes', recipeSlug(recipe.name), 'edit']">{{
-        language.t('recipe.edit')
-      }}</a>
-      @switch (store.deleteBlock(recipe.name)) {
-        @case ('picked') {
-          <p class="note">{{ language.t('recipe.inPlan') }}</p>
-        }
-        @case ('accepted') {
-          <p class="note">{{ language.t('recipe.inAcceptedPlan') }}</p>
-        }
-        @case ('limit') {
-          <p class="note">{{ language.t('recipe.deleteLimit', { min: minSuggested }) }}</p>
-        }
-        @default {
-          <button #deleteButton type="button" class="secondary delete" (click)="openDeleteDialog()">
-            {{ language.t('recipe.delete') }}
-          </button>
-        }
-      }
-    </div>
-  }
-  @if (steps(); as steps) {
-    <div class="steps">
-      <div class="view" role="group" [attr.aria-label]="language.t('recipe.showSteps')">
-        <button type="button" [attr.aria-pressed]="view() === 'steps'" (click)="showView('steps')">
-          {{ language.t('recipe.stepByStep') }}
-        </button>
-        <button type="button" [attr.aria-pressed]="view() === 'all'" (click)="showView('all')">
-          {{ language.t('recipe.allSteps') }}
-        </button>
-      </div>
-      @if (view() === 'steps') {
-        <!-- Screen readers announce changes inside a live region already on the page, not a region
-             added along with its text, so this one stays across the steps -->
-        <div aria-live="polite" aria-atomic="true">
-          <p class="counter">
-            {{ language.t('recipe.stepOf', { step: step() + 1, total: steps.length }) }}
-          </p>
-          <p class="step">
-            <ng-container *ngTemplateOutlet="stepText; context: { $implicit: steps[step()] }" />
-          </p>
-        </div>
-        <div class="actions">
+    @let removed = store.removed().includes(recipe.name);
+    @if (removed || store.canRemove()) {
+      <p class="suggest">
+        @if (removed) {
+          <span>{{ language.t('recipes.notSuggested') }}</span>
           <button
-            #previousButton
+            #suggestAgainButton
             type="button"
-            class="secondary"
-            [disabled]="step() === 0"
-            (click)="showPrevious(previousButton)"
+            class="link"
+            (click)="suggestAgain(recipe.name, suggestAgainButton)"
           >
-            {{ language.t('recipe.previous') }}
+            {{ language.t('recipes.suggestAgain') }}
           </button>
-          @if (last()) {
-            <a #doneLink class="primary" [routerLink]="page().back">{{
-              language.t('recipe.done')
-            }}</a>
-          } @else {
-            <button #nextButton type="button" class="primary" (click)="showNext(nextButton)">
-              {{ language.t('recipe.next') }}
+        } @else {
+          <button
+            #dontSuggestButton
+            type="button"
+            class="link"
+            (click)="dontSuggest(recipe.name, dontSuggestButton)"
+          >
+            {{ language.t('recipes.dontSuggest') }}
+          </button>
+        }
+      </p>
+    } @else {
+      <p class="note">{{ language.t('recipes.limit', { min: minSuggested }) }}</p>
+    }
+    <ul>
+      @for (ingredient of ingredients(); track ingredient.name) {
+        <li>{{ language.amount(ingredient) }} {{ ingredient.name }}</li>
+      }
+    </ul>
+    @if (recipe.own) {
+      <div class="manage">
+        <a class="secondary" [routerLink]="['/recipes', recipeSlug(recipe.name), 'edit']">{{
+          language.t('recipe.edit')
+        }}</a>
+        @switch (store.deleteBlock(recipe.name)) {
+          @case ('picked') {
+            <p class="note">{{ language.t('recipe.inPlan') }}</p>
+          }
+          @case ('accepted') {
+            <p class="note">{{ language.t('recipe.inAcceptedPlan') }}</p>
+          }
+          @case ('limit') {
+            <p class="note">{{ language.t('recipe.deleteLimit', { min: minSuggested }) }}</p>
+          }
+          @default {
+            <button
+              #deleteButton
+              type="button"
+              class="secondary delete"
+              (click)="openDeleteDialog()"
+            >
+              {{ language.t('recipe.delete') }}
             </button>
           }
-        </div>
-      } @else {
-        <ol class="all">
-          @for (parts of steps; track $index) {
-            <li>
-              <ng-container *ngTemplateOutlet="stepText; context: { $implicit: parts }" />
-            </li>
-          }
-        </ol>
-      }
-    </div>
-    <!-- Angular keeps the line breaks around a bare interpolation as spaces, which would pad the
-         text parts, so they sit in an ng-container; &ngsp; is a space it doesn't drop -->
-    <ng-template #stepText let-parts>
-      @for (part of parts; track $index) {
-        @if ('text' in part) {
-          <ng-container>{{ part.text }}</ng-container>
-        } @else {
-          &ngsp;<span class="amount">{{ part.amount }}</span>
         }
-      }
-    </ng-template>
-  }
-</article>
-@if (recipe.own) {
-  <!-- On close, the browser returns the focus to where it was before the dialog opened, which is
+      </div>
+    }
+    @if (steps(); as steps) {
+      <div class="steps">
+        <div class="view" role="group" [attr.aria-label]="language.t('recipe.showSteps')">
+          <button
+            type="button"
+            [attr.aria-pressed]="view() === 'steps'"
+            (click)="showView('steps')"
+          >
+            {{ language.t('recipe.stepByStep') }}
+          </button>
+          <button type="button" [attr.aria-pressed]="view() === 'all'" (click)="showView('all')">
+            {{ language.t('recipe.allSteps') }}
+          </button>
+        </div>
+        @if (view() === 'steps') {
+          <!-- Screen readers announce changes inside a live region already on the page, not a region
+             added along with its text, so this one stays across the steps -->
+          <div aria-live="polite" aria-atomic="true">
+            <p class="counter">
+              {{ language.t('recipe.stepOf', { step: step() + 1, total: steps.length }) }}
+            </p>
+            <p class="step">
+              <ng-container *ngTemplateOutlet="stepText; context: { $implicit: steps[step()] }" />
+            </p>
+          </div>
+          <div class="actions">
+            <button
+              #previousButton
+              type="button"
+              class="secondary"
+              [disabled]="step() === 0"
+              (click)="showPrevious(previousButton)"
+            >
+              {{ language.t('recipe.previous') }}
+            </button>
+            @if (last()) {
+              <a #doneLink class="primary" [routerLink]="page().back">{{
+                language.t('recipe.done')
+              }}</a>
+            } @else {
+              <button #nextButton type="button" class="primary" (click)="showNext(nextButton)">
+                {{ language.t('recipe.next') }}
+              </button>
+            }
+          </div>
+        } @else {
+          <ol class="all">
+            @for (parts of steps; track $index) {
+              <li>
+                <ng-container *ngTemplateOutlet="stepText; context: { $implicit: parts }" />
+              </li>
+            }
+          </ol>
+        }
+      </div>
+      <!-- Angular keeps the line breaks around a bare interpolation as spaces, which would pad the
+         text parts, so they sit in an ng-container; &ngsp; is a space it doesn't drop -->
+      <ng-template #stepText let-parts>
+        @for (part of parts; track $index) {
+          @if ('text' in part) {
+            <ng-container>{{ part.text }}</ng-container>
+          } @else {
+            &ngsp;<span class="amount">{{ part.amount }}</span>
+          }
+        }
+      </ng-template>
+    }
+  </article>
+  @if (recipe.own) {
+    <!-- On close, the browser returns the focus to where it was before the dialog opened, which is
        nowhere when the click on "Delete" didn't focus it: Safari and Firefox on macOS don't focus a
        clicked button. tabindex="-1" keeps the focus in the dialog on a click on its text or
        padding, where the browser would otherwise move it to the page -->
-  <dialog
-    #dialog
-    tabindex="-1"
-    aria-labelledby="delete-title"
-    aria-describedby="delete-text"
-    (pointerdown)="pressBackdrop($event, dialog)"
-    (click)="closeOnBackdrop($event, dialog)"
-    (keydown)="trapFocus($event, keepButton, deleteRecipeButton)"
-    (close)="focusDelete()"
-  >
-    <h2 id="delete-title">{{ language.t('delete.title', { recipe: name() }) }}</h2>
-    <p id="delete-text">{{ language.t('delete.text') }}</p>
-    <div class="actions">
-      <button #keepButton type="button" class="secondary" autofocus (click)="dialog.close()">
-        {{ language.t('delete.keep') }}
-      </button>
-      <button
-        #deleteRecipeButton
-        type="button"
-        class="primary danger"
-        (click)="deleteRecipe(recipe.name)"
-      >
-        {{ language.t('delete.confirm') }}
-      </button>
-    </div>
-  </dialog>
+    <dialog
+      #dialog
+      tabindex="-1"
+      aria-labelledby="delete-title"
+      aria-describedby="delete-text"
+      (pointerdown)="pressBackdrop($event, dialog)"
+      (click)="closeOnBackdrop($event, dialog)"
+      (keydown)="trapFocus($event, keepButton, deleteRecipeButton)"
+      (close)="focusDelete()"
+    >
+      <h2 id="delete-title">{{ language.t('delete.title', { recipe: name() }) }}</h2>
+      <p id="delete-text">{{ language.t('delete.text') }}</p>
+      <div class="actions">
+        <button #keepButton type="button" class="secondary" autofocus (click)="dialog.close()">
+          {{ language.t('delete.keep') }}
+        </button>
+        <button
+          #deleteRecipeButton
+          type="button"
+          class="primary danger"
+          (click)="deleteRecipe(recipe.name)"
+        >
+          {{ language.t('delete.confirm') }}
+        </button>
+      </div>
+    </dialog>
+  }
 }

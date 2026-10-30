@@ -2,11 +2,15 @@ import {
   afterNextRender,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
+  InjectionToken,
   Injector,
   PendingTasks,
   signal,
+  Type,
+  untracked,
   viewChild,
 } from '@angular/core';
 import {
@@ -25,6 +29,17 @@ import { filter, firstValueFrom } from 'rxjs';
 import { AuthStore } from './auth/auth-store';
 import { Language, LanguageStore } from './language-store';
 import type { PlanStore } from './plan/plan-store';
+import { SaveStatus } from './save-status';
+
+// Imported on demand, as the guards in app.routes.ts do, to keep the recipes out of the initial
+// bundle
+export const IMPORT_PLAN_STORE = new InjectionToken<() => Promise<Type<PlanStore>>>(
+  'IMPORT_PLAN_STORE',
+  {
+    providedIn: 'root',
+    factory: () => () => import('./plan/plan-store').then((m) => m.PlanStore),
+  },
+);
 
 @Component({
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
@@ -35,8 +50,11 @@ import type { PlanStore } from './plan/plan-store';
 export class App {
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
+  private readonly pendingTasks = inject(PendingTasks);
+  private readonly importPlanStore = inject(IMPORT_PLAN_STORE);
   protected readonly language = inject(LanguageStore);
   protected readonly auth = inject(AuthStore);
+  protected readonly saves = inject(SaveStatus);
   private readonly signInLink = viewChild<ElementRef<HTMLAnchorElement>>('signInLink');
   // A recipe page and the form to add one belong to Recipes, so the link stays current there, but
   // they aren't that page. RouterLinkActive can't do this: it would take the class and aria-current
@@ -47,22 +65,58 @@ export class App {
   private readonly onAddRecipe = isActive('/add-recipe', this.router);
   private readonly planStore = signal<PlanStore | undefined>(undefined);
   protected readonly loaded = computed(() => this.planStore()?.ready() ?? false);
+  protected readonly loadFailed = signal(false);
+  private loads = 0;
+  // The user whose data the stores hold: undefined until the client has returned the saved session
+  private loadedFor: string | null | undefined;
 
   constructor() {
-    // Pending until the pages can show, so the app only counts as stable from then on
-    inject(PendingTasks).run(() => this.loadStores());
+    this.loadStores(false);
+    // The first load reads for the session the client returns first, in the same task as this
+    void this.auth.whenLoaded().then(() => (this.loadedFor = this.auth.userId()));
     if (this.auth.openedFromLink) {
       void this.goToPlanAfterLink();
     }
+    this.reloadOnSessionChange();
   }
 
-  // Imported on demand, as the guards in app.routes.ts do, to keep the recipes out of the initial
-  // bundle. Loading the plan loads the recipes too
-  private async loadStores(): Promise<void> {
-    const { PlanStore } = await import('./plan/plan-store');
-    const store = this.injector.get(PlanStore);
-    this.planStore.set(store);
-    await store.load();
+  // Signing in or out here or in another tab changes the user; a refreshed session of the same user
+  // doesn't. The data of the other place has nothing to do with the page left, so the user goes on
+  // planning, and a change of the data left that couldn't be saved no longer matters
+  private reloadOnSessionChange(): void {
+    effect(() => {
+      const user = this.auth.userId();
+      if (!this.auth.loaded() || this.loadedFor === undefined || user === this.loadedFor) {
+        return;
+      }
+      untracked(() => {
+        this.loadedFor = user;
+        this.saves.reset();
+        this.loadStores(true);
+        void this.router.navigateByUrl('/plan', { replaceUrl: true });
+      });
+    });
+  }
+
+  // Pending until the pages can show, so the app only counts as stable from then on
+  private loadStores(again: boolean): void {
+    const done = this.pendingTasks.add();
+    void this.load(again).finally(done);
+  }
+
+  // Loading the plan loads the recipes too. Only the last load started tells whether loading failed
+  private async load(again: boolean): Promise<void> {
+    const load = ++this.loads;
+    this.loadFailed.set(false);
+    try {
+      const store = this.injector.get(await this.importPlanStore());
+      this.planStore.set(store);
+      await (again ? store.reload() : store.load());
+    } catch {
+      if (load === this.loads) {
+        this.loadFailed.set(true);
+      }
+    }
   }
 
   protected showLanguage(language: Language): void {

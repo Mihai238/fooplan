@@ -13,6 +13,7 @@ export class AuthStore {
   private readonly state = signal<Session | null | undefined>(undefined);
   readonly loaded = computed(() => this.state() !== undefined);
   readonly email = computed(() => this.state()?.user.email ?? null);
+  readonly userId = computed(() => this.state()?.user.id ?? null);
   private markLoaded!: () => void;
   private readonly loading = new Promise<void>((resolve) => (this.markLoaded = resolve));
 

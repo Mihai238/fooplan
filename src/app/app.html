@@ -52,8 +52,14 @@
     </div>
   }
 </header>
+<!-- An alert is announced when it is added, unlike a status, so this one comes and goes -->
+@if (saves.failed()) {
+  <p class="save-failed" role="alert">{{ language.t('app.saveFailed') }}</p>
+}
 <main>
-  @if (loaded()) {
+  @if (loadFailed()) {
+    <p role="alert">{{ language.t('app.loadFailed') }}</p>
+  } @else if (loaded()) {
     <router-outlet />
   } @else {
     <p role="status">{{ language.t('app.loading') }}</p>

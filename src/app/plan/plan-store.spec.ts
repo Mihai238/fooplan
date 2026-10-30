@@ -5,6 +5,8 @@ import { RecipeStore } from '../recipes/recipe-store';
 import { Recipe } from '../recipes/recipe';
 import { RECIPES } from '../recipes/recipes';
 import { ownRecipe, PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../recipes/testing';
+import { deferred } from '../auth/testing';
+import { SaveStatus } from '../save-status';
 import { LocalStorageBackend, StorageBackend } from '../storage';
 import { RejectingBackend, ThrowingOnceBackend, unhandledRejections } from '../testing';
 import { addedKey, DEFAULT_SETTINGS, MealRef, Plan } from './plan';
@@ -1939,6 +1941,76 @@ describe('PlanStore', () => {
         expect(loaded.plan().days[0].lunch.recipe).toBe(recipe);
         expect(backend.writes.at(-1)).toEqual([STORAGE_KEY, loaded.plan()]);
         expect(unhandled).toEqual([]);
+      });
+
+      it("applies only the reload() after a failed load, never the earlier load's recipes read that ends later, so a later save holds only the reloaded own recipes (#45 4j)", async () => {
+        storeOwnRecipes(QUICK_DAL);
+        const backend = new LocalStorageBackend();
+        const earlierRecipes = deferred<void>();
+        const read = backend.read.bind(backend);
+        let first = true;
+        vi.spyOn(backend, 'read').mockImplementation((key) => {
+          if (!first) {
+            return read(key);
+          }
+          if (key === RECIPES_KEY) {
+            return earlierRecipes.promise.then(() => [
+              {
+                name: 'Ana Dal',
+                servings: 4,
+                ingredients: [{ name: 'onion', amount: 1, unit: 'pc' }],
+              },
+            ]);
+          }
+          return key === REMOVED_KEY ? Promise.reject(new Error('not read')) : read(key);
+        });
+        const loaded = unloaded({ provide: StorageBackend, useValue: backend });
+        await expect(loaded.load(), 'earlier load').rejects.toThrow('not read');
+
+        first = false;
+        await loaded.reload();
+        const recipes = TestBed.inject(RecipeStore);
+        expect(recipes.own(), 'after the reload').toEqual([QUICK_DAL]);
+        earlierRecipes.resolve();
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(recipes.own(), 'after the earlier read ended').toEqual([QUICK_DAL]);
+        expect(loaded.ready()).toBe(true);
+
+        recipes.add(PLAIN_RICE);
+        const saved = JSON.parse(localStorage.getItem(RECIPES_KEY) ?? '[]') as { name: string }[];
+        expect(saved.map((recipe) => recipe.name)).toEqual(['Quick Dal', 'Plain Rice']);
+      });
+
+      it('reports a rejected write to SaveStatus as failed, and the next write that resolves as saved (#45 7c)', async () => {
+        const backend = new RejectingBackend();
+        const loaded = unloaded({ provide: StorageBackend, useValue: backend });
+        await loaded.load();
+        const status = TestBed.inject(SaveStatus);
+
+        loaded.pick(LUNCH, loaded.plan().days[0].lunch.suggestions[0]);
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(status.failed(), 'after the rejected write').toBe(true);
+
+        vi.spyOn(backend, 'write').mockResolvedValue();
+        loaded.removeRecipe('Bean burritos');
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(status.failed(), 'after the resolved write').toBe(false);
+      });
+
+      it('reports a failed save when removeRecipe writes the removed recipes, rejected, and then the plan, saved (#45 7i)', async () => {
+        const backend = new RejectingBackend();
+        const loaded = unloaded({ provide: StorageBackend, useValue: backend });
+        await loaded.load();
+        const status = TestBed.inject(SaveStatus);
+        vi.spyOn(backend, 'write').mockImplementation((key) =>
+          key === REMOVED_KEY ? Promise.reject(new Error('not saved')) : Promise.resolve(),
+        );
+        const write = vi.mocked(backend.write);
+
+        loaded.removeRecipe(loaded.plan().days[0].lunch.suggestions[0]);
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(write.mock.calls.map(([key]) => key)).toEqual([REMOVED_KEY, STORAGE_KEY]);
+        expect(status.failed()).toBe(true);
       });
     });
 

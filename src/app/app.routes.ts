@@ -65,7 +65,13 @@ async function recipeGuard(
   const { RecipeStore } = await import('./recipes/recipe-store');
   const recipes = injector.get(RecipeStore);
   if (!recipes.ready()) {
-    await recipes.load();
+    // The app shows that the load failed instead of any page. Refusing a first navigation would set
+    // the URL back to the base URL, so the link is let through and stays for a reload
+    try {
+      await recipes.load();
+    } catch {
+      return true;
+    }
   }
   return allows(recipes.bySlug(route.paramMap.get('slug')!)) ? true : router.parseUrl('/recipes');
 }

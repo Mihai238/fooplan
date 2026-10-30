@@ -13,6 +13,8 @@ const EN = {
   'account.signIn': 'Sign in',
   'account.signOut': 'Sign out',
   'app.loading': 'Loading…',
+  'app.loadFailed': "Couldn't load your data. Check your connection and reload the page.",
+  'app.saveFailed': "Your last change couldn't be saved. Check your connection and try again.",
   'home.title': 'Lunch and dinner, planned in a few minutes',
   'home.intro':
     'Pick meals for the next few days from quick recipes, then shop from one grocery list.',
@@ -206,6 +208,10 @@ export const MESSAGES: Record<Language, Record<MessageId, string>> = {
     'account.signIn': 'Anmelden',
     'account.signOut': 'Abmelden',
     'app.loading': 'Wird geladen…',
+    'app.loadFailed':
+      'Deine Daten konnten nicht geladen werden. Prüf deine Verbindung und lade die Seite neu.',
+    'app.saveFailed':
+      'Deine letzte Änderung konnte nicht gespeichert werden. Prüf deine Verbindung und versuch es noch einmal.',
     'home.title': 'Mittag- und Abendessen in wenigen Minuten geplant',
     'home.intro':
       'Wähle Mahlzeiten für die nächsten Tage aus schnellen Rezepten und kauf dann mit einer einzigen Einkaufsliste ein.',

@@ -1,13 +1,22 @@
+import { Location } from '@angular/common';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { App } from './app';
+import { App, IMPORT_PLAN_STORE } from './app';
 import { routes } from './app.routes';
-import { FakeSupabase, provideSupabase, sessionFor, SIGN_OUT_FAILED } from './auth/testing';
+import {
+  DATA_FAILED,
+  deferred,
+  FakeSupabase,
+  provideSupabase,
+  sessionFor,
+  SIGN_OUT_FAILED,
+} from './auth/testing';
 import { LanguageStore } from './language-store';
-import { PlanStore } from './plan/plan-store';
+import { PlanStore, TODAY } from './plan/plan-store';
 import { day, open, picked, planOf } from './plan/testing';
 import { RecipeStore } from './recipes/recipe-store';
 import { QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from './recipes/testing';
+import { SessionBackend } from './session-backend';
 import { StorageBackend } from './storage';
 import { HeldBackend, LANGUAGE_KEY, TABBABLE } from './testing';
 
@@ -422,48 +431,17 @@ describe('App', () => {
       expect(textOf(button!.previousElementSibling!), 'before "Sign out"').toBe('ana@example.com');
     });
 
-    it('stays on the Recipes page as it was when "Sign out" is clicked, and shows "Sign in" with the focus (#43 8)', async () => {
+    it('goes to the Plan page when "Sign out" is clicked on the Recipes page, and shows "Sign in" with the focus (#43 8, changed by #45 5)', async () => {
       fake.load(sessionFor('ana@example.com'));
       await open('/recipes');
-      const search = compiled.querySelector<HTMLInputElement>('main input[type="search"]')!;
-      search.value = 'pasta';
-      search.dispatchEvent(new Event('input', { bubbles: true }));
-      await stable();
-      const shown = compiled.querySelectorAll('main article').length;
 
       await click(buttonIn(accountGroup(), 'Sign out'));
       expect(fake.signOuts.length, 'signed out').toBe(1);
-      expect(TestBed.inject(Router).url).toBe('/recipes');
-      expect(compiled.querySelector('main input[type="search"]'), 'search field kept').toBe(search);
-      expect(search.value).toBe('pasta');
-      expect(compiled.querySelectorAll('main article').length, 'recipes shown').toBe(shown);
+      expect(TestBed.inject(Router).url).toBe('/plan');
+      expect(compiled.querySelector('main h1')?.textContent?.trim()).toBe('Plan');
       const link = accountGroup().querySelector('a');
       expect(textOf(accountGroup())).toBe('Sign in');
       expect(document.activeElement, 'focus after "Sign out"').toBe(link);
-    });
-
-    it('keeps a picked plan and an own recipe, in the stores and in localStorage, when the user signs in and out (#43 10)', async () => {
-      storeOwnRecipes(QUICK_DAL);
-      const saved = planOf([day('2026-10-24', picked('Spaghetti carbonara'), picked('Quick Dal'))]);
-      localStorage.setItem('fooplan.plan', JSON.stringify(saved));
-      fake.load(null);
-      await open('/plan');
-      const plan = TestBed.inject(PlanStore).plan();
-      expect(plan.days[0].dinner.recipe, 'saved plan not loaded').toBe('Quick Dal');
-      const stored = [localStorage.getItem('fooplan.plan'), localStorage.getItem(RECIPES_KEY)];
-
-      fake.emit('SIGNED_IN', sessionFor('ana@example.com'));
-      await stable();
-      expect(childTexts(accountGroup()), 'signed in').toEqual(['ana@example.com', 'Sign out']);
-      expect(TestBed.inject(PlanStore).plan(), 'plan after signing in').toEqual(plan);
-
-      await click(buttonIn(accountGroup(), 'Sign out'));
-      expect(textOf(accountGroup()), 'signed out').toBe('Sign in');
-      expect(TestBed.inject(PlanStore).plan(), 'plan after signing out').toEqual(plan);
-      expect(TestBed.inject(RecipeStore).bySlug('quick-dal')?.name).toBe('Quick Dal');
-      expect([localStorage.getItem('fooplan.plan'), localStorage.getItem(RECIPES_KEY)]).toEqual(
-        stored,
-      );
     });
 
     it('goes to the Plan page, replacing the URL, once the client has signed in from the link the app opened with and the router has followed the cleared URL, when the session comes first (#43 9)', async () => {
@@ -563,6 +541,419 @@ describe('App', () => {
         expect(fake.signOuts.length, 'not signed out').toBe(1);
         expect(childTexts(accountGroup())).toEqual(['ana@example.com', 'Sign out']);
       });
+    });
+
+    describe('data in the account (#45)', () => {
+      const TODAY_DATE = '2026-10-30';
+      const LOAD_FAILED = "Couldn't load your data. Check your connection and reload the page.";
+      const SAVE_FAILED =
+        "Your last change couldn't be saved. Check your connection and try again.";
+      const browserPlan = planOf([
+        day(TODAY_DATE, picked('Pizza toast'), picked('Potato goulash')),
+      ]);
+      const accountPlan = planOf(
+        [day(TODAY_DATE, picked('Spaghetti carbonara'), picked('Fish tacos'))],
+        { accepted: true },
+      );
+
+      beforeEach(() => {
+        TestBed.overrideProvider(StorageBackend, {
+          useFactory: (backend: SessionBackend) => backend,
+          deps: [SessionBackend],
+        });
+        TestBed.overrideProvider(TODAY, { useValue: () => TODAY_DATE });
+      });
+
+      it('shows a new 5-day plan for 2 people starting today, saved in the row fooplan.plan, and the 44 built-in recipes, none "Not suggested" and no "Your recipe", for an account with no rows (#45 4)', async () => {
+        fake.load(sessionFor('ana@example.com'));
+        await open('/plan');
+
+        expect(compiled.querySelector('main .summary')?.textContent?.trim()).toBe(
+          '5 days for 2 people',
+        );
+        const days = compiled.querySelectorAll('main section.day');
+        expect(days.length).toBe(5);
+        expect(days[0].querySelector('h2')?.getAttribute('aria-current'), 'today first').toBe(
+          'date',
+        );
+        const plan = TestBed.inject(PlanStore).plan();
+        expect(plan.days[0].date).toBe(TODAY_DATE);
+        expect(fake.row('fooplan.plan')?.value, 'row fooplan.plan').toEqual(plan);
+
+        await TestBed.inject(Router).navigateByUrl('/recipes');
+        await stable();
+        const cards = Array.from(compiled.querySelectorAll('main article'));
+        expect(cards.length).toBe(44);
+        expect(cards.filter((card) => textOf(card).includes('Not suggested'))).toEqual([]);
+        expect(cards.filter((card) => textOf(card).includes('Your recipe'))).toEqual([]);
+      });
+
+      it('shows "Loading…", then the Plan page with the browser\'s plan at /plan, replacing the URL, when "Sign out" is clicked on the Grocery list page of an accepted plan; and the same with the account\'s plan when another tab signs in (#45 5)', async () => {
+        localStorage.setItem('fooplan.plan', JSON.stringify(browserPlan));
+        fake.saveRow('fooplan.plan', accountPlan);
+        fake.load(sessionFor('ana@example.com'));
+        await open('/groceries');
+        expect(compiled.querySelector('main h1')?.textContent?.trim()).toBe('Grocery list');
+        expect(compiled.querySelector('main')?.textContent).not.toContain('Accept a plan');
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+        let release = holdReads();
+        const signOut = buttonIn(accountGroup(), 'Sign out');
+        signOut.focus();
+        signOut.click();
+        await rendered();
+        expect(mainContent(), 'signing out').toEqual([['P', 'status', 'Loading…']]);
+        release();
+        await stable();
+        expect(navigate).toHaveBeenCalledWith('/plan', { replaceUrl: true });
+        expect(TestBed.inject(Router).url).toBe('/plan');
+        expect(pickedNames(), 'browser plan').toEqual(['Pizza toast', 'Potato goulash']);
+
+        navigate.mockClear();
+        release = holdReads();
+        fake.emit('SIGNED_IN', sessionFor('ana@example.com'));
+        await rendered();
+        expect(mainContent(), 'signing in').toEqual([['P', 'status', 'Loading…']]);
+        release();
+        await stable();
+        expect(navigate).toHaveBeenCalledWith('/plan', { replaceUrl: true });
+        expect(TestBed.inject(Router).url).toBe('/plan');
+        expect(pickedNames(), 'account plan').toEqual(['Spaghetti carbonara', 'Fish tacos']);
+      });
+
+      it(`holds only the alert "${LOAD_FAILED}" in <main>, no page and no "Loading…", when the load rejects (#45 6)`, async () => {
+        fake.readError = DATA_FAILED;
+        fake.load(sessionFor('ana@example.com'));
+        await open('/plan');
+
+        expect(mainContent()).toEqual([['P', 'alert', LOAD_FAILED]]);
+        expect(compiled.querySelector('main h1')).toBeNull();
+      });
+
+      it(`shows the pick and the alert "${SAVE_FAILED}" between the header and <main> when the write of a pick rejects, and no alert once a later write resolves (#45 7)`, async () => {
+        fake.load(sessionFor('ana@example.com'));
+        await open('/plan');
+        fake.writeError = DATA_FAILED;
+
+        const lunch = suggestionButtons(0)[0];
+        const name = textOf(lunch.querySelector('.name')!);
+        await click(lunch);
+        expect(pickedNames()).toEqual([name]);
+        const alert = saveAlert();
+        expect(alert, 'no alert').not.toBeNull();
+        expect(alert!.tagName).toBe('P');
+        expect(textOf(alert!)).toBe(SAVE_FAILED);
+        expect(alert!.previousElementSibling?.tagName, 'before the alert').toBe('HEADER');
+        expect(alert!.nextElementSibling?.tagName, 'after the alert').toBe('MAIN');
+
+        fake.writeError = null;
+        await click(suggestionButtons(0)[0]);
+        expect(pickedNames().length).toBe(2);
+        expect(saveAlert(), 'after a saved pick').toBeNull();
+      });
+
+      it('shows the browser\'s plan and own recipe "Quick Dal" again, and leaves them unchanged in localStorage, after signing in, picking a meal in the account and signing out (#45 9)', async () => {
+        localStorage.setItem('fooplan.plan', JSON.stringify(browserPlan));
+        storeOwnRecipes(QUICK_DAL);
+        const stored = [localStorage.getItem('fooplan.plan'), localStorage.getItem(RECIPES_KEY)];
+        fake.load(null);
+        await open('/plan');
+        expect(pickedNames(), 'browser plan').toEqual(['Pizza toast', 'Potato goulash']);
+
+        fake.emit('SIGNED_IN', sessionFor('ana@example.com'));
+        await stable();
+        expect(pickedNames(), 'account plan').toEqual([]);
+        expect(
+          TestBed.inject(RecipeStore).bySlug('quick-dal'),
+          'own recipe signed in',
+        ).toBeUndefined();
+        await click(suggestionButtons(0)[0]);
+        expect(pickedNames().length, 'picked in the account').toBe(1);
+
+        await click(buttonIn(accountGroup(), 'Sign out'));
+        expect(pickedNames(), 'browser plan again').toEqual(['Pizza toast', 'Potato goulash']);
+        await TestBed.inject(Router).navigateByUrl('/recipes');
+        await stable();
+        const own = Array.from(compiled.querySelectorAll('main article')).filter((card) =>
+          textOf(card).includes('Your recipe'),
+        );
+        expect(own.map((card) => textOf(card.querySelector('h2')!))).toEqual(['Quick Dal']);
+        expect([localStorage.getItem('fooplan.plan'), localStorage.getItem(RECIPES_KEY)]).toEqual(
+          stored,
+        );
+      });
+
+      describe('edge cases', () => {
+        it("shows none of the browser's plan, removed recipes or own recipes for a session whose account has no rows, and leaves localStorage as it was (#45 4a)", async () => {
+          localStorage.setItem('fooplan.plan', JSON.stringify(browserPlan));
+          localStorage.setItem('fooplan.removed', JSON.stringify(['Niçoise salad']));
+          storeOwnRecipes(QUICK_DAL);
+          const stored = { ...localStorage };
+          fake.load(sessionFor('ana@example.com'));
+          await open('/plan');
+
+          expect(pickedNames()).toEqual([]);
+          await TestBed.inject(Router).navigateByUrl('/recipes');
+          await stable();
+          expect(textOf(compiled.querySelector('main')!)).not.toContain('Not suggested');
+          expect(textOf(compiled.querySelector('main')!)).not.toContain('Quick Dal');
+          expect({ ...localStorage }).toEqual(stored);
+        });
+
+        it('stays on the page and loads nothing again when the client reports a refreshed session of the same user (#45 5a)', async () => {
+          fake.load(sessionFor('ana@example.com'));
+          await open('/recipes');
+          const queried = fake.tables.length;
+          const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+          fake.emit('TOKEN_REFRESHED', sessionFor('ana@example.com', 'new-token'));
+          await stable();
+          fake.emit('SIGNED_IN', sessionFor('ana@example.com', 'new-token'));
+          await stable();
+          expect(navigate).not.toHaveBeenCalled();
+          expect(TestBed.inject(Router).url).toBe('/recipes');
+          expect(fake.tables.length, 'read again').toBe(queried);
+        });
+
+        it('stays on the page of a reload while signed in, reading each key from the account once (#45 5b)', async () => {
+          const reads: string[] = [];
+          fake.beforeRead = (key) => {
+            reads.push(key);
+            return Promise.resolve();
+          };
+          fake.load(sessionFor('ana@example.com'));
+          await open('/recipes');
+
+          expect(TestBed.inject(Router).url).toBe('/recipes');
+          expect(compiled.querySelector('main h1')?.textContent?.trim()).toBe('Recipes');
+          expect(reads.sort()).toEqual(['fooplan.plan', 'fooplan.recipes', 'fooplan.removed']);
+        });
+
+        it('says "Deine Daten konnten nicht geladen werden. Prüf deine Verbindung und lade die Seite neu." when the load rejects in German (#45 6a)', async () => {
+          localStorage.setItem(LANGUAGE_KEY, 'de');
+          fake.readError = DATA_FAILED;
+          fake.load(sessionFor('ana@example.com'));
+          await open('/plan');
+
+          expect(mainContent()).toEqual([
+            [
+              'P',
+              'alert',
+              'Deine Daten konnten nicht geladen werden. Prüf deine Verbindung und lade die Seite neu.',
+            ],
+          ]);
+        });
+
+        it('shows "Loading…" and then the Plan page from localStorage when "Sign out" is clicked after a failed load (#45 6b)', async () => {
+          localStorage.setItem('fooplan.plan', JSON.stringify(browserPlan));
+          fake.readError = DATA_FAILED;
+          fake.load(sessionFor('ana@example.com'));
+          await open('/recipes');
+          expect(mainContent(), 'failed').toEqual([['P', 'alert', LOAD_FAILED]]);
+
+          const release = holdReads();
+          const signOut = buttonIn(accountGroup(), 'Sign out');
+          signOut.focus();
+          signOut.click();
+          await rendered();
+          expect(mainContent(), 'signing out').toEqual([['P', 'status', 'Loading…']]);
+          release();
+          await stable();
+          expect(TestBed.inject(Router).url).toBe('/plan');
+          expect(pickedNames()).toEqual(['Pizza toast', 'Potato goulash']);
+        });
+
+        it('shows the alert and no page for a recipe link opened directly when the load rejects, keeping its URL, and the navigation does not fail (#45 6c)', async () => {
+          fake.readError = DATA_FAILED;
+          fake.load(sessionFor('ana@example.com'));
+          fixture = TestBed.createComponent(App);
+          compiled = fixture.nativeElement as HTMLElement;
+
+          await expect(TestBed.inject(Router).navigateByUrl('/recipes/quick-dal')).resolves.toBe(
+            true,
+          );
+          await stable();
+          expect(mainContent()).toEqual([['P', 'alert', LOAD_FAILED]]);
+          expect(TestBed.inject(Location).path(), 'URL kept for a reload').toBe(
+            '/recipes/quick-dal',
+          );
+        });
+
+        it('shows the load alert when the code of the stores fails to download, and loads once the session changes (#45 6d)', async () => {
+          let imports = 0;
+          TestBed.overrideProvider(IMPORT_PLAN_STORE, {
+            useValue: () =>
+              imports++ === 0
+                ? Promise.reject(new TypeError('Failed to fetch dynamically imported module'))
+                : import('./plan/plan-store').then((m) => m.PlanStore),
+          });
+          fake.load(null);
+          await open('/plan');
+          expect(mainContent(), 'failed').toEqual([['P', 'alert', LOAD_FAILED]]);
+
+          fake.emit('SIGNED_IN', sessionFor('ana@example.com'));
+          await stable();
+          expect(TestBed.inject(Router).url).toBe('/plan');
+          expect(compiled.querySelector('main h1')?.textContent?.trim()).toBe('Plan');
+        });
+
+        it('loads the account when the client reports a sign-in after the first load read the browser, before the app first rendered (#45 5c)', async () => {
+          localStorage.setItem('fooplan.plan', JSON.stringify(browserPlan));
+          fake.saveRow('fooplan.plan', accountPlan);
+          fixture = TestBed.createComponent(App);
+          compiled = fixture.nativeElement as HTMLElement;
+          fake.load(null);
+          await TestBed.inject(PlanStore).load();
+          expect(TestBed.inject(PlanStore).plan(), 'first load').toEqual(browserPlan);
+
+          fake.emit('SIGNED_IN', sessionFor('ana@example.com'));
+          await stable();
+          expect(TestBed.inject(Router).url).toBe('/plan');
+          expect(pickedNames()).toEqual(['Spaghetti carbonara', 'Fish tacos']);
+        });
+
+        it('hides the save alert once "Sign out" has loaded the browser\'s data (#45 7j)', async () => {
+          // A saved browser plan loads without a write, so only the sign-out hides the alert
+          localStorage.setItem('fooplan.plan', JSON.stringify(browserPlan));
+          fake.load(sessionFor('ana@example.com'));
+          await open('/plan');
+          fake.writeError = DATA_FAILED;
+          await click(suggestionButtons(0)[0]);
+          expect(saveAlert(), 'after the failed save').not.toBeNull();
+
+          await click(buttonIn(accountGroup(), 'Sign out'));
+          expect(TestBed.inject(Router).url).toBe('/plan');
+          expect(saveAlert(), 'after signing out').toBeNull();
+        });
+
+        it.each(['/recipes/nope', '/recipes/nope/edit'])(
+          'goes to the Recipes page, replacing the URL, for %s opened when the recipes failed to load and a later load succeeded (#45 6e)',
+          async (url) => {
+            const importStore = deferred<void>();
+            TestBed.overrideProvider(IMPORT_PLAN_STORE, {
+              useValue: () =>
+                importStore.promise.then(() =>
+                  import('./plan/plan-store').then((m) => m.PlanStore),
+                ),
+            });
+            let recipeReads = 0;
+            fake.beforeRead = (key) =>
+              key === 'fooplan.recipes' && recipeReads++ === 0
+                ? Promise.reject(DATA_FAILED)
+                : Promise.resolve();
+            fake.load(sessionFor('ana@example.com'));
+            fixture = TestBed.createComponent(App);
+            compiled = fixture.nativeElement as HTMLElement;
+            const router = TestBed.inject(Router);
+            await router.navigateByUrl(url);
+            expect(recipeReads, 'the guard read the recipes').toBe(1);
+            const navigate = vi.spyOn(router, 'navigateByUrl');
+
+            importStore.resolve();
+            await stable();
+            expect(router.url).toBe('/recipes');
+            expect(navigate).toHaveBeenLastCalledWith('/recipes', { replaceUrl: true });
+            expect(compiled.querySelector('main h1')?.textContent?.trim()).toBe('Recipes');
+          },
+        );
+
+        it.each(['/recipes/ana-dal', '/recipes/ana-dal/edit'])(
+          'goes to the Plan page with the browser\'s plan when "Sign out" is clicked on %s, an own recipe of the account only (#45 5d)',
+          async (url) => {
+            localStorage.setItem('fooplan.plan', JSON.stringify(browserPlan));
+            fake.saveRow('fooplan.recipes', [
+              {
+                name: 'Ana Dal',
+                servings: 4,
+                ingredients: [{ name: 'onion', amount: 1, unit: 'pc' }],
+              },
+            ]);
+            fake.load(sessionFor('ana@example.com'));
+            await open(url);
+            expect(TestBed.inject(Router).url, 'opened').toBe(url);
+
+            await click(buttonIn(accountGroup(), 'Sign out'));
+            expect(TestBed.inject(Router).url).toBe('/plan');
+            expect(pickedNames()).toEqual(['Pizza toast', 'Potato goulash']);
+          },
+        );
+
+        it('says "Deine letzte Änderung konnte nicht gespeichert werden. Prüf deine Verbindung und versuch es noch einmal." when a write rejects in German (#45 7a)', async () => {
+          localStorage.setItem(LANGUAGE_KEY, 'de');
+          fake.load(sessionFor('ana@example.com'));
+          await open('/plan');
+          fake.writeError = DATA_FAILED;
+
+          await click(suggestionButtons(0)[0]);
+          expect(textOf(saveAlert()!)).toBe(
+            'Deine letzte Änderung konnte nicht gespeichert werden. Prüf deine Verbindung und versuch es noch einmal.',
+          );
+        });
+
+        it('shows no save alert signed out, also when localStorage refuses the write (#45 7b)', async () => {
+          fake.load(null);
+          await open('/plan');
+          vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new DOMException('quota exceeded', 'QuotaExceededError');
+          });
+
+          await click(suggestionButtons(0)[0]);
+          expect(pickedNames().length).toBe(1);
+          expect(saveAlert()).toBeNull();
+          expect(compiled.querySelector('[role="alert"]')).toBeNull();
+        });
+      });
+
+      // Reads wait until the returned function is called, so "Loading…" can be seen
+      function holdReads(): () => void {
+        const held = deferred<void>();
+        const read = SessionBackend.prototype.read;
+        const spy = vi.spyOn(SessionBackend.prototype, 'read').mockImplementation(async function (
+          this: SessionBackend,
+          key: string,
+        ) {
+          await held.promise;
+          return read.call(this, key);
+        });
+        return () => {
+          spy.mockRestore();
+          held.resolve();
+        };
+      }
+
+      // While a load is held the fixture never becomes stable: the render is run here instead
+      async function rendered() {
+        for (let i = 0; i < 3; i++) {
+          await new Promise((resolve) => setTimeout(resolve));
+          TestBed.tick();
+        }
+      }
+
+      function mainContent(): (string | null)[][] {
+        return Array.from(compiled.querySelector('main')!.children).map((child) => [
+          child.tagName,
+          child.getAttribute('role'),
+          textOf(child),
+        ]);
+      }
+
+      function pickedNames(): string[] {
+        return Array.from(compiled.querySelectorAll('main .meal .recipe a.name')).map((name) =>
+          textOf(name),
+        );
+      }
+
+      function suggestionButtons(dayIndex: number): HTMLButtonElement[] {
+        return Array.from(
+          compiled
+            .querySelectorAll('main section.day')
+            [dayIndex].querySelectorAll<HTMLButtonElement>('button.suggestion'),
+        );
+      }
+
+      function saveAlert(): HTMLElement | null {
+        return compiled.querySelector<HTMLElement>(':scope > [role="alert"]');
+      }
     });
 
     async function open(url: string) {

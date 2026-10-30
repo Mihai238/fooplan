@@ -3,6 +3,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -36,23 +37,31 @@ export class RecipePage {
   private readonly recipes = inject(RecipeStore);
   private readonly stepsView = inject(StepsViewStore);
   protected readonly language = inject(LanguageStore);
-  // The router reuses this page for another slug, and the route's guard lets only a known one in
+  // The router reuses this page for another slug. The route's guard lets in only a known one, unless
+  // loading the recipes failed
   protected readonly page = toSignal(
     inject(ActivatedRoute).paramMap.pipe(
       map((params) => ({
-        recipe: this.recipes.bySlug(params.get('slug')!)!,
+        recipe: this.recipes.bySlug(params.get('slug')!),
         back: this.previousUrl(),
       })),
     ),
     { requireSync: true },
   );
-  protected readonly name = computed(() => this.recipes.displayName(this.page().recipe));
-  protected readonly ingredients = computed(() =>
-    this.recipes.displayIngredients(this.page().recipe),
-  );
+  protected readonly name = computed(() => {
+    const recipe = this.page().recipe;
+    return recipe ? this.recipes.displayName(recipe) : '';
+  });
+  protected readonly ingredients = computed(() => {
+    const recipe = this.page().recipe;
+    return recipe ? this.recipes.displayIngredients(recipe) : [];
+  });
   // stepParts finds the German names of the stored ingredients itself
   protected readonly steps = computed(() => {
     const recipe = this.page().recipe;
+    if (!recipe) {
+      return undefined;
+    }
     return this.recipes
       .displaySteps(recipe)
       ?.map((step) =>
@@ -78,6 +87,17 @@ export class RecipePage {
   private readonly deleteButton = viewChild<ElementRef<HTMLButtonElement>>('deleteButton');
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   private pressedOnBackdrop = false;
+
+  // The page shows once the stores are loaded, also after its guard let it in because loading failed,
+  // and again after the session changed: a recipe that isn't there leads to the Recipes page, unless
+  // a navigation under way leaves the page anyway
+  constructor() {
+    effect(() => {
+      if (!this.page().recipe && this.router.currentNavigation() === null) {
+        void this.router.navigateByUrl('/recipes', { replaceUrl: true });
+      }
+    });
+  }
 
   protected servingsText(servings: number): string {
     const { id, params } = servingsMessage(servings);

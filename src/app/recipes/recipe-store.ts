@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { LanguageStore } from '../language-store';
+import { SaveStatus } from '../save-status';
 import { isRecord, StorageBackend } from '../storage';
 import { GermanRecipe, germanRecipe, ingredientNameIn } from './german-names';
 import { checkRecipe, MAX_INGREDIENTS } from './own-recipe';
@@ -13,22 +14,32 @@ const STORAGE_KEY = 'fooplan.recipes';
 export class RecipeStore {
   private readonly language = inject(LanguageStore);
   private readonly backend = inject(StorageBackend);
+  private readonly saves = inject(SaveStatus);
   private readonly ownState = signal<readonly Recipe[]>([]);
   readonly own = this.ownState.asReadonly();
   private readonly readyState = signal(false);
   readonly ready = this.readyState.asReadonly();
   private loading: Promise<void> | undefined;
+  private latest: Promise<void> = Promise.resolve();
+  private loads = 0;
   readonly all = computed<readonly Recipe[]>(() => [...RECIPES, ...this.own()]);
   private readonly bySlugMap = computed(
     () => new Map(this.all().map((recipe) => [recipeSlug(recipe.name), recipe])),
   );
 
   load(): Promise<void> {
-    if (!this.loading) {
-      this.readyState.set(false);
-      // Read from a promise, so that a read failing at once ends the load after it is stored here
-      this.loading = Promise.resolve().then(() => this.read());
-    }
+    return this.loading ?? this.reload();
+  }
+
+  // Reads again even while a load runs, for data that may differ from what that load reads, e.g.
+  // after the session changed: only the new read is applied, and the load running then settles with
+  // the new one
+  reload(): Promise<void> {
+    this.readyState.set(false);
+    const load = ++this.loads;
+    // Read from a promise, so that a read failing at once ends the load after it is stored here
+    this.loading = Promise.resolve().then(() => this.read(load));
+    this.latest = this.loading;
     return this.loading;
   }
 
@@ -90,12 +101,25 @@ export class RecipeStore {
   }
 
   // The load ends in the step that makes the store ready, so a load() from then on reads again
-  private async read(): Promise<void> {
+  private async read(load: number): Promise<void> {
     try {
-      this.ownState.set(parseRecipes(await this.backend.read(STORAGE_KEY)));
-      this.readyState.set(true);
+      const own = parseRecipes(await this.backend.read(STORAGE_KEY));
+      if (load === this.loads) {
+        this.ownState.set(own);
+        this.readyState.set(true);
+      }
+    } catch (error) {
+      if (load === this.loads) {
+        throw error;
+      }
     } finally {
-      this.loading = undefined;
+      if (load === this.loads) {
+        this.loading = undefined;
+      }
+    }
+    // A load replaced by a newer one settles with it
+    if (load !== this.loads) {
+      return this.latest;
     }
   }
 
@@ -107,14 +131,16 @@ export class RecipeStore {
     return this.language.language() === 'de';
   }
 
-  // A failed write is ignored: the change lives until the page is reloaded
+  // A change that couldn't be saved stays in memory, until the page is reloaded or a later write
+  // saves it
   private save(): void {
-    this.backend
-      .write(
+    this.saves.track(
+      STORAGE_KEY,
+      this.backend.write(
         STORAGE_KEY,
         this.own().map(({ name, servings, ingredients }) => ({ name, servings, ingredients })),
-      )
-      .catch(() => undefined);
+      ),
+    );
   }
 }
 
