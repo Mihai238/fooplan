@@ -1,0 +1,24 @@
+<h1>{{ language.t('signIn.title') }}</h1>
+@if (sentTo(); as email) {
+  <h2 #checkInbox tabindex="-1">{{ language.t('signIn.checkInbox') }}</h2>
+  <p class="sent">{{ language.t('signIn.sent', { email }) }}</p>
+  <button type="button" class="link" (click)="useAnotherEmail()">
+    {{ language.t('signIn.otherEmail') }}
+  </button>
+} @else {
+  <form class="field" novalidate (submit)="send($event)">
+    <label for="sign-in-email">{{ language.t('signIn.email') }}</label>
+    <input #emailInput type="email" id="sign-in-email" autocomplete="email" />
+    <button type="submit" class="primary" [disabled]="sending()">
+      {{ language.t('signIn.send') }}
+    </button>
+    <!-- Screen readers announce changes inside a live region already on the page, not a region
+         added along with its text, so this one stays, empty until a problem -->
+    <p class="status" role="status">
+      @if (problem(); as problem) {
+        {{ language.t(problem) }}
+      }
+    </p>
+  </form>
+  <p class="note">{{ language.t('signIn.note') }}</p>
+}

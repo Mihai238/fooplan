@@ -3,16 +3,20 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from './app.routes';
+import { FakeSupabase, provideSupabase, sessionFor } from './auth/testing';
 import { PlanStore } from './plan/plan-store';
 import { RecipeStore } from './recipes/recipe-store';
 import { RECIPES } from './recipes/recipes';
 import { ownRecipe, QUICK_DAL, shownStep, storeOwnRecipes } from './recipes/testing';
 
 describe('routes', () => {
+  let fake: FakeSupabase;
+
   beforeEach(() => {
     localStorage.clear();
+    fake = new FakeSupabase();
     TestBed.configureTestingModule({
-      providers: [provideRouter(routes)],
+      providers: [provideRouter(routes), provideSupabase(fake)],
     });
   });
 
@@ -255,5 +259,41 @@ describe('routes', () => {
     expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
       'Grocery list',
     );
+  });
+
+  describe('sign-in (#43)', () => {
+    it('shows the Plan page instead of /sign-in with a session, leaving no history entry for /sign-in (#43 7)', async () => {
+      fake.load(sessionFor('ana@example.com'));
+      const harness = await RouterTestingHarness.create('/groceries');
+      await harness.navigateByUrl('/sign-in');
+      expect(TestBed.inject(Router).url).toBe('/plan');
+      expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Plan');
+      const location = TestBed.inject(Location);
+      expect(location.path()).toBe('/plan');
+      location.back();
+      await harness.fixture.whenStable();
+      expect(location.path(), 'back from /plan').toBe('/groceries');
+    });
+
+    describe('edge cases', () => {
+      it('shows the sign-in page at /sign-in without a session (#43 7c)', async () => {
+        fake.load(null);
+        const harness = await RouterTestingHarness.create('/sign-in');
+        expect(TestBed.inject(Router).url).toBe('/sign-in');
+        expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+          'Sign in',
+        );
+      });
+
+      it('waits for a saved session not yet returned when /sign-in is opened directly, then shows the Plan page and never the sign-in form (#43 7b)', async () => {
+        const opening = RouterTestingHarness.create('/sign-in');
+        await new Promise((resolve) => setTimeout(resolve));
+        expect(document.querySelector('app-sign-in-page'), 'form before the session').toBeNull();
+        fake.load(sessionFor('ana@example.com'));
+        const harness = await opening;
+        expect(TestBed.inject(Router).url).toBe('/plan');
+        expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Plan');
+      });
+    });
   });
 });

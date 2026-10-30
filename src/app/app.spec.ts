@@ -1,16 +1,24 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { routes } from './app.routes';
-import { QUICK_DAL, storeOwnRecipes } from './recipes/testing';
+import { FakeSupabase, provideSupabase, sessionFor, SIGN_OUT_FAILED } from './auth/testing';
+import { LanguageStore } from './language-store';
+import { PlanStore } from './plan/plan-store';
+import { day, picked, planOf } from './plan/testing';
+import { RecipeStore } from './recipes/recipe-store';
+import { QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from './recipes/testing';
 import { LANGUAGE_KEY, TABBABLE } from './testing';
 
 describe('App', () => {
+  let fake: FakeSupabase;
+
   beforeEach(async () => {
     localStorage.clear();
+    fake = new FakeSupabase();
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter(routes)],
+      providers: [provideRouter(routes), provideSupabase(fake)],
     }).compileComponents();
   });
 
@@ -243,6 +251,269 @@ describe('App', () => {
       const found = compiled.querySelector<HTMLElement>('header div.language[role="group"]');
       expect(found, 'no div.language group in the header').not.toBeNull();
       return found!;
+    }
+  });
+
+  describe('account (#43)', () => {
+    let fixture: ComponentFixture<App>;
+    let compiled: HTMLElement;
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      history.replaceState(null, '', '/');
+      document.documentElement.lang = 'en';
+    });
+
+    it('ends the header with the group "Account", right after "Language", holding only the link "Sign in" to /sign-in without a session, "Konto" and "Anmelden" in German (#43 1)', async () => {
+      fake.load(null);
+      await open('/plan');
+      const group = accountGroup();
+      const header = compiled.querySelector('header')!;
+      expect(header.lastElementChild, 'last in the header').toBe(group);
+      expect(group.previousElementSibling?.getAttribute('aria-label'), 'before the group').toBe(
+        'Language',
+      );
+      expect(
+        Array.from(group.children).map((child) => [
+          child.tagName,
+          textOf(child),
+          child.getAttribute('href'),
+        ]),
+      ).toEqual([['A', 'Sign in', '/sign-in']]);
+
+      TestBed.inject(LanguageStore).set('de');
+      await stable();
+      expect(group.getAttribute('aria-label'), 'German group').toBe('Konto');
+      expect(textOf(group), 'German link').toBe('Anmelden');
+    });
+
+    it('renders no "Account" group until the client has returned the saved session, and then the group with "Sign in" (#43 2)', async () => {
+      await open('/plan');
+      expect(findAccountGroup(), 'before the session is read').toBeNull();
+      expect(textOf(compiled.querySelector('header')!), 'before').not.toContain('Sign in');
+
+      fake.load(null);
+      await stable();
+      expect(textOf(accountGroup())).toBe('Sign in');
+    });
+
+    it('shows the email "ana@example.com" and the button "Sign out", and no "Sign in", with a session (#43 7)', async () => {
+      fake.load(sessionFor('ana@example.com'));
+      await open('/recipes');
+      const group = accountGroup();
+      expect(childTexts(group)).toEqual(['ana@example.com', 'Sign out']);
+      expect(group.querySelector('a'), 'a link in the group').toBeNull();
+      const button = group.querySelector('button');
+      expect(button?.type).toBe('button');
+      expect(textOf(button!)).toBe('Sign out');
+      expect(textOf(button!.previousElementSibling!), 'before "Sign out"').toBe('ana@example.com');
+    });
+
+    it('stays on the Recipes page as it was when "Sign out" is clicked, and shows "Sign in" with the focus (#43 8)', async () => {
+      fake.load(sessionFor('ana@example.com'));
+      await open('/recipes');
+      const search = compiled.querySelector<HTMLInputElement>('main input[type="search"]')!;
+      search.value = 'pasta';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      await stable();
+      const shown = compiled.querySelectorAll('main article').length;
+
+      await click(buttonIn(accountGroup(), 'Sign out'));
+      expect(fake.signOuts.length, 'signed out').toBe(1);
+      expect(TestBed.inject(Router).url).toBe('/recipes');
+      expect(compiled.querySelector('main input[type="search"]'), 'search field kept').toBe(search);
+      expect(search.value).toBe('pasta');
+      expect(compiled.querySelectorAll('main article').length, 'recipes shown').toBe(shown);
+      const link = accountGroup().querySelector('a');
+      expect(textOf(accountGroup())).toBe('Sign in');
+      expect(document.activeElement, 'focus after "Sign out"').toBe(link);
+    });
+
+    it('keeps a picked plan and an own recipe, in the stores and in localStorage, when the user signs in and out (#43 10)', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      const saved = planOf([day('2026-10-24', picked('Spaghetti carbonara'), picked('Quick Dal'))]);
+      localStorage.setItem('fooplan.plan', JSON.stringify(saved));
+      fake.load(null);
+      await open('/plan');
+      const plan = TestBed.inject(PlanStore).plan();
+      expect(plan.days[0].dinner.recipe, 'saved plan not loaded').toBe('Quick Dal');
+      const stored = [localStorage.getItem('fooplan.plan'), localStorage.getItem(RECIPES_KEY)];
+
+      fake.emit('SIGNED_IN', sessionFor('ana@example.com'));
+      await stable();
+      expect(childTexts(accountGroup()), 'signed in').toEqual(['ana@example.com', 'Sign out']);
+      expect(TestBed.inject(PlanStore).plan(), 'plan after signing in').toEqual(plan);
+
+      await click(buttonIn(accountGroup(), 'Sign out'));
+      expect(textOf(accountGroup()), 'signed out').toBe('Sign in');
+      expect(TestBed.inject(PlanStore).plan(), 'plan after signing out').toEqual(plan);
+      expect(TestBed.inject(RecipeStore).bySlug('quick-dal')?.name).toBe('Quick Dal');
+      expect([localStorage.getItem('fooplan.plan'), localStorage.getItem(RECIPES_KEY)]).toEqual(
+        stored,
+      );
+    });
+
+    it('goes to the Plan page, replacing the URL, once the client has signed in from the link the app opened with and the router has followed the cleared URL, when the session comes first (#43 9)', async () => {
+      await openOnLink();
+      const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+      fake.load(sessionFor('ana@example.com', 'token'));
+      await stable();
+      expect(TestBed.inject(Router).url, 'before the URL is cleared').toBe('/');
+      expect(navigate, 'before the URL is cleared').not.toHaveBeenCalled();
+
+      await clearLink();
+      expect(navigate).toHaveBeenCalledExactlyOnceWith('/plan', { replaceUrl: true });
+      expect(TestBed.inject(Router).url).toBe('/plan');
+      expect(childTexts(accountGroup())).toEqual(['ana@example.com', 'Sign out']);
+    });
+
+    it('goes to the Plan page when the router has followed the cleared URL with a navigation of its own before the session comes (#43 9b)', async () => {
+      await openOnLink();
+      await clearLink();
+      expect(TestBed.inject(Router).url, 'before the session').toBe('/');
+
+      fake.load(sessionFor('ana@example.com', 'token'));
+      await stable();
+      expect(TestBed.inject(Router).url).toBe('/plan');
+    });
+
+    describe('edge cases', () => {
+      it('tabs through "Fooplan", "Plan", "Grocery list", "Recipes", "EN", "DE", "Sign in" and then the page (#43 1a)', async () => {
+        fake.load(null);
+        await open('/plan');
+        const tabbable = Array.from(compiled.querySelectorAll<HTMLElement>(TABBABLE)).filter(
+          (candidate) => !candidate.closest('dialog'),
+        );
+        expect(tabbable.slice(0, 7).map((candidate) => textOf(candidate))).toEqual([
+          'Fooplan',
+          'Plan',
+          'Grocery list',
+          'Recipes',
+          'EN',
+          'DE',
+          'Sign in',
+        ]);
+        expect(tabbable[7]?.closest('main'), 'the page after "Sign in"').not.toBeNull();
+      });
+
+      it('shows neither "Sign in" nor the email until a saved session is returned, and then the email and "Sign out" (#43 2a)', async () => {
+        await open('/plan');
+        const header = compiled.querySelector('header')!;
+        expect(findAccountGroup(), 'before the session is read').toBeNull();
+        expect(textOf(header)).not.toContain('Sign in');
+        expect(textOf(header)).not.toContain('ana@example.com');
+
+        fake.load(sessionFor('ana@example.com'));
+        await stable();
+        expect(childTexts(accountGroup())).toEqual(['ana@example.com', 'Sign out']);
+      });
+
+      it('stays on the page of a reload while signed in, and on the home page when the link brings no session (#43 9a)', async () => {
+        fake.load(sessionFor('ana@example.com'));
+        await open('/');
+        await stable();
+        expect(TestBed.inject(Router).url, 'reload').toBe('/');
+
+        TestBed.resetTestingModule();
+        fake = new FakeSupabase();
+        TestBed.configureTestingModule({
+          providers: [provideRouter(routes), provideSupabase(fake)],
+        });
+        await openOnLink();
+        fake.load(null);
+        await clearLink();
+        expect(TestBed.inject(Router).url, 'no session').toBe('/');
+      });
+
+      it('leaves a signed-in user where the link opened when signing in from it fails and the client keeps the earlier session (#43 9c)', async () => {
+        await openOnLink();
+        const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+        fake.load(sessionFor('ana@example.com', 'earlier-token'));
+        await clearLink();
+        expect(navigate).not.toHaveBeenCalled();
+        expect(TestBed.inject(Router).url).toBe('/');
+      });
+
+      it('names the group "Konto" and the button "Abmelden" in German with a session (#43 7a)', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        fake.load(sessionFor('ana@example.com'));
+        await open('/plan');
+        const group = accountGroup('Konto');
+        expect(childTexts(group)).toEqual(['ana@example.com', 'Abmelden']);
+      });
+
+      it('keeps the email and "Sign out" when signing out fails (#43 8a)', async () => {
+        fake.load(sessionFor('ana@example.com'));
+        fake.signOutResult = () => Promise.resolve(SIGN_OUT_FAILED);
+        await open('/recipes');
+        await click(buttonIn(accountGroup(), 'Sign out'));
+        expect(fake.signOuts.length, 'not signed out').toBe(1);
+        expect(childTexts(accountGroup())).toEqual(['ana@example.com', 'Sign out']);
+      });
+    });
+
+    async function open(url: string) {
+      fixture = TestBed.createComponent(App);
+      compiled = fixture.nativeElement as HTMLElement;
+      await TestBed.inject(Router).navigateByUrl(url);
+      await stable();
+    }
+
+    // As the app starts on the link's URL: bootstrapping runs the router's first navigation, which
+    // also makes it follow popstate
+    async function openOnLink() {
+      history.replaceState(null, '', '/#access_token=token&type=magiclink');
+      fixture = TestBed.createComponent(App);
+      compiled = fixture.nativeElement as HTMLElement;
+      TestBed.inject(Router).initialNavigation();
+      await stable();
+    }
+
+    // As the client does once it has signed in from the URL; jsdom fires popstate for it, as a
+    // browser does, and the router follows it from a timer
+    async function clearLink() {
+      location.hash = '';
+      await stable();
+      await stable();
+    }
+
+    // jsdom doesn't focus what is clicked, unlike a browser
+    async function click(target: HTMLElement) {
+      target.focus();
+      target.click();
+      await stable();
+    }
+
+    // The fake client answers in promises, whose renders come after the microtasks they start
+    async function stable() {
+      await new Promise((resolve) => setTimeout(resolve));
+      await fixture.whenStable();
+    }
+
+    function accountGroup(name = 'Account'): HTMLElement {
+      const group = findAccountGroup(name);
+      expect(group, `no "${name}" group in the header`).not.toBeNull();
+      return group!;
+    }
+
+    function findAccountGroup(name = 'Account'): HTMLElement | null {
+      return compiled.querySelector<HTMLElement>(`header [role="group"][aria-label="${name}"]`);
+    }
+
+    function buttonIn(group: HTMLElement, text: string): HTMLButtonElement {
+      const button = Array.from(group.querySelectorAll('button')).find(
+        (candidate) => textOf(candidate) === text,
+      );
+      expect(button, `no "${text}" button`).toBeDefined();
+      return button!;
+    }
+
+    function childTexts(target: Element): string[] {
+      return Array.from(target.children).map((child) => textOf(child));
+    }
+
+    function textOf(target: Element): string {
+      return target.textContent?.replace(/\s+/g, ' ').trim() ?? '';
     }
   });
 });

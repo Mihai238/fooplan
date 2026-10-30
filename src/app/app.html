@@ -41,6 +41,16 @@
       DE
     </button>
   </div>
+  @if (auth.loaded()) {
+    <div class="account" role="group" [attr.aria-label]="language.t('account.group')">
+      @if (auth.email(); as email) {
+        <span class="email">{{ email }}</span>
+        <button type="button" (click)="signOut()">{{ language.t('account.signOut') }}</button>
+      } @else {
+        <a #signInLink routerLink="/sign-in">{{ language.t('account.signIn') }}</a>
+      }
+    </div>
+  }
 </header>
 <main>
   <router-outlet />

@@ -25,6 +25,18 @@ Open `http://127.0.0.1:4200/`. Before reusing an open tab, check its URL in `lis
 
 To check the production build instead, run `npm run build`, then `npx http-server dist/fooplan/browser -a 127.0.0.1 -p 4300` and open `http://127.0.0.1:4300/`.
 
+## Supabase
+
+Signing in needs the local Supabase stack. Check whether it answers:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:54321/auth/v1/health --max-time 3
+```
+
+On `000`, run `npx supabase start` from the repo root (and `colima start` first if Docker doesn't answer, `docker info` failing).
+
+To sign in, submit an email address on `/sign-in`, open Mailpit at `http://127.0.0.1:54324` (or its API, `/api/v1/messages`), and follow the link of the newest mail to that address. Don't stop the stack afterwards: it belongs to the machine, not to the test.
+
 ## Driving the app
 
 - Act on `take_snapshot` uids for HTML controls.

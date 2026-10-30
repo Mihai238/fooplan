@@ -1,5 +1,6 @@
 import { inject, Injector } from '@angular/core';
 import { ActivatedRouteSnapshot, Router, Routes, UrlTree } from '@angular/router';
+import { AuthStore } from './auth/auth-store';
 import type { Recipe } from './recipes/recipe';
 
 export const routes: Routes = [
@@ -34,6 +35,11 @@ export const routes: Routes = [
     path: 'groceries',
     loadComponent: () => import('./groceries/grocery-list/grocery-list').then((m) => m.GroceryList),
   },
+  {
+    path: 'sign-in',
+    canActivate: [signedOut],
+    loadComponent: () => import('./auth/sign-in-page/sign-in-page').then((m) => m.SignInPage),
+  },
   { path: '**', redirectTo: '' },
 ];
 
@@ -59,4 +65,13 @@ function recipeGuard(
       ? true
       : router.parseUrl('/recipes'),
   );
+}
+
+// The client reads the saved session asynchronously on start, so /sign-in opened directly waits for
+// it rather than showing the form to a signed-in user
+async function signedOut(): Promise<true | UrlTree> {
+  const auth = inject(AuthStore);
+  const router = inject(Router);
+  await auth.whenLoaded();
+  return auth.email() === null ? true : router.parseUrl('/plan');
 }

@@ -9,6 +9,9 @@ const EN = {
   'language.group': 'Language',
   'language.en': 'English',
   'language.de': 'Deutsch',
+  'account.group': 'Account',
+  'account.signIn': 'Sign in',
+  'account.signOut': 'Sign out',
   'home.title': 'Lunch and dinner, planned in a few minutes',
   'home.intro':
     'Pick meals for the next few days from quick recipes, then shop from one grocery list.',
@@ -176,6 +179,15 @@ const EN = {
   'form.enterIngredient': 'Enter an ingredient.',
   'form.ingredientTooLong': 'Use at most 40 characters.',
   'form.ingredientExists': 'This ingredient is already in the list.',
+  'signIn.title': 'Sign in',
+  'signIn.email': 'Email',
+  'signIn.send': 'Send sign-in link',
+  'signIn.note': "We'll email you a link that signs you in. No password needed.",
+  'signIn.enterEmail': 'Enter your email address.',
+  'signIn.failed': "Couldn't send the link. Try again.",
+  'signIn.checkInbox': 'Check your inbox',
+  'signIn.sent': 'We sent a sign-in link to "{email}". Open it on this device to sign in.',
+  'signIn.otherEmail': 'Use another email',
 };
 
 export type MessageId = keyof typeof EN;
@@ -189,6 +201,9 @@ export const MESSAGES: Record<Language, Record<MessageId, string>> = {
     'language.group': 'Sprache',
     'language.en': 'English',
     'language.de': 'Deutsch',
+    'account.group': 'Konto',
+    'account.signIn': 'Anmelden',
+    'account.signOut': 'Abmelden',
     'home.title': 'Mittag- und Abendessen in wenigen Minuten geplant',
     'home.intro':
       'Wähle Mahlzeiten für die nächsten Tage aus schnellen Rezepten und kauf dann mit einer einzigen Einkaufsliste ein.',
@@ -361,5 +376,15 @@ export const MESSAGES: Record<Language, Record<MessageId, string>> = {
     'form.enterIngredient': 'Gib eine Zutat ein.',
     'form.ingredientTooLong': 'Höchstens 40 Zeichen.',
     'form.ingredientExists': 'Diese Zutat steht schon in der Liste.',
+    'signIn.title': 'Anmelden',
+    'signIn.email': 'E-Mail',
+    'signIn.send': 'Anmeldelink senden',
+    'signIn.note': 'Wir schicken dir einen Link, der dich anmeldet. Kein Passwort nötig.',
+    'signIn.enterEmail': 'Gib deine E-Mail-Adresse ein.',
+    'signIn.failed': 'Der Link konnte nicht gesendet werden. Versuch es noch einmal.',
+    'signIn.checkInbox': 'Sieh in deinem Posteingang nach',
+    'signIn.sent':
+      'Wir haben einen Anmeldelink an „{email}“ geschickt. Öffne ihn auf diesem Gerät, um dich anzumelden.',
+    'signIn.otherEmail': 'Andere E-Mail-Adresse',
   },
 };
