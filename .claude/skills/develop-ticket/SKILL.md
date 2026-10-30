@@ -93,9 +93,9 @@ tests they make pass, and which slices can run in parallel. Check CLAUDE.md and 
 constraints. Before the approach names a component, route, input, CSS class or label, check how sibling
 code names the same thing and reuse that name.
 
-Publish the plan (spec, criteria with their edge-case rows, the readings decided at step 1, open
-edge-case questions, approach, risks) as an HTML artifact and go on without waiting: the plan is
-approved automatically. If the user objects to it while the work runs, adjust the approach and drop the
+`.ticket.md` is the plan (spec, criteria with their edge-case rows, the readings decided at step 1, open
+edge-case questions, approach, risks); it isn't published anywhere else. Go on without waiting: the plan
+is approved automatically. If the user objects to it while the work runs, adjust the approach and drop the
 edge-case tests they reject. Fixes from the quality gate and from the user's feedback go ahead without
 a new plan.
 

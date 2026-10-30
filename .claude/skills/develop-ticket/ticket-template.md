@@ -30,7 +30,7 @@ Reviewed: (commit the last review round covered; later rounds review only what c
 
 ## Approach
 
-(step 3: slices in order, each with its files and the criteria tests it makes pass; what runs in parallel)
+(step 3: slices in order, each with its files and the criteria tests it makes pass; what runs in parallel; the risks)
 
 ## Decisions
 
