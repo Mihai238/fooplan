@@ -40,6 +40,12 @@ export interface MealRef {
   kind: MealKind;
 }
 
+export interface PlanSettings {
+  days: number;
+  people: number;
+  kidFriendly: boolean;
+}
+
 export type Random = () => number;
 
 export interface ScoreContext {
@@ -55,60 +61,28 @@ export const NO_SCORE: Score = () => 0;
 export const MIN_DAYS = 1;
 export const MAX_DAYS = 5;
 export const MIN_PEOPLE = 1;
-export const DEFAULT_DAYS = 5;
-export const DEFAULT_PEOPLE = 2;
 export const MIN_SUGGESTED = 15;
 const SUGGESTIONS = 3;
 
+export const DEFAULT_SETTINGS: Readonly<PlanSettings> = { days: 5, people: 2, kidFriendly: false };
+
 export function createPlan(
   startDate: string,
+  settings: PlanSettings,
   recipes: readonly string[],
   random: Random,
   score: Score = NO_SCORE,
 ): Plan {
   const plan: Plan = {
     days: [],
-    people: DEFAULT_PEOPLE,
+    people: settings.people,
     accepted: false,
     ticked: [],
     added: [],
     shown: [],
-    kidFriendly: false,
+    kidFriendly: settings.kidFriendly,
   };
-  return openDays(plan, startDate, DEFAULT_DAYS, recipes, random, score);
-}
-
-export function setDays(
-  plan: Plan,
-  days: number,
-  recipes: readonly string[],
-  random: Random,
-  score: Score = NO_SCORE,
-): Plan {
-  if (
-    plan.accepted ||
-    days === plan.days.length ||
-    !Number.isInteger(days) ||
-    days < MIN_DAYS ||
-    days > MAX_DAYS
-  ) {
-    return plan;
-  }
-  if (days < plan.days.length) {
-    const dropped = picksOf({ ...plan, days: plan.days.slice(days) });
-    const kept = markUnpicked({ ...plan, days: plan.days.slice(0, days) }, dropped);
-    // The new last day has no next lunch left to cover
-    return withDay(kept, days - 1, { cookExtra: false });
-  }
-  const nextDate = addDays(plan.days[plan.days.length - 1].date, 1);
-  return openDays(plan, nextDate, days - plan.days.length, recipes, random, score);
-}
-
-export function setPeople(plan: Plan, people: number): Plan {
-  if (plan.accepted || people === plan.people || !Number.isInteger(people) || people < MIN_PEOPLE) {
-    return plan;
-  }
-  return { ...plan, people };
+  return openDays(plan, startDate, settings.days, recipes, random, score);
 }
 
 export function pickRecipe(

@@ -15,7 +15,7 @@ import { Language, LanguageStore } from '../../language-store';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RecipeStore } from '../../recipes/recipe-store';
 import {
-  DEFAULT_DAYS,
+  DEFAULT_SETTINGS,
   filledMeals,
   isComplete,
   leftoversOf,
@@ -24,10 +24,12 @@ import {
   MIN_DAYS,
   MIN_PEOPLE,
   MIN_SUGGESTED,
+  PlanSettings,
 } from '../plan';
 import { PlanStore, TODAY } from '../plan-store';
 
 const DATE_FORMATS: Record<Language, string> = { en: 'EEE d MMM', de: 'EEE, d. MMM' };
+const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), [tabindex="0"]';
 
 interface RemovalRow {
   dontSuggest: HTMLButtonElement;
@@ -57,22 +59,17 @@ export class PlanPage {
   protected readonly filled = computed(() => filledMeals(this.plan()));
   protected readonly dateFormat = computed(() => DATE_FORMATS[this.language.language()]);
   protected readonly summary = computed(() => this.language.planSummary(this.plan()));
-  protected readonly nextPlan = computed(() => {
-    const people = this.plan().people;
-    return this.language.t(this.store.kidFriendly() ? 'newPlan.nextKidFriendly' : 'newPlan.next', {
-      days: DEFAULT_DAYS,
-      people,
-      personWord: this.personWord(people),
-    });
-  });
+  protected readonly newPlanSettings = signal<PlanSettings>(DEFAULT_SETTINGS);
+  protected readonly nextPlan = computed(() =>
+    this.language.describePlan(this.newPlanSettings(), 'newPlan.next', 'newPlan.nextKidFriendly'),
+  );
   protected readonly minDays = MIN_DAYS;
   protected readonly maxDays = MAX_DAYS;
   protected readonly minPeople = MIN_PEOPLE;
   protected readonly minSuggested = MIN_SUGGESTED;
-  protected readonly fewestDays = computed(() => this.plan().days.length <= MIN_DAYS);
-  protected readonly mostDays = computed(() => this.plan().days.length >= MAX_DAYS);
-  protected readonly fewestPeople = computed(() => this.plan().people <= MIN_PEOPLE);
-  protected readonly kidFriendlyDisabled = computed(() => !this.store.canBeKidFriendly());
+  protected readonly fewestDays = computed(() => this.newPlanSettings().days <= MIN_DAYS);
+  protected readonly mostDays = computed(() => this.newPlanSettings().days >= MAX_DAYS);
+  protected readonly fewestPeople = computed(() => this.newPlanSettings().people <= MIN_PEOPLE);
   protected readonly recipeSlug = recipeSlug;
   protected readonly meals: readonly { kind: MealKind; label: MessageId }[] = [
     { kind: 'lunch', label: 'meal.lunch' },
@@ -82,16 +79,27 @@ export class PlanPage {
     () => new Map(this.recipes.all().map((recipe) => [recipe.name, recipe])),
   );
   private readonly groceriesLink = viewChild<ElementRef<HTMLAnchorElement>>('groceriesLink');
+  private readonly newPlanDays = viewChild<ElementRef<HTMLElement>>('daysValue');
   protected readonly removing = signal('');
   private removalRow: RemovalRow | null = null;
   private pressedOnBackdrop = false;
 
-  protected stepDays(delta: number): void {
-    this.store.setDays(this.plan().days.length + delta);
+  protected stepNewDays(delta: number): void {
+    const days = this.newPlanSettings().days + delta;
+    if (days >= MIN_DAYS && days <= MAX_DAYS) {
+      this.newPlanSettings.update((settings) => ({ ...settings, days }));
+    }
   }
 
-  protected stepPeople(delta: number): void {
-    this.store.setPeople(this.plan().people + delta);
+  protected stepNewPeople(delta: number): void {
+    const people = this.newPlanSettings().people + delta;
+    if (people >= MIN_PEOPLE) {
+      this.newPlanSettings.update((settings) => ({ ...settings, people }));
+    }
+  }
+
+  protected setNewKidFriendly(kidFriendly: boolean): void {
+    this.newPlanSettings.update((settings) => ({ ...settings, kidFriendly }));
   }
 
   // A button disabled while it has the focus drops the focus to the page, so the focus moves on to
@@ -123,16 +131,31 @@ export class PlanPage {
     afterNextRender(() => this.groceriesLink()?.nativeElement.focus(), { injector: this.injector });
   }
 
+  // The dialog opens with the focus on the Days value, which a screen reader reads out, so it opens
+  // once the values shown are the plan's. The focus is put there itself, as showModal() would focus
+  // the first arrow, and some browsers ignore autofocus on an element that isn't a control; on a
+  // value, unlike a button, a stray Enter discards nothing
   protected newPlan(dialog: HTMLDialogElement): void {
-    if (this.filled() > 0 || this.plan().accepted) {
-      this.openDialog(dialog);
-    } else {
-      this.startPlan();
-    }
+    this.newPlanSettings.set({
+      days: this.plan().days.length,
+      people: this.plan().people,
+      kidFriendly: this.store.kidFriendly(),
+    });
+    afterNextRender(
+      () => {
+        this.openDialog(dialog);
+        this.newPlanDays()?.nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
+  // The store refuses values outside its limits, which leaves the dialog open
   protected startNewPlan(dialog: HTMLDialogElement): void {
-    this.startPlan();
+    if (!this.store.newPlan(this.newPlanSettings())) {
+      return;
+    }
+    this.today.set(this.plan().days[0].date);
     dialog.close();
   }
 
@@ -176,19 +199,23 @@ export class PlanPage {
   }
 
   // A modal dialog keeps Tab off the page behind, but lets it leave for the browser's toolbar, and
-  // Safari's Tab skips buttons by default; so every Tab moves between the two buttons here, with
-  // the focus elsewhere in the dialog counting as before the first and after the last
-  protected trapFocus(event: KeyboardEvent, first: HTMLElement, last: HTMLElement): void {
+  // Safari's Tab skips buttons by default; so every Tab moves between the dialog's enabled focusable
+  // elements here, with the focus elsewhere in the dialog counting as before the first and after
+  // the last
+  protected trapFocus(event: KeyboardEvent, dialog: HTMLDialogElement): void {
     if (event.key !== 'Tab') {
       return;
     }
     event.preventDefault();
-    const [from, to] = event.shiftKey ? [last, first] : [first, last];
-    (document.activeElement === from ? to : from).focus();
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE));
+    const index = focusable.indexOf(document.activeElement as HTMLElement);
+    const from = index === -1 && event.shiftKey ? focusable.length : index;
+    focusable.at((from + (event.shiftKey ? -1 : 1)) % focusable.length)?.focus();
   }
 
   private openDialog(dialog: HTMLDialogElement): void {
-    // A second click on a "×" before the first one's render opens the dialog asks to open it again
+    // A second click on a "×" or "New plan" before the first one's render opens the dialog asks to
+    // open it again
     if (dialog.open) {
       return;
     }
@@ -196,15 +223,6 @@ export class PlanPage {
     // (element.click(), some assistive technology) close the dialog right after reopening
     this.pressedOnBackdrop = false;
     dialog.showModal();
-  }
-
-  private personWord(people: number): string {
-    return this.language.t(people === 1 ? 'person.one' : 'person.other');
-  }
-
-  private startPlan(): void {
-    this.store.newPlan();
-    this.today.set(this.plan().days[0].date);
   }
 
   private isOnBackdrop(event: MouseEvent, dialog: HTMLDialogElement): boolean {

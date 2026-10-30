@@ -1,7 +1,7 @@
 import { computed, effect, Injectable, signal } from '@angular/core';
 import { Section } from './groceries/sections';
 import { LOCALES, MESSAGES, MessageId } from './i18n';
-import type { Plan } from './plan/plan';
+import type { Plan, PlanSettings } from './plan/plan';
 import { Amount, formatAmount } from './recipes/amount';
 import { Unit } from './recipes/recipe';
 import { readStoredText, writeStoredText } from './storage';
@@ -53,9 +53,21 @@ export class LanguageStore {
   }
 
   planSummary({ days, people, kidFriendly }: Plan): string {
-    return this.t(kidFriendly ? 'plan.summaryKidFriendly' : 'plan.summary', {
-      days: days.length,
-      dayWord: this.t(days.length === 1 ? 'day.one' : 'day.other'),
+    return this.describePlan(
+      { days: days.length, people, kidFriendly },
+      'plan.summary',
+      'plan.summaryKidFriendly',
+    );
+  }
+
+  describePlan(
+    { days, people, kidFriendly }: PlanSettings,
+    id: MessageId,
+    kidFriendlyId: MessageId,
+  ): string {
+    return this.t(kidFriendly ? kidFriendlyId : id, {
+      days,
+      dayWord: this.t(days === 1 ? 'day.one' : 'day.other'),
       people,
       personWord: this.t(people === 1 ? 'person.one' : 'person.other'),
     });

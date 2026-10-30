@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { DEFAULT_SETTINGS } from '../plan/plan';
 import { PlanStore, RANDOM, TODAY } from '../plan/plan-store';
 import { seededRandom } from '../plan/testing';
 import { StepsViewStore } from './steps-view-store';
@@ -72,7 +73,7 @@ describe('StepsViewStore', () => {
       });
       const store = createStore();
       store.set('all');
-      TestBed.inject(PlanStore).newPlan();
+      TestBed.inject(PlanStore).newPlan(DEFAULT_SETTINGS);
       expect(store.view()).toBe('all');
       expect(localStorage.getItem(STEPS_VIEW_KEY)).toBe('all');
       expect(reload().view(), 'after a reload').toBe('all');

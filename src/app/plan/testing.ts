@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { RecipeStore } from '../recipes/recipe-store';
 import { Recipe } from '../recipes/recipe';
 import { RECIPES } from '../recipes/recipes';
-import { Meal, MealRef, Plan, PlanDay, Random } from './plan';
+import { DEFAULT_SETTINGS, Meal, MealRef, Plan, PlanDay, Random } from './plan';
 import { PlanStore } from './plan-store';
 
 export const LUNCH: MealRef = { day: 0, kind: 'lunch' };
@@ -49,7 +49,7 @@ export function seededRandom(seed: number): Random {
 }
 
 export function acceptOneDayPlan(store: PlanStore): void {
-  store.setDays(1);
+  store.newPlan({ ...DEFAULT_SETTINGS, days: 1 });
   for (const meal of [LUNCH, DINNER]) {
     store.pick(meal, store.plan().days[0][meal.kind].suggestions[0]);
   }

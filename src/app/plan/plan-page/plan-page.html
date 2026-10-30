@@ -1,94 +1,6 @@
 <div class="toolbar">
   <h1>{{ language.t('plan.title') }}</h1>
-  @if (plan().accepted) {
-    <p class="summary">{{ summary() }}</p>
-  } @else {
-    <!-- The arrow keys step the value also at a limit, where nothing changes, so that they never
-         scroll the page from it -->
-    <span class="stepper">
-      <span id="days-label" class="stepper-label">{{ language.t('plan.days') }}</span>
-      <button
-        #fewerDays
-        type="button"
-        class="step"
-        [attr.aria-label]="language.t('plan.oneDayFewer')"
-        [disabled]="fewestDays()"
-        (click)="stepDays(-1); keepFocus(fewerDays, fewestDays(), daysValue)"
-      >
-        <span aria-hidden="true">▼</span>
-      </button>
-      <span
-        #daysValue
-        role="spinbutton"
-        tabindex="0"
-        class="value"
-        aria-labelledby="days-label"
-        [attr.aria-valuenow]="plan().days.length"
-        [attr.aria-valuemin]="minDays"
-        [attr.aria-valuemax]="maxDays"
-        (keydown.arrowup)="$event.preventDefault(); stepDays(1)"
-        (keydown.arrowdown)="$event.preventDefault(); stepDays(-1)"
-      >
-        {{ plan().days.length }}
-      </span>
-      <button
-        #moreDays
-        type="button"
-        class="step"
-        [attr.aria-label]="language.t('plan.oneMoreDay')"
-        [disabled]="mostDays()"
-        (click)="stepDays(1); keepFocus(moreDays, mostDays(), daysValue)"
-      >
-        <span aria-hidden="true">▲</span>
-      </button>
-    </span>
-    <span class="stepper">
-      <span id="people-label" class="stepper-label">{{ language.t('plan.people') }}</span>
-      <button
-        #fewerPeople
-        type="button"
-        class="step"
-        [attr.aria-label]="language.t('plan.onePersonFewer')"
-        [disabled]="fewestPeople()"
-        (click)="stepPeople(-1); keepFocus(fewerPeople, fewestPeople(), peopleValue)"
-      >
-        <span aria-hidden="true">▼</span>
-      </button>
-      <span
-        #peopleValue
-        role="spinbutton"
-        tabindex="0"
-        class="value"
-        aria-labelledby="people-label"
-        [attr.aria-valuenow]="plan().people"
-        [attr.aria-valuemin]="minPeople"
-        (keydown.arrowup)="$event.preventDefault(); stepPeople(1)"
-        (keydown.arrowdown)="$event.preventDefault(); stepPeople(-1)"
-      >
-        {{ plan().people }}
-      </span>
-      <button
-        type="button"
-        class="step"
-        [attr.aria-label]="language.t('plan.oneMorePerson')"
-        (click)="stepPeople(1)"
-      >
-        <span aria-hidden="true">▲</span>
-      </button>
-    </span>
-    <label class="kid-friendly">
-      <input
-        #kidFriendlyInput
-        type="checkbox"
-        id="kid-friendly"
-        [checked]="plan().kidFriendly"
-        [disabled]="kidFriendlyDisabled()"
-        [attr.aria-describedby]="kidFriendlyDisabled() ? 'kid-friendly-note' : null"
-        (change)="store.setKidFriendly(kidFriendlyInput.checked)"
-      />
-      {{ language.t('plan.kidFriendly') }}
-    </label>
-  }
+  <p class="summary">{{ summary() }}</p>
   <button
     #newPlanButton
     type="button"
@@ -98,12 +10,6 @@
     {{ language.t('plan.newPlan') }}
   </button>
 </div>
-
-@if (!plan().accepted && kidFriendlyDisabled()) {
-  <p id="kid-friendly-note" class="note">
-    {{ language.t('plan.kidFriendlyNote', { min: minSuggested }) }}
-  </p>
-}
 
 <div class="days">
   @for (day of plan().days; track day.date; let dayIndex = $index, lastDay = $last) {
@@ -236,37 +142,137 @@
   aria-describedby="new-plan-lost new-plan-next"
   (pointerdown)="pressBackdrop($event, newPlanDialog)"
   (click)="closeOnBackdrop($event, newPlanDialog)"
-  (keydown)="trapFocus($event, keepButton, startButton)"
+  (keydown)="trapFocus($event, newPlanDialog)"
   (close)="newPlanButton.focus()"
 >
   @let days = plan().days;
   @let firstDate = days[0].date | date: dateFormat() : undefined : language.locale();
   @let lastDate = days[days.length - 1].date | date: dateFormat() : undefined : language.locale();
+  @let lost = filled() > 0 || plan().accepted;
   <h2 id="new-plan-title">{{ language.t('newPlan.title') }}</h2>
-  <p id="new-plan-lost">
-    {{
-      language.t('newPlan.lost', {
-        dates: days.length === 1 ? firstDate! : firstDate + ' – ' + lastDate,
-        filled: filled(),
-        total: days.length * 2,
-      })
-    }}
-    @if (plan().accepted) {
-      {{ language.t('newPlan.accepted') }}
+  @if (lost) {
+    <p id="new-plan-lost">
+      {{
+        language.t('newPlan.lost', {
+          dates: days.length === 1 ? firstDate! : firstDate + ' – ' + lastDate,
+          filled: filled(),
+          total: days.length * 2,
+        })
+      }}
+      @if (plan().accepted) {
+        {{ language.t('newPlan.accepted') }}
+      }
+      @if (plan().ticked.length > 0) {
+        {{ language.t('newPlan.ticks') }}
+      }
+      @if (plan().added.length > 0) {
+        {{ language.t('newPlan.added') }}
+      }
+    </p>
+  }
+  <div class="settings">
+    <!-- The arrow keys step the value also at a limit, where nothing changes, so that they never
+         scroll the page from it -->
+    <span class="stepper">
+      <span id="days-label" class="stepper-label">{{ language.t('plan.days') }}</span>
+      <button
+        #fewerDays
+        type="button"
+        class="step"
+        [attr.aria-label]="language.t('plan.oneDayFewer')"
+        [disabled]="fewestDays()"
+        (click)="stepNewDays(-1); keepFocus(fewerDays, fewestDays(), daysValue)"
+      >
+        <span aria-hidden="true">▼</span>
+      </button>
+      <span
+        #daysValue
+        role="spinbutton"
+        tabindex="0"
+        class="value"
+        aria-labelledby="days-label"
+        [attr.aria-valuenow]="newPlanSettings().days"
+        [attr.aria-valuemin]="minDays"
+        [attr.aria-valuemax]="maxDays"
+        (keydown.arrowup)="$event.preventDefault(); stepNewDays(1)"
+        (keydown.arrowdown)="$event.preventDefault(); stepNewDays(-1)"
+      >
+        {{ newPlanSettings().days }}
+      </span>
+      <button
+        #moreDays
+        type="button"
+        class="step"
+        [attr.aria-label]="language.t('plan.oneMoreDay')"
+        [disabled]="mostDays()"
+        (click)="stepNewDays(1); keepFocus(moreDays, mostDays(), daysValue)"
+      >
+        <span aria-hidden="true">▲</span>
+      </button>
+    </span>
+    <span class="stepper">
+      <span id="people-label" class="stepper-label">{{ language.t('plan.people') }}</span>
+      <button
+        #fewerPeople
+        type="button"
+        class="step"
+        [attr.aria-label]="language.t('plan.onePersonFewer')"
+        [disabled]="fewestPeople()"
+        (click)="stepNewPeople(-1); keepFocus(fewerPeople, fewestPeople(), peopleValue)"
+      >
+        <span aria-hidden="true">▼</span>
+      </button>
+      <span
+        #peopleValue
+        role="spinbutton"
+        tabindex="0"
+        class="value"
+        aria-labelledby="people-label"
+        [attr.aria-valuenow]="newPlanSettings().people"
+        [attr.aria-valuemin]="minPeople"
+        (keydown.arrowup)="$event.preventDefault(); stepNewPeople(1)"
+        (keydown.arrowdown)="$event.preventDefault(); stepNewPeople(-1)"
+      >
+        {{ newPlanSettings().people }}
+      </span>
+      <button
+        type="button"
+        class="step"
+        [attr.aria-label]="language.t('plan.oneMorePerson')"
+        (click)="stepNewPeople(1)"
+      >
+        <span aria-hidden="true">▲</span>
+      </button>
+    </span>
+    <label class="kid-friendly">
+      <input
+        #kidFriendlyInput
+        type="checkbox"
+        id="kid-friendly"
+        [checked]="newPlanSettings().kidFriendly"
+        [disabled]="!store.canBeKidFriendly()"
+        [attr.aria-describedby]="store.canBeKidFriendly() ? null : 'kid-friendly-note'"
+        (change)="setNewKidFriendly(kidFriendlyInput.checked)"
+      />
+      {{ language.t('plan.kidFriendly') }}
+    </label>
+    @if (!store.canBeKidFriendly()) {
+      <p id="kid-friendly-note" class="note">
+        {{ language.t('plan.kidFriendlyNote', { min: minSuggested }) }}
+      </p>
     }
-    @if (plan().ticked.length > 0) {
-      {{ language.t('newPlan.ticks') }}
-    }
-    @if (plan().added.length > 0) {
-      {{ language.t('newPlan.added') }}
-    }
-  </p>
+  </div>
   <p id="new-plan-next">{{ nextPlan() }}</p>
   <div class="actions">
-    <button #keepButton type="button" class="secondary" autofocus (click)="newPlanDialog.close()">
+    <button type="button" class="secondary" (click)="newPlanDialog.close()">
       {{ language.t('newPlan.keep') }}
     </button>
-    <button #startButton type="button" class="primary danger" (click)="startNewPlan(newPlanDialog)">
+    <button
+      type="button"
+      class="primary"
+      [class.danger]="lost"
+      (click)="startNewPlan(newPlanDialog)"
+    >
       {{ language.t('newPlan.start') }}
     </button>
   </div>
@@ -281,7 +287,7 @@
   aria-describedby="dont-suggest-text"
   (pointerdown)="pressBackdrop($event, dontSuggestDialog)"
   (click)="closeOnBackdrop($event, dontSuggestDialog)"
-  (keydown)="trapFocus($event, keepSuggestingButton, dontSuggestButton)"
+  (keydown)="trapFocus($event, dontSuggestDialog)"
   (close)="focusRow()"
 >
   <h2 id="dont-suggest-title">
@@ -289,21 +295,10 @@
   </h2>
   <p id="dont-suggest-text">{{ language.t('dontSuggest.text') }}</p>
   <div class="actions">
-    <button
-      #keepSuggestingButton
-      type="button"
-      class="secondary"
-      autofocus
-      (click)="dontSuggestDialog.close()"
-    >
+    <button type="button" class="secondary" autofocus (click)="dontSuggestDialog.close()">
       {{ language.t('dontSuggest.keep') }}
     </button>
-    <button
-      #dontSuggestButton
-      type="button"
-      class="primary"
-      (click)="confirmDontSuggest(dontSuggestDialog)"
-    >
+    <button type="button" class="primary" (click)="confirmDontSuggest(dontSuggestDialog)">
       {{ language.t('dontSuggest.confirm') }}
     </button>
   </div>

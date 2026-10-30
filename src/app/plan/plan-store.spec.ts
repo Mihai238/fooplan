@@ -5,7 +5,7 @@ import { RecipeStore } from '../recipes/recipe-store';
 import { Recipe } from '../recipes/recipe';
 import { RECIPES } from '../recipes/recipes';
 import { ownRecipe, PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../recipes/testing';
-import { addedKey, DEFAULT_DAYS, MealRef, Plan } from './plan';
+import { addedKey, DEFAULT_SETTINGS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
 import { scoreWith } from './ranking';
 import {
@@ -252,8 +252,7 @@ describe('PlanStore', () => {
   });
 
   it('shows the same days, people, picks and suggestions of a plan in progress after a reload', () => {
-    store.setDays(2);
-    store.setPeople(3);
+    store.newPlan({ days: 2, people: 3, kidFriendly: false });
     pickFirstSuggestion(LUNCH);
     const before = store.plan();
     expect(before.days, 'days not set').toHaveLength(2);
@@ -269,7 +268,7 @@ describe('PlanStore', () => {
   });
 
   it('turns on "Cook extra" for a dinner, covering the next lunch, and keeps it after a reload', () => {
-    store.setDays(2);
+    store.newPlan({ ...DEFAULT_SETTINGS, days: 2 });
     pickFirstSuggestion(DINNER);
     store.setCookExtra(0, true);
     const before = store.plan();
@@ -372,7 +371,7 @@ describe('PlanStore', () => {
   });
 
   it('keeps the start date of a stored plan when reloaded on a later day', () => {
-    store.setDays(2);
+    store.newPlan({ ...DEFAULT_SETTINGS, days: 2 });
     const before = store.plan();
     expect(before.days, 'days not set').toHaveLength(2);
     today = '2026-10-27';
@@ -413,7 +412,7 @@ describe('PlanStore', () => {
     acceptOneDayPlan(store);
     today = '2026-10-26';
 
-    store.newPlan();
+    store.newPlan(DEFAULT_SETTINGS);
     expectFreshPlan(store.plan(), '2026-10-26');
     expect(reload().plan()).toEqual(store.plan());
   });
@@ -423,20 +422,11 @@ describe('PlanStore', () => {
       store.otherSuggestions(LUNCH);
     }
 
-    store.newPlan();
+    store.newPlan(DEFAULT_SETTINGS);
     expectFreshPlan(store.plan(), '2026-10-24');
     expect([...store.plan().shown].sort()).toEqual(
       [...new Set(suggestionsOf(store.plan()))].sort(),
     );
-  });
-
-  it('keeps the people on "New plan"', () => {
-    store.setPeople(4);
-    acceptOneDayPlan(store);
-
-    store.newPlan();
-    expect(store.plan().accepted).toBe(false);
-    expect(store.plan().people).toBe(4);
   });
 
   it('keeps a ticked grocery item ticked after a reload', () => {
@@ -453,7 +443,7 @@ describe('PlanStore', () => {
     store.toggleTicked(firstItemKey());
     expect(store.plan().ticked, 'item not ticked').toHaveLength(1);
 
-    store.newPlan();
+    store.newPlan(DEFAULT_SETTINGS);
     expect(store.plan().ticked).toEqual([]);
     expect(store.plan().accepted).toBe(false);
     store = reload();
@@ -484,13 +474,127 @@ describe('PlanStore', () => {
     store.toggleTicked(addedKey('coffee'));
     expect(store.plan().added, 'items not added').toHaveLength(2);
 
-    store.newPlan();
+    store.newPlan(DEFAULT_SETTINGS);
     expect(store.plan().added).toEqual([]);
     expect(store.plan().ticked).toEqual([]);
     store = reload();
     expect(store.plan().added).toEqual([]);
     acceptOneDayPlan(store);
     expect(store.plan().added).toEqual([]);
+  });
+
+  describe('newPlan with settings (#41)', () => {
+    it('starts 2 open days from today for 3 people with no pick, tick or added item and only the new suggestions shown on store.newPlan({ days: 2, people: 3, kidFriendly: false }) from a 5-day plan for 2 with 3 picks and a tick, and saves it; draws only kid-friendly recipes with kidFriendly: true; and keeps the same plan for kidFriendly: true with 14 kid-friendly recipes suggested, days 0, 6 or 2.5 or people 0', () => {
+      for (const meal of [LUNCH, DINNER, { day: 1, kind: 'lunch' } as const]) {
+        pickFirstSuggestion(meal);
+      }
+      today = '2026-10-26';
+
+      store.newPlan({ days: 2, people: 3, kidFriendly: false });
+      const plan = store.plan();
+      expect(plan.days.map((planDay) => planDay.date)).toEqual(['2026-10-26', '2026-10-27']);
+      expect(plan.people).toBe(3);
+      expect(plan.kidFriendly).toBe(false);
+      expect(plan.accepted).toBe(false);
+      for (const planDay of plan.days) {
+        for (const meal of [planDay.lunch, planDay.dinner]) {
+          expect(meal.recipe, planDay.date).toBeNull();
+          expect(meal.suggestions, planDay.date).toHaveLength(3);
+        }
+      }
+      expect([...plan.shown].sort()).toEqual([...new Set(suggestionsOf(plan))].sort());
+      expect(reload().plan(), 'after a reload').toEqual(plan);
+
+      // Grocery lines can only be ticked on an accepted plan
+      store = reload();
+      acceptOneDayPlan(store);
+      store.toggleTicked(firstItemKey());
+      store.addItem('toilet paper');
+      expect(store.plan().ticked, 'item not ticked').toHaveLength(1);
+      store.newPlan({ days: 2, people: 3, kidFriendly: false });
+      expect(store.plan()).toMatchObject({ accepted: false, ticked: [], added: [], people: 3 });
+      expect(store.plan().days).toHaveLength(2);
+
+      store = reload();
+      store.newPlan({ days: 5, people: 2, kidFriendly: true });
+      expect(store.plan().kidFriendly).toBe(true);
+      expectKidFriendly('kid-friendly new plan');
+
+      // A kid-friendly plan stops removals at 15 kid-friendly recipes
+      localStorage.clear();
+      store = reload();
+      leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+      const before = store.plan();
+      for (const settings of [
+        { days: 3, people: 2, kidFriendly: true },
+        { days: 0, people: 2, kidFriendly: false },
+        { days: 6, people: 2, kidFriendly: false },
+        { days: 2.5, people: 2, kidFriendly: false },
+        { days: 3, people: 0, kidFriendly: false },
+      ]) {
+        store.newPlan(settings);
+        expect(store.plan(), JSON.stringify(settings)).toBe(before);
+      }
+    });
+
+    describe('edge cases', () => {
+      it('keeps the same plan and saves nothing on newPlan with people 1.5 or -1, days -1 or NaN', () => {
+        const before = store.plan();
+        const stored = localStorage.getItem(STORAGE_KEY);
+        for (const settings of [
+          { days: 3, people: 1.5, kidFriendly: false },
+          { days: 3, people: -1, kidFriendly: false },
+          { days: -1, people: 2, kidFriendly: false },
+          { days: Number.NaN, people: 2, kidFriendly: false },
+        ]) {
+          store.newPlan(settings);
+          expect(store.plan(), JSON.stringify(settings)).toBe(before);
+        }
+        expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
+        // A rejected call must not be one that ignores its settings
+        store.newPlan({ days: 3, people: 2, kidFriendly: false });
+        expect(store.plan().days, 'valid settings').toHaveLength(3);
+      });
+
+      it('starts 1 day for 1 person, 5 days for 100 people, and a kid-friendly plan with exactly 15 kid-friendly recipes suggested', () => {
+        store.newPlan({ days: 1, people: 1, kidFriendly: false });
+        expect(store.plan().days).toHaveLength(1);
+        expect(store.plan().people).toBe(1);
+
+        store.newPlan({ days: 5, people: 100, kidFriendly: false });
+        expect(store.plan().days).toHaveLength(5);
+        expect(store.plan().people).toBe(100);
+
+        leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 15), ...NOT_KID_FRIENDLY);
+        store.newPlan({ days: 2, people: 2, kidFriendly: true });
+        expect(store.plan().days).toHaveLength(2);
+        expect(store.plan().kidFriendly).toBe(true);
+        expectKidFriendly('15 kid-friendly suggested');
+      });
+
+      it('tells whether newPlan started a plan: true for 3 days and for the defaults, false for 6 days, 0 people or kid-friendly while 14 kid-friendly recipes are suggested', () => {
+        expect(store.newPlan({ ...DEFAULT_SETTINGS, days: 3 })).toBe(true);
+        expect(store.newPlan({ ...DEFAULT_SETTINGS, days: 6 })).toBe(false);
+        expect(store.newPlan({ ...DEFAULT_SETTINGS, people: 0 })).toBe(false);
+        leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+        expect(store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true })).toBe(false);
+        expect(store.newPlan(DEFAULT_SETTINGS)).toBe(true);
+      });
+
+      it('starts a plan that is not kid-friendly from a kid-friendly one on newPlan with kidFriendly: false, drawing from every suggested recipe', () => {
+        store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
+        expect(store.plan().kidFriendly, 'not kid-friendly').toBe(true);
+
+        const drawn = new Set<string>();
+        for (let i = 0; i < 3; i++) {
+          store.newPlan({ days: 5, people: 2, kidFriendly: false });
+          expect(store.plan().kidFriendly).toBe(false);
+          expect(store.plan().days).toHaveLength(5);
+          suggestionsOf(store.plan()).forEach((name) => drawn.add(name));
+        }
+        expect(NOT_KID_FRIENDLY.filter((name) => drawn.has(name)).length).toBeGreaterThan(0);
+      });
+    });
   });
 
   describe('own recipes', () => {
@@ -937,37 +1041,30 @@ describe('PlanStore', () => {
   });
 
   describe('kid-friendly', () => {
-    it('turns kid-friendly on with setKidFriendly, suggesting none of the 11 recipes that are not kid-friendly, saves it and keeps it after a reload, and keeps the same plan when set on again', () => {
+    it('starts a kid-friendly plan with newPlan, suggesting none of the 11 recipes that are not kid-friendly, saves it and keeps it after a reload', () => {
       expect(store.plan().kidFriendly, 'new plan').toBe(false);
       expect(
         suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)).length,
         'strong flavours suggested before',
       ).toBeGreaterThan(0);
 
-      store.setKidFriendly(true);
+      store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
       expect(store.plan().kidFriendly).toBe(true);
-      expectKidFriendly('turned on');
+      expectKidFriendly('new plan');
       store = reload();
       expect(store.plan().kidFriendly, 'after a reload').toBe(true);
       expectKidFriendly('after a reload');
-
-      const before = store.plan();
-      store.setKidFriendly(true);
-      expect(store.plan()).toBe(before);
     });
 
-    it('draws only kid-friendly recipes while kid-friendly is on, for "Other suggestions", the days, picks, "Cook extra" turned off and the replacement of a removed recipe, and from every suggested recipe again for a new plan once it is off', () => {
-      store.setKidFriendly(true);
-      expectKidFriendly('turned on');
+    it('draws only kid-friendly recipes while kid-friendly is on, for "Other suggestions", picks, "Cook extra" turned off and the replacement of a removed recipe, and from every suggested recipe again for a new plan that is not kid-friendly', () => {
+      store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
+      expectKidFriendly('new plan');
       for (const meal of mealRefs(store.plan())) {
         for (let click = 1; click <= 3; click++) {
           store.otherSuggestions(meal);
           expectKidFriendly(`day ${meal.day} ${meal.kind}, "Other suggestions" ${click}`);
         }
       }
-      store.setDays(1);
-      store.setDays(5);
-      expectKidFriendly('5 days again');
       for (const meal of mealRefs(store.plan()).slice(0, -1)) {
         pickFirstSuggestion(meal);
         expectKidFriendly(`picked day ${meal.day} ${meal.kind}`);
@@ -981,8 +1078,7 @@ describe('PlanStore', () => {
       expect(store.removed(), `${removed} not removed`).toEqual([removed]);
       expectKidFriendly(`${removed} removed`);
 
-      store.setKidFriendly(false);
-      store.newPlan();
+      store.newPlan(DEFAULT_SETTINGS);
       expect(store.plan().kidFriendly).toBe(false);
       expect(
         suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)).length,
@@ -990,10 +1086,10 @@ describe('PlanStore', () => {
       ).toBeGreaterThan(0);
     });
 
-    it('lets recipes be removed with kid-friendly on while 16 kid-friendly recipes are suggested, none once 15 are left, not even one that is not kid-friendly, and again once it is off', () => {
+    it('lets recipes be removed with kid-friendly on while 16 kid-friendly recipes are suggested, none once 15 are left, not even one that is not kid-friendly, and again for a new plan that is not kid-friendly', () => {
       const sixteen = KID_FRIENDLY.slice(0, 16);
       leaveSuggested(store, 27, ...sixteen, ...NOT_KID_FRIENDLY);
-      store.setKidFriendly(true);
+      store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
       expect(store.canRemove(), '16 kid-friendly suggested').toBe(true);
 
       store.removeRecipe(sixteen[0]);
@@ -1004,26 +1100,10 @@ describe('PlanStore', () => {
       store.removeRecipe(NOT_KID_FRIENDLY[0]);
       expect(store.removed(), 'removed at 15 kid-friendly suggested').toEqual(before);
 
-      store.setKidFriendly(false);
-      expect(store.canRemove(), 'turned off').toBe(true);
+      store.newPlan(DEFAULT_SETTINGS);
+      expect(store.canRemove(), 'not kid-friendly').toBe(true);
       store.removeRecipe(NOT_KID_FRIENDLY[0]);
       expect(store.removed()).toEqual([...before, NOT_KID_FRIENDLY[0]]);
-    });
-
-    it('keeps "New plan" kid-friendly, suggesting none of the 11 recipes that are not kid-friendly, also after a reload, and not kid-friendly when it is off', () => {
-      store.setKidFriendly(true);
-      acceptOneDayPlan(store);
-
-      store.newPlan();
-      expectFreshPlan(store.plan(), '2026-10-24');
-      expect(store.plan().kidFriendly).toBe(true);
-      expectKidFriendly('new plan');
-      expect(reload().plan(), 'after a reload').toEqual(store.plan());
-
-      store = reload();
-      store.setKidFriendly(false);
-      store.newPlan();
-      expect(store.plan().kidFriendly, 'turned off').toBe(false);
     });
 
     it('replaces "Penne arrabbiata" and "Niçoise salad" suggested by a saved kid-friendly plan in their places with kid-friendly recipes when loading it, keeps the other suggestions and the dinner picked as "Pad thai with chicken", and saves the plan with the replacements', () => {
@@ -1102,8 +1182,8 @@ describe('PlanStore', () => {
       storeOwnRecipes(PLAIN_RICE);
       store = reload();
       leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 14), PLAIN_RICE.name, ...NOT_KID_FRIENDLY);
-      store.setKidFriendly(true);
-      expect(store.plan().kidFriendly, 'not turned on').toBe(true);
+      store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
+      expect(store.plan().kidFriendly, 'not kid-friendly').toBe(true);
       for (const meal of mealRefs(store.plan()).slice(0, -1)) {
         const { suggestions } = store.plan().days[meal.day][meal.kind];
         store.pick(meal, suggestions.filter((name) => name !== PLAIN_RICE.name)[0]);
@@ -1186,16 +1266,6 @@ describe('PlanStore', () => {
     });
 
     describe('edge cases', () => {
-      it('changes nothing on setKidFriendly(true) while 14 kid-friendly recipes are suggested', () => {
-        leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
-        const before = store.plan();
-        const stored = localStorage.getItem(STORAGE_KEY);
-
-        store.setKidFriendly(true);
-        expect(store.plan()).toBe(before);
-        expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
-      });
-
       it('loads a saved kid-friendly plan not kid-friendly, with its suggestions, and saves it while only 14 kid-friendly recipes are suggested', () => {
         localStorage.setItem(REMOVED_KEY, JSON.stringify(KID_FRIENDLY.slice(14)));
         const saved = planOf(
@@ -1211,7 +1281,7 @@ describe('PlanStore', () => {
         );
       });
 
-      it('keeps a saved accepted kid-friendly plan kid-friendly while only 14 kid-friendly recipes are suggested, saving nothing, and starts "New plan" not kid-friendly from it, drawing from every suggested recipe', () => {
+      it('keeps a saved accepted kid-friendly plan kid-friendly while only 14 kid-friendly recipes are suggested, saving nothing, tells kidFriendly false for it, and starts a new plan from it only when it is not kid-friendly, drawing from every suggested recipe', () => {
         localStorage.setItem(REMOVED_KEY, JSON.stringify(KID_FRIENDLY.slice(14)));
         const stored = JSON.stringify(
           planOf([day('2026-10-24', picked(KID_FRIENDLY[0]), picked(KID_FRIENDLY[1]))], {
@@ -1224,8 +1294,12 @@ describe('PlanStore', () => {
         store = reload();
         expect(store.plan().kidFriendly, 'accepted plan').toBe(true);
         expect(localStorage.getItem(STORAGE_KEY), 'accepted plan saved').toBe(stored);
+        expect(store.kidFriendly()).toBe(false);
 
-        store.newPlan();
+        const accepted = store.plan();
+        store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
+        expect(store.plan(), 'kid-friendly new plan').toBe(accepted);
+        store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: store.kidFriendly() });
         expect(store.plan().kidFriendly, 'new plan').toBe(false);
         expect(
           suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)).length,
@@ -1292,7 +1366,7 @@ describe('PlanStore', () => {
         );
         expect(store.deleteBlock(PLAIN_RICE.name), 'off').toBeNull();
 
-        store.setKidFriendly(true);
+        store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
         expect(store.deleteBlock(PLAIN_RICE.name), 'on').toBe('limit');
         store.deleteRecipe(PLAIN_RICE.name);
         expect(
@@ -1315,13 +1389,6 @@ describe('PlanStore', () => {
         ingredients: [...recipe.ingredients, { name: 'chili flakes', amount: 1, unit: 'tsp' }],
       };
     }
-
-    function expectKidFriendly(step: string) {
-      expect(
-        suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)),
-        step,
-      ).toEqual([]);
-    }
   });
 
   describe('recipes not suggested', () => {
@@ -1329,7 +1396,7 @@ describe('PlanStore', () => {
       vi.restoreAllMocks();
     });
 
-    it('suggests only the 15 recipes left suggested in a new plan, after "Other suggestions", changing the days, picks and "Cook extra"', () => {
+    it('suggests only the 15 recipes left suggested in a new plan, after "Other suggestions", picks and "Cook extra"', () => {
       const suggested = leaveSuggested(store, 15);
       const expectOnlySuggested = (step: string) =>
         expect(
@@ -1337,7 +1404,7 @@ describe('PlanStore', () => {
           step,
         ).toEqual([]);
 
-      store.newPlan();
+      store.newPlan(DEFAULT_SETTINGS);
       expectOnlySuggested('new plan');
       for (const meal of mealRefs(store.plan())) {
         for (let click = 1; click <= 5; click++) {
@@ -1345,10 +1412,6 @@ describe('PlanStore', () => {
           expectOnlySuggested(`day ${meal.day} ${meal.kind}, "Other suggestions" ${click}`);
         }
       }
-      store.setDays(1);
-      expectOnlySuggested('1 day');
-      store.setDays(5);
-      expectOnlySuggested('5 days again');
       for (const meal of mealRefs(store.plan()).slice(0, -1)) {
         pickFirstSuggestion(meal);
         expectOnlySuggested(`picked day ${meal.day} ${meal.kind}`);
@@ -1366,7 +1429,7 @@ describe('PlanStore', () => {
       expect(store.removed(), 'Penne arrabbiata not removed').toContain('Penne arrabbiata');
 
       store.restoreRecipe('Penne arrabbiata');
-      store.newPlan();
+      store.newPlan(DEFAULT_SETTINGS);
       expect(suggestionsOf(store.plan())).toContain('Penne arrabbiata');
     });
 
@@ -1515,7 +1578,7 @@ describe('PlanStore', () => {
         'Chickpea and spinach curry',
         'Shakshuka with bread',
       ]);
-      store.newPlan();
+      store.newPlan(DEFAULT_SETTINGS);
       expect(store.removed(), 'after "New plan"').toEqual([
         'Chickpea and spinach curry',
         'Shakshuka with bread',
@@ -1710,8 +1773,15 @@ describe('PlanStore', () => {
     store.pick(meal, suggestions[0]);
   }
 
+  function expectKidFriendly(step: string) {
+    expect(
+      suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)),
+      step,
+    ).toEqual([]);
+  }
+
   function expectFreshPlan(plan: Plan, startDate: string) {
-    expect(plan.days).toHaveLength(DEFAULT_DAYS);
+    expect(plan.days).toHaveLength(DEFAULT_SETTINGS.days);
     expect(plan.days[0].date).toBe(startDate);
     expect(plan.accepted).toBe(false);
     for (const planDay of plan.days) {

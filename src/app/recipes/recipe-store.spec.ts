@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { LanguageStore } from '../language-store';
+import { DEFAULT_SETTINGS } from '../plan/plan';
 import { PlanStore, RANDOM, TODAY } from '../plan/plan-store';
 import { seededRandom } from '../plan/testing';
 import { checkRecipe } from './own-recipe';
@@ -41,7 +42,7 @@ describe('RecipeStore', () => {
 
     store = reload();
     expect(store.own(), 'after a reload').toEqual([QUICK_DAL, PLAIN_RICE]);
-    TestBed.inject(PlanStore).newPlan();
+    TestBed.inject(PlanStore).newPlan(DEFAULT_SETTINGS);
     expect(store.own(), 'after "New plan"').toEqual([QUICK_DAL, PLAIN_RICE]);
     expect(storedRecipes(), 'saved after "New plan"').toEqual(saved);
   });

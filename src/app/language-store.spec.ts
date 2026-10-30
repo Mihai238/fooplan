@@ -3,6 +3,7 @@ import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { SECTIONS } from './groceries/sections';
 import { Language, LanguageStore } from './language-store';
+import { DEFAULT_SETTINGS } from './plan/plan';
 import { PlanStore, RANDOM, TODAY } from './plan/plan-store';
 import { seededRandom } from './plan/testing';
 import { UNITS } from './recipes/recipe';
@@ -120,7 +121,7 @@ describe('LanguageStore', () => {
       expect(localStorage.getItem(LANGUAGE_KEY)).toBe('de');
       expect(document.documentElement.lang).toBe('de');
 
-      TestBed.inject(PlanStore).newPlan();
+      TestBed.inject(PlanStore).newPlan(DEFAULT_SETTINGS);
       expect(store.language(), 'after "New plan"').toBe('de');
       expect(localStorage.getItem(LANGUAGE_KEY), 'saved after "New plan"').toBe('de');
       expectLoaded('de', 'de after a reload');

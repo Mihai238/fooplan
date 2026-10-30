@@ -7,24 +7,27 @@ import {
   addItem,
   clearMeal,
   createPlan,
+  DEFAULT_SETTINGS,
   dropSuggestion,
   dropSuggestionsOutside,
   eatOut,
   forgetRecipe,
   isPicked,
+  MAX_DAYS,
   MealRef,
+  MIN_DAYS,
+  MIN_PEOPLE,
   MIN_SUGGESTED,
   otherSuggestions,
   parsePlan,
   pickRecipe,
   Plan,
+  PlanSettings,
   Random,
   removeItem,
   renameRecipe,
   setCookExtra,
-  setDays,
   setKidFriendly,
-  setPeople,
   toggleTicked,
 } from './plan';
 import { scoreWith } from './ranking';
@@ -77,23 +80,6 @@ export class PlanStore {
   readonly kidFriendly = computed(() => this.plan().kidFriendly && this.canBeKidFriendly());
   private readonly candidates = computed(() => this.candidatesOf(this.kidFriendly()));
   readonly canRemove = computed(() => this.candidates().length > MIN_SUGGESTED);
-
-  setDays(days: number): void {
-    this.update((plan) => setDays(plan, days, this.candidates(), this.random, this.score()));
-  }
-
-  setPeople(people: number): void {
-    this.update((plan) => setPeople(plan, people));
-  }
-
-  setKidFriendly(on: boolean): void {
-    if (on && !this.canBeKidFriendly()) {
-      return;
-    }
-    this.update((plan) =>
-      setKidFriendly(plan, on, this.candidatesOf(on), this.random, this.score()),
-    );
-  }
 
   pick(meal: MealRef, recipe: string): void {
     this.update((plan) =>
@@ -184,19 +170,13 @@ export class PlanStore {
     this.setRemoved(this.removed().filter((other) => other !== name));
   }
 
-  newPlan(): void {
-    // Drawn from the current plan's candidates, which already match the kid-friendly value the new
-    // plan keeps, so setKidFriendly has nothing left to replace
-    const candidates = this.candidates();
-    this.update((plan) =>
-      setKidFriendly(
-        setPeople(createPlan(this.today(), candidates, this.random, this.score()), plan.people),
-        this.kidFriendly(),
-        candidates,
-        this.random,
-        this.score(),
-      ),
-    );
+  newPlan(settings: PlanSettings): boolean {
+    if (!this.isValid(settings)) {
+      return false;
+    }
+    const candidates = this.candidatesOf(settings.kidFriendly);
+    this.update(() => createPlan(this.today(), settings, candidates, this.random, this.score()));
+    return true;
   }
 
   private load(): Plan {
@@ -212,7 +192,13 @@ export class PlanStore {
       }
       return plan;
     }
-    const plan = createPlan(this.today(), this.suggested(), this.random, this.score());
+    const plan = createPlan(
+      this.today(),
+      DEFAULT_SETTINGS,
+      this.suggested(),
+      this.random,
+      this.score(),
+    );
     writeStored(STORAGE_KEY, plan);
     return plan;
   }
@@ -229,6 +215,17 @@ export class PlanStore {
       this.candidatesOf(kept.kidFriendly && this.canBeKidFriendly()),
       this.random,
       this.score(),
+    );
+  }
+
+  private isValid({ days, people, kidFriendly }: PlanSettings): boolean {
+    return (
+      Number.isInteger(days) &&
+      days >= MIN_DAYS &&
+      days <= MAX_DAYS &&
+      Number.isInteger(people) &&
+      people >= MIN_PEOPLE &&
+      (!kidFriendly || this.canBeKidFriendly())
     );
   }
 

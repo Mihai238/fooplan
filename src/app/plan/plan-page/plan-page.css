@@ -15,11 +15,35 @@ h1 {
   font-size: 1.75rem;
 }
 
-/* The gap leaves the value's focus ring clear of the arrows */
-.stepper {
-  display: flex;
+/* Each stepper's label, "▼", value and "▲" take a column of their own, so the arrows line up
+   whatever the values' widths; the checkbox and its note sit under the arrows. The gap leaves a
+   value's focus ring clear of its arrows; the label's margin adds to it */
+.settings {
+  display: grid;
+  grid-template-columns: auto repeat(3, auto) 1fr;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem 0.5rem;
+  margin-top: 1rem;
+}
+
+.stepper {
+  display: contents;
+}
+
+/* Without a column of its own, the People label would follow the Days row's last item */
+.settings .stepper-label {
+  grid-column: 1;
+}
+
+.settings .kid-friendly,
+.settings .note {
+  grid-column: 2 / -1;
+  justify-self: start;
+}
+
+/* Else "dialog p", more specific once Angular scopes the styles, adds its margin to the row gap */
+.settings .note {
+  margin: 0;
 }
 
 label,
@@ -33,52 +57,7 @@ label,
 }
 
 .stepper-label {
-  margin-right: 0.25rem;
-}
-
-/* The title, both steppers beside their labels, the checkbox and "New plan" fit in one row from
-   about 44.2rem; 46rem leaves headroom for wider system fonts. Up to it the labels go above the
-   steppers, which share the row below the title and "New plan" */
-@media (max-width: 46rem) {
-  .toolbar:has(.stepper) {
-    display: grid;
-    grid-template-columns: auto auto;
-    justify-content: space-between;
-  }
-
-  .toolbar:has(.stepper) > button {
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
-  }
-
-  .stepper {
-    display: grid;
-    grid-template-columns: repeat(3, auto);
-    grid-row: 2;
-    justify-content: start;
-    row-gap: 0.25rem;
-  }
-
-  .stepper-label {
-    grid-column: 1 / -1;
-    margin-right: 0;
-  }
-
-  .kid-friendly {
-    grid-row: 3;
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
-}
-
-/* Below this width the two steppers side by side would overflow the row */
-@media (max-width: 21.5rem) {
-  .stepper,
-  .kid-friendly {
-    grid-row: auto;
-    grid-column: 1 / -1;
-  }
+  margin-right: 0.5rem;
 }
 
 .value {
@@ -178,14 +157,9 @@ label input {
   cursor: pointer;
 }
 
-/* As high as the step buttons, so the whole label is a touch target and the toolbar keeps its
-   height */
+/* As high as the step buttons, so the whole label is a touch target */
 .kid-friendly {
   min-height: max(2.75rem, 44px);
-}
-
-.toolbar + .note {
-  margin-bottom: 1rem;
 }
 
 button {
@@ -319,13 +293,14 @@ button {
   text-decoration: none;
 }
 
-/* dialog button:focus: opening the dialog with a click doesn't make its first focus
-   :focus-visible, yet the ring must show which button Enter presses */
+/* dialog button:focus and dialog .value:focus: opening a dialog with a click doesn't make its
+   first focus :focus-visible, yet the ring must show where the keys act */
 button:focus-visible,
 input:focus-visible,
 a:focus-visible,
 .value:focus-visible,
-dialog button:focus {
+dialog button:focus,
+dialog .value:focus {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

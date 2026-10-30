@@ -4,8 +4,7 @@ import {
   addItem,
   clearMeal,
   createPlan,
-  DEFAULT_DAYS,
-  DEFAULT_PEOPLE,
+  DEFAULT_SETTINGS,
   dropSuggestion,
   dropSuggestionsOutside,
   eatOut,
@@ -20,15 +19,14 @@ import {
   parsePlan,
   pickRecipe,
   Plan,
+  Random,
   removeItem,
   renameRecipe,
   sameItem,
   Score,
   ScoreContext,
   setCookExtra,
-  setDays,
   setKidFriendly,
-  setPeople,
   toggleTicked,
 } from './plan';
 import {
@@ -66,7 +64,7 @@ const SEEDS = [1, 2, 3, 42, 2026];
 describe('plan', () => {
   describe('createPlan', () => {
     it('starts with the default days, from the start date across a month end, every meal open, for the default people', () => {
-      const plan = createPlan('2026-10-30', RECIPES, seededRandom(1));
+      const plan = createPlan('2026-10-30', DEFAULT_SETTINGS, RECIPES, seededRandom(1));
       expect(plan.days.map((day) => day.date)).toEqual([
         '2026-10-30',
         '2026-10-31',
@@ -74,8 +72,8 @@ describe('plan', () => {
         '2026-11-02',
         '2026-11-03',
       ]);
-      expect(plan.days).toHaveLength(DEFAULT_DAYS);
-      expect(plan.people).toBe(DEFAULT_PEOPLE);
+      expect(plan.days).toHaveLength(DEFAULT_SETTINGS.days);
+      expect(plan.people).toBe(DEFAULT_SETTINGS.people);
       expect(plan.accepted).toBe(false);
       expect(meals(plan).every((meal) => meal.recipe === null)).toBe(true);
     });
@@ -83,7 +81,7 @@ describe('plan', () => {
     it('suggests every recipe for at most one meal when there are more recipes than suggestions', () => {
       for (const seed of SEEDS) {
         const suggestions = suggestionsOf(
-          createPlan('2026-10-24', FORTY_RECIPES, seededRandom(seed)),
+          createPlan('2026-10-24', DEFAULT_SETTINGS, FORTY_RECIPES, seededRandom(seed)),
         );
         expect(suggestions, `seed ${seed}`).toHaveLength(30);
         expect(new Set(suggestions).size, `seed ${seed}: ${suggestions.join(', ')}`).toBe(30);
@@ -94,7 +92,7 @@ describe('plan', () => {
       const thirtyRecipes = FORTY_RECIPES.slice(0, 30);
       for (const seed of SEEDS) {
         const suggestions = suggestionsOf(
-          createPlan('2026-10-24', thirtyRecipes, seededRandom(seed)),
+          createPlan('2026-10-24', DEFAULT_SETTINGS, thirtyRecipes, seededRandom(seed)),
         );
         expect([...suggestions].sort(), `seed ${seed}`).toEqual([...thirtyRecipes].sort());
       }
@@ -103,7 +101,7 @@ describe('plan', () => {
     it('suggests every recipe before suggesting one again, and none more than twice, when there are fewer recipes than suggestions', () => {
       const twentyRecipes = FORTY_RECIPES.slice(0, 20);
       for (const seed of SEEDS) {
-        const plan = createPlan('2026-10-24', twentyRecipes, seededRandom(seed));
+        const plan = createPlan('2026-10-24', DEFAULT_SETTINGS, twentyRecipes, seededRandom(seed));
         openMealsOf(plan).forEach((meal) =>
           expectValidSuggestions(meal, plan, twentyRecipes, seed),
         );
@@ -119,7 +117,7 @@ describe('plan', () => {
     it('brings only recipes no meal of the new plan suggested on the first "Other suggestions"', () => {
       for (const seed of SEEDS) {
         const random = seededRandom(seed);
-        const plan = createPlan('2026-10-24', FORTY_RECIPES, random);
+        const plan = createPlan('2026-10-24', DEFAULT_SETTINGS, FORTY_RECIPES, random);
         const shownBefore = suggestionsOf(plan);
         const result = otherSuggestions(plan, LUNCH, FORTY_RECIPES, random);
         const lunch = result.days[0].lunch;
@@ -127,229 +125,32 @@ describe('plan', () => {
         expectNoneOf(lunch.suggestions, shownBefore, `seed ${seed}:`);
       }
     });
-  });
 
-  describe('setDays', () => {
-    it('rejects 0 and 6 days and accepts 1 and 5', () => {
-      const plan = createPlan('2026-10-24', RECIPES, seededRandom(1));
-      expectUnchanged(plan, (p) => setDays(p, 0, RECIPES, seededRandom(2)));
-      expectUnchanged(plan, (p) => setDays(p, 6, RECIPES, seededRandom(2)));
-      const oneDay = setDays(plan, 1, RECIPES, seededRandom(2));
-      expect(oneDay.days).toHaveLength(1);
-      expect(setDays(oneDay, 5, RECIPES, seededRandom(3)).days).toHaveLength(5);
-    });
+    it('starts a plan with the days, people and kid-friendly value it is given: 3 open days from 2026-10-27 for 4 people, kid-friendly, every suggestion among the candidates and not accepted, and 1 day for 1 person', () => {
+      const candidates = FORTY_RECIPES.slice(0, 20);
+      const plan = createPlan(
+        '2026-10-27',
+        { days: 3, people: 4, kidFriendly: true },
+        candidates,
+        seededRandom(1),
+      );
+      expect(plan.days.map((day) => day.date)).toEqual(['2026-10-27', '2026-10-28', '2026-10-29']);
+      expect(plan.people).toBe(4);
+      expect(plan.kidFriendly).toBe(true);
+      expect(plan.accepted).toBe(false);
+      openMealsOf(plan).forEach((meal) => expectValidSuggestions(meal, plan, candidates, 1));
+      expect(meals(plan).every((meal) => meal.recipe === null && !meal.eatOut)).toBe(true);
+      expect(suggestionsOf(plan).filter((name) => !candidates.includes(name))).toEqual([]);
 
-    it('rejects a number of days that is not whole', () => {
-      const plan = createPlan('2026-10-24', RECIPES, seededRandom(1));
-      expectUnchanged(plan, (p) => setDays(p, 2.5, RECIPES, seededRandom(2)));
-    });
-
-    it('returns the same plan when the days are set to the current number', () => {
-      const plan = createPlan('2026-10-24', RECIPES, seededRandom(1));
-      expectUnchanged(plan, (p) => setDays(p, DEFAULT_DAYS, RECIPES, seededRandom(2)));
-    });
-
-    it('keeps the existing days and their picks when growing and adds open days with the following dates, each meal with three suggestions', () => {
-      const plan: Plan = {
-        days: [
-          day('2026-10-30', picked('Chili'), open('Dal', 'Fajitas', 'Lasagne')),
-          day('2026-10-31', picked('Curry'), picked('Goulash')),
-        ],
-        people: 3,
-        accepted: false,
-        ticked: [],
-        added: [],
-        shown: [],
-        kidFriendly: false,
-      };
-      const grown = setDays(plan, 5, RECIPES, seededRandom(1));
-      expect(grown.days.map((d) => d.date)).toEqual([
-        '2026-10-30',
-        '2026-10-31',
-        '2026-11-01',
-        '2026-11-02',
-        '2026-11-03',
-      ]);
-      expect(grown.days.slice(0, 2)).toEqual(plan.days);
-      expect(grown.people).toBe(3);
-      expect(grown.accepted).toBe(false);
-      for (const newDay of grown.days.slice(2)) {
-        for (const meal of [newDay.lunch, newDay.dinner]) {
-          expect(meal.recipe, newDay.date).toBeNull();
-          expectValidSuggestions(meal, grown, RECIPES);
-        }
-      }
-    });
-
-    it('suggests exactly the recipes not shown yet for an added day when there are just as many left as it needs', () => {
-      for (const seed of SEEDS) {
-        const plan = oneDayPlan(
-          open('Chili', 'Curry', 'Dal'),
-          open('Fajitas', 'Goulash', 'Lasagne'),
-          ['Minestrone', 'Pesto', 'Chili', 'Curry', 'Dal', 'Fajitas', 'Goulash', 'Lasagne'],
-        );
-        const grown = setDays(plan, 2, FOURTEEN_RECIPES, seededRandom(seed));
-        const added = [...grown.days[1].lunch.suggestions, ...grown.days[1].dinner.suggestions];
-        expect(added.sort(), `seed ${seed}`).toEqual([
-          'Quiche',
-          'Risotto',
-          'Shakshuka',
-          'Tacos',
-          'Udon',
-          'Vindaloo',
-        ]);
-      }
-    });
-
-    it('fills an added day with the recipes not shown yet and then with those shown longest ago when too few are left', () => {
-      for (const seed of SEEDS) {
-        const plan = oneDayPlan(
-          open('Chili', 'Curry', 'Dal'),
-          open('Fajitas', 'Goulash', 'Lasagne'),
-          [
-            'Minestrone',
-            'Pesto',
-            'Quiche',
-            'Risotto',
-            'Shakshuka',
-            'Tacos',
-            'Chili',
-            'Curry',
-            'Dal',
-            'Fajitas',
-            'Goulash',
-            'Lasagne',
-          ],
-        );
-        const grown = setDays(plan, 2, FOURTEEN_RECIPES, seededRandom(seed));
-        expectValidSuggestions(grown.days[1].lunch, grown, FOURTEEN_RECIPES, seed);
-        expectValidSuggestions(grown.days[1].dinner, grown, FOURTEEN_RECIPES, seed);
-        const added = [...grown.days[1].lunch.suggestions, ...grown.days[1].dinner.suggestions];
-        expect(added.sort(), `seed ${seed}`).toEqual([
-          'Minestrone',
-          'Pesto',
-          'Quiche',
-          'Risotto',
-          'Udon',
-          'Vindaloo',
-        ]);
-      }
-    });
-
-    it('drops days from the end when shrinking, so their recipes can be suggested again', () => {
-      const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-      const plan: Plan = {
-        days: [
-          day('2026-10-24', picked('A'), open('D', 'E', 'F')),
-          day('2026-10-25', picked('B'), picked('C')),
-        ],
-        people: 2,
-        accepted: false,
-        ticked: [],
-        added: [],
-        shown: [],
-        kidFriendly: false,
-      };
-      const shrunk = setDays(plan, 1, recipes, seededRandom(1));
-      expect(shrunk.days).toHaveLength(1);
-      expect(shrunk.days[0].date).toBe('2026-10-24');
-      expect(shrunk.days[0].lunch).toEqual(picked('A'));
-      expect(shrunk.days[0].dinner.recipe).toBeNull();
-
-      // Only G would be left if B and C stayed picked, so the new three must reuse both
-      const suggestions = otherSuggestions(shrunk, DINNER, recipes, seededRandom(2)).days[0].dinner
-        .suggestions;
-      expect([...suggestions].sort()).toEqual(['B', 'C', 'G']);
-    });
-
-    it('turns "Cook extra" off when shrinking makes its day the last one', () => {
-      const plan: Plan = {
-        days: [
-          day('2026-10-24', picked('Chili'), picked('Curry')),
-          day('2026-10-25', picked('Dal'), picked('Fajitas'), true),
-          day('2026-10-26', covered(), open('Goulash', 'Lasagne', 'Minestrone')),
-        ],
-        people: 2,
-        accepted: false,
-        ticked: [],
-        added: [],
-        shown: [],
-        kidFriendly: false,
-      };
-      const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
-      expect(shrunk.days).toHaveLength(2);
-      expect(shrunk.days[1]).toEqual({ ...plan.days[1], cookExtra: false });
-      expect(shrunk.days[0]).toEqual(plan.days[0]);
-    });
-
-    it('keeps "Cook extra" and the covered lunch when shrinking leaves the next day in the plan', () => {
-      const plan: Plan = {
-        days: [
-          day('2026-10-24', picked('Chili'), picked('Curry'), true),
-          day('2026-10-25', covered(), picked('Dal')),
-          day('2026-10-26', picked('Fajitas'), open('Goulash', 'Lasagne', 'Minestrone')),
-        ],
-        people: 2,
-        accepted: false,
-        ticked: [],
-        added: [],
-        shown: [],
-        kidFriendly: false,
-      };
-      const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
-      expect(shrunk.days).toEqual(plan.days.slice(0, 2));
-      expect(leftoversOf(shrunk, 1)).toBe('Curry');
-    });
-
-    it('drops a dinner eating out on the last day with its day when shrinking from 3 to 2 days, leaving shown unchanged', () => {
-      const plan = planOf([
-        day('2026-10-24', picked('Chili'), picked('Curry')),
-        day('2026-10-25', open('Dal', 'Fajitas', 'Goulash'), picked('Lasagne')),
-        day(
-          '2026-10-26',
-          open('Minestrone', 'Pesto', 'Quiche'),
-          eatingOut(['Risotto', 'Shakshuka', 'Tacos']),
-        ),
-      ]);
-      const shrunk = setDays(plan, 2, RECIPES, seededRandom(1));
-      expect(shrunk.days).toEqual(plan.days.slice(0, 2));
-      expect(shrunk.shown).toEqual(plan.shown);
-    });
-
-    it('keeps a meal eating out when growing and adds an open day with three suggestions per meal', () => {
-      const plan = planOf([
-        day('2026-10-24', eatingOut(['Chili', 'Curry', 'Dal']), picked('Fajitas')),
-        day('2026-10-25', picked('Goulash'), eatingOut(['Lasagne', 'Minestrone', 'Pesto'])),
-      ]);
-      for (const seed of SEEDS) {
-        const grown = setDays(plan, 3, FOURTEEN_RECIPES, seededRandom(seed));
-        expect(grown.days.slice(0, 2), `seed ${seed}`).toEqual(plan.days);
-        expect(grown.days[2].date).toBe('2026-10-26');
-        for (const meal of [grown.days[2].lunch, grown.days[2].dinner]) {
-          expect(meal.recipe, `seed ${seed}`).toBeNull();
-          expect(meal.eatOut, `seed ${seed}`).toBeUndefined();
-          expectValidSuggestions(meal, grown, FOURTEEN_RECIPES, seed);
-        }
-      }
-    });
-  });
-
-  describe('setPeople', () => {
-    it('rejects 0 people and a number of people that is not whole', () => {
-      const plan = createPlan('2026-10-24', RECIPES, seededRandom(1));
-      expectUnchanged(plan, (p) => setPeople(p, 0));
-      expectUnchanged(plan, (p) => setPeople(p, 1.5));
-    });
-
-    it('accepts any whole number of people from 1 up', () => {
-      const plan = createPlan('2026-10-24', RECIPES, seededRandom(1));
-      expect(setPeople(plan, 1).people).toBe(1);
-      expect(setPeople(plan, 50).people).toBe(50);
-    });
-
-    it('returns the same plan when the people are set to the current number', () => {
-      const plan = createPlan('2026-10-24', RECIPES, seededRandom(1));
-      expectUnchanged(plan, (p) => setPeople(p, DEFAULT_PEOPLE));
+      const small = createPlan(
+        '2026-10-27',
+        { days: 1, people: 1, kidFriendly: false },
+        candidates,
+        seededRandom(1),
+      );
+      expect(small.days.map((day) => day.date)).toEqual(['2026-10-27']);
+      expect(small.people).toBe(1);
+      expect(small.kidFriendly).toBe(false);
     });
   });
 
@@ -357,7 +158,7 @@ describe('plan', () => {
     it('offers three different recipes for every open meal, none of them picked for another meal', () => {
       for (const seed of SEEDS) {
         const random = seededRandom(seed);
-        let plan = createPlan('2026-10-24', RECIPES, random);
+        let plan = createPlan('2026-10-24', DEFAULT_SETTINGS, RECIPES, random);
         openMealsOf(plan).forEach((meal) => expectValidSuggestions(meal, plan, RECIPES, seed));
 
         plan = pickRecipe(plan, LUNCH, plan.days[0].lunch.suggestions[0], RECIPES, random);
@@ -368,7 +169,7 @@ describe('plan', () => {
       }
     });
 
-    it('draws only recipes not shown yet for added days, a pick replacement, a meal undone without remembered suggestions and a lunch reopened by turning "Cook extra" off, while such recipes are left', () => {
+    it('draws only recipes not shown yet for a pick replacement, a meal undone without remembered suggestions and a lunch reopened by turning "Cook extra" off, while such recipes are left', () => {
       for (const seed of SEEDS) {
         const shown = [
           'Minestrone',
@@ -380,16 +181,6 @@ describe('plan', () => {
           'Goulash',
           'Lasagne',
         ];
-
-        const oneDay = oneDayPlan(
-          open('Chili', 'Curry', 'Dal'),
-          open('Fajitas', 'Goulash', 'Lasagne'),
-          [...shown],
-        );
-        const grown = setDays(oneDay, 2, FOURTEEN_RECIPES, seededRandom(seed));
-        const added = [...grown.days[1].lunch.suggestions, ...grown.days[1].dinner.suggestions];
-        expect(new Set(added).size, `seed ${seed}, added day: ${added.join(', ')}`).toBe(6);
-        expectNoneOf(added, shown, `seed ${seed}, added day:`);
 
         const sharing: Plan = {
           days: [
@@ -425,7 +216,7 @@ describe('plan', () => {
       }
     });
 
-    it('counts a lunch pick dropped by "Cook extra" and the picks of days dropped by shrinking as shown just now, so the recipes shown before them come back first', () => {
+    it('counts a lunch pick dropped by "Cook extra" as shown just now, so the recipes shown before it come back first', () => {
       const recipes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
       for (const seed of SEEDS) {
         const nextLunchPicked: Plan = {
@@ -450,25 +241,6 @@ describe('plan', () => {
         expect(
           [...afterCookExtra.days[1].dinner.suggestions].sort(),
           `seed ${seed}, "Cook extra"`,
-        ).toEqual(['G', 'H', 'I']);
-
-        const lastDayPicked: Plan = {
-          days: [
-            day('2026-10-24', picked('A'), open('D', 'E', 'F')),
-            day('2026-10-25', picked('B'), picked('C')),
-          ],
-          people: 2,
-          accepted: false,
-          ticked: [],
-          added: [],
-          shown: ['B', 'C', 'G', 'H', 'I', 'A', 'D', 'E', 'F'],
-          kidFriendly: false,
-        };
-        const shrunk = setDays(lastDayPicked, 1, recipes, seededRandom(seed));
-        const afterShrink = otherSuggestions(shrunk, DINNER, recipes, seededRandom(seed));
-        expect(
-          [...afterShrink.days[0].dinner.suggestions].sort(),
-          `seed ${seed}, shrinking`,
         ).toEqual(['G', 'H', 'I']);
       }
     });
@@ -582,7 +354,7 @@ describe('plan', () => {
     it('never uses a recipe twice when all 10 meals of a 5-day plan are filled from their suggestions', () => {
       for (const seed of SEEDS) {
         const random = seededRandom(seed);
-        let plan = createPlan('2026-10-24', FORTY_RECIPES, random);
+        let plan = createPlan('2026-10-24', DEFAULT_SETTINGS, FORTY_RECIPES, random);
         expect(plan.days, `seed ${seed}`).toHaveLength(5);
         plan.days.forEach((_, dayIndex) => {
           for (const kind of ['lunch', 'dinner'] as const) {
@@ -1776,7 +1548,7 @@ describe('plan', () => {
     it('never brings back a recipe picked for another meal and never uses a recipe twice when every meal of a 5-day plan is picked and then undone, keeping each remembered recipe that is still unpicked in its place', () => {
       for (const seed of SEEDS) {
         const random = seededRandom(seed);
-        let plan = createPlan('2026-10-24', FOURTEEN_RECIPES, random);
+        let plan = createPlan('2026-10-24', DEFAULT_SETTINGS, FOURTEEN_RECIPES, random);
         const refs = plan.days.flatMap((_, d): MealRef[] => [
           { day: d, kind: 'lunch' },
           { day: d, kind: 'dinner' },
@@ -2255,8 +2027,6 @@ describe('plan', () => {
         ...oneDayPlan(picked('Chili'), open('Curry', 'Dal', 'Fajitas')),
         accepted: true,
       };
-      expectUnchanged(plan, (p) => setDays(p, 3, RECIPES, seededRandom(1)));
-      expectUnchanged(plan, (p) => setPeople(p, 4));
       expectUnchanged(plan, (p) => clearMeal(p, LUNCH, RECIPES, seededRandom(1)));
       expectUnchanged(plan, (p) => pickRecipe(p, DINNER, 'Curry', RECIPES, seededRandom(1)));
       expectUnchanged(plan, (p) => otherSuggestions(p, DINNER, RECIPES, seededRandom(1)));
@@ -2392,8 +2162,7 @@ describe('plan', () => {
   describe('parsePlan', () => {
     it('reads back a plan in progress and an accepted plan from their JSON', () => {
       const random = seededRandom(1);
-      let plan = createPlan('2026-10-24', RECIPES, random);
-      plan = setPeople(plan, 3);
+      let plan = createPlan('2026-10-24', { ...DEFAULT_SETTINGS, people: 3 }, RECIPES, random);
       plan = pickRecipe(plan, LUNCH, plan.days[0].lunch.suggestions[0], RECIPES, random);
       expect(parsePlan(JSON.parse(JSON.stringify(plan)), RECIPES)).toEqual(plan);
 
