@@ -9,6 +9,8 @@ import {
   covered,
   day,
   leaveSuggested,
+  loadStores,
+  loadStoresOnce,
   LUNCH,
   open,
   picked,
@@ -51,7 +53,7 @@ describe('RecipePage', () => {
       ['/recipes/spaghetti-carbonara', 'Spaghetti carbonara'],
       ['/recipes/nicoise-salad', 'Niçoise salad'],
     ]) {
-      harness = await RouterTestingHarness.create(url);
+      harness = await createHarness(url);
       const recipe = recipeNamed(name);
       expect(router().url, `${name}: URL`).toBe(url);
       expect(headings().map(textOf), `${name}: heading`).toEqual([name]);
@@ -63,7 +65,7 @@ describe('RecipePage', () => {
   });
 
   it('shows the 15 ml vegetable oil of "Teriyaki chicken with rice" as "1 tbsp vegetable oil" and the 700 ml milk of "Mac and cheese" in ml', async () => {
-    harness = await RouterTestingHarness.create('/recipes/teriyaki-chicken-with-rice');
+    harness = await createHarness('/recipes/teriyaki-chicken-with-rice');
     expect(headings().map(textOf)).toEqual(['Teriyaki chicken with rice']);
     expect(ingredientLines()).toContain('1 tbsp vegetable oil');
     expect(ingredientLines()).not.toContain('15 ml vegetable oil');
@@ -73,7 +75,7 @@ describe('RecipePage', () => {
   });
 
   it('links "Back" to the Plan page when opened from it, which shows the plan unchanged', async () => {
-    harness = await RouterTestingHarness.create('/plan');
+    harness = await createHarness('/plan');
     const suggestion = page().querySelector<HTMLButtonElement>('button.suggestion');
     expect(suggestion, 'no suggestion on the Plan page').not.toBeNull();
     const picked = textOf(suggestion!.querySelector('span.name'));
@@ -95,7 +97,7 @@ describe('RecipePage', () => {
   });
 
   it('links "Back" to the Recipes page when opened directly', async () => {
-    harness = await RouterTestingHarness.create('/recipes/nicoise-salad');
+    harness = await createHarness('/recipes/nicoise-salad');
     expect(headings().map(textOf), 'recipe page not shown').toEqual(['Niçoise salad']);
     const back = backLink();
     expect(back.getAttribute('href')).toBe('/recipes');
@@ -105,7 +107,7 @@ describe('RecipePage', () => {
   });
 
   it('links "Back" to the Recipes page when opened from it after the Plan page', async () => {
-    harness = await RouterTestingHarness.create('/plan');
+    harness = await createHarness('/plan');
     await harness.navigateByUrl('/recipes');
     await harness.navigateByUrl('/recipes/nicoise-salad');
     expect(headings().map(textOf), 'recipe page not shown').toEqual(['Niçoise salad']);
@@ -115,7 +117,7 @@ describe('RecipePage', () => {
   });
 
   it('shows the other recipe and links "Back" to the first when opened from another recipe page', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     await harness.navigateByUrl('/recipes/nicoise-salad');
     expect(headings().map(textOf)).toEqual(['Niçoise salad']);
     expect(ingredientLines()).toEqual(linesOf(recipeNamed('Niçoise salad')));
@@ -127,7 +129,7 @@ describe('RecipePage', () => {
   });
 
   it('links "Back" to the Recipes page after a reload of a recipe page opened from the Plan page, keeping the plan', async () => {
-    harness = await RouterTestingHarness.create('/plan');
+    harness = await createHarness('/plan');
     await harness.navigateByUrl('/recipes/nicoise-salad');
     expect(backLink().getAttribute('href'), 'before the reload').toBe('/plan');
     const before = TestBed.inject(PlanStore).plan();
@@ -135,7 +137,7 @@ describe('RecipePage', () => {
     // A fresh app on the same URL and localStorage, as a reload makes
     TestBed.resetTestingModule();
     configure();
-    harness = await RouterTestingHarness.create('/recipes/nicoise-salad');
+    harness = await createHarness('/recipes/nicoise-salad');
     expect(headings().map(textOf)).toEqual(['Niçoise salad']);
     expect(backLink().getAttribute('href')).toBe('/recipes');
     expect(TestBed.inject(PlanStore).plan()).toEqual(before);
@@ -144,7 +146,7 @@ describe('RecipePage', () => {
   it('links "Back", and "Done" on the last step, to the Recipes page rather than the form when opened from /add-recipe, for an own recipe and a built-in one', async () => {
     const { name, servings, ingredients } = QUICK_DAL;
     localStorage.setItem(RECIPES_KEY, JSON.stringify([{ name, servings, ingredients }]));
-    harness = await RouterTestingHarness.create('/add-recipe');
+    harness = await createHarness('/add-recipe');
     await harness.navigateByUrl('/recipes/quick-dal');
     expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
     expect(backLink().getAttribute('href'), '"Back" of Quick Dal').toBe('/recipes');
@@ -167,7 +169,7 @@ describe('RecipePage', () => {
   });
 
   it('shows "Step 1 of N" with the first step below the ingredients when opened, with "Previous" disabled', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     expect(stepCounters()).toEqual([`Step 1 of ${steps.length}`]);
     const ingredients = page().querySelector('ul')!;
@@ -182,7 +184,7 @@ describe('RecipePage', () => {
   });
 
   it('shows "Tuna and white bean salad with bread", "2 servings", its 7 ingredient lines and "Step 1 of 4" with its first step at /recipes/tuna-and-white-bean-salad-with-bread, and "Step 1 of 5" at /recipes/spinach-and-feta-omelette', async () => {
-    harness = await RouterTestingHarness.create('/recipes/tuna-and-white-bean-salad-with-bread');
+    harness = await createHarness('/recipes/tuna-and-white-bean-salad-with-bread');
     expect(router().url).toBe('/recipes/tuna-and-white-bean-salad-with-bread');
     expect(headings().map(textOf)).toEqual(['Tuna and white bean salad with bread']);
     expect(textOf(page())).toContain('2 servings');
@@ -206,7 +208,7 @@ describe('RecipePage', () => {
   });
 
   it('shows "Pizza toast", "2 servings", its 6 ingredient lines and "Step 1 of 4" with its first step at /recipes/pizza-toast, and "Step 1 of 6" at /recipes/spaghetti-with-meatballs', async () => {
-    harness = await RouterTestingHarness.create('/recipes/pizza-toast');
+    harness = await createHarness('/recipes/pizza-toast');
     expect(router().url).toBe('/recipes/pizza-toast');
     expect(headings().map(textOf)).toEqual(['Pizza toast']);
     expect(textOf(page())).toContain('2 servings');
@@ -243,7 +245,7 @@ describe('RecipePage', () => {
       ['chicken-and-vegetable-skewers-with-rice', 'Chicken and vegetable skewers with rice', 5],
       ['pasta-with-broccoli-and-parmesan', 'Pasta with broccoli and parmesan', 5],
     ];
-    harness = await RouterTestingHarness.create();
+    harness = await createHarness();
     for (const [slug, name, steps] of pages) {
       await harness.navigateByUrl(`/recipes/${slug}`);
       expect(router().url, name).toBe(`/recipes/${slug}`);
@@ -253,7 +255,7 @@ describe('RecipePage', () => {
   });
 
   it('shows only the current step, never the others, on every step', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     for (let current = 0; current < steps.length; current++) {
       expect(stepCounters()).toEqual([`Step ${current + 1} of ${steps.length}`]);
@@ -269,7 +271,7 @@ describe('RecipePage', () => {
   });
 
   it('stays on step 1 when the disabled "Previous" is clicked', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     expect(button('Previous').disabled).toBe(true);
     await click(button('Previous'));
@@ -279,7 +281,7 @@ describe('RecipePage', () => {
   });
 
   it('starts at step 1 of the other recipe when another recipe is opened on step 3', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const carbonara = stepsOf('Spaghetti carbonara');
     await click(button('Next'));
     await click(button('Next'));
@@ -294,7 +296,7 @@ describe('RecipePage', () => {
   });
 
   it('shows step 2 after "Next" and step 1 again after "Previous"', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     await click(button('Next'));
     expect(stepCounters()).toEqual([`Step 2 of ${steps.length}`]);
@@ -310,7 +312,7 @@ describe('RecipePage', () => {
   });
 
   it('moves the focus to "Next" when "Previous" becomes disabled under it', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     await click(button('Next'));
     const previous = button('Previous');
@@ -326,7 +328,7 @@ describe('RecipePage', () => {
     const original = recipe.steps;
     recipe.steps = ['Simmer the sauce for 10 minutes.', 'Serve the shakshuka.'];
     try {
-      harness = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
+      harness = await createHarness('/recipes/shakshuka-with-bread');
       await click(button('Next'));
       const previous = button('Previous');
       previous.focus();
@@ -340,7 +342,7 @@ describe('RecipePage', () => {
   });
 
   it('moves the focus to "Done" when it replaces the focused "Next" on the last step', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     for (let step = 1; step < steps.length - 1; step++) await click(button('Next'));
     const next = button('Next');
@@ -352,7 +354,7 @@ describe('RecipePage', () => {
   });
 
   it('shows the step text in a polite live region that stays in place across "Next"', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     const region = elementShowing(steps[0]).closest('[aria-live="polite"]');
     expect(region, 'step 1 outside a polite live region').not.toBeNull();
@@ -362,7 +364,7 @@ describe('RecipePage', () => {
   });
 
   it('turns "Next" into a "Done" link on the last step, linked like "Back", which returns to the Plan page it was opened from', async () => {
-    harness = await RouterTestingHarness.create('/plan');
+    harness = await createHarness('/plan');
     await harness.navigateByUrl('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     await stepToLast(steps);
@@ -376,7 +378,7 @@ describe('RecipePage', () => {
   });
 
   it('shows no "Done" before the last step', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     for (let current = 1; current < steps.length; current++) {
       expect(controlsLabelled('Done'), `"Done" on step ${current}`).toEqual([]);
@@ -387,7 +389,7 @@ describe('RecipePage', () => {
   });
 
   it('shows "Step N of N" with the last step and no "Next" on the last step', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     await stepToLast(steps);
     expect(stepCounters()).toEqual([`Step ${steps.length} of ${steps.length}`]);
@@ -402,7 +404,7 @@ describe('RecipePage', () => {
     const original = recipe.steps;
     recipe.steps = ['Chop the onion.', 'Simmer the sauce for 10 minutes.', 'Serve the shakshuka.'];
     try {
-      harness = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
+      harness = await createHarness('/recipes/shakshuka-with-bread');
       expect(stepCounters()).toEqual(['Step 1 of 3']);
       await click(button('Next'));
       expect(stepCounters()).toEqual(['Step 2 of 3']);
@@ -418,7 +420,7 @@ describe('RecipePage', () => {
   });
 
   it('turns "Done" back into "Next" when "Previous" is clicked on the last step', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
     await stepToLast(steps);
     doneLink();
@@ -430,7 +432,7 @@ describe('RecipePage', () => {
   });
 
   it('links "Done" to the Recipes page, like "Back", when opened directly', async () => {
-    harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+    harness = await createHarness('/recipes/spaghetti-carbonara');
     await stepToLast(stepsOf('Spaghetti carbonara'));
     const done = doneLink();
     expect(done.getAttribute('href')).toBe(backLink().getAttribute('href'));
@@ -446,7 +448,7 @@ describe('RecipePage', () => {
     });
 
     it('starts div.steps with a group "Show steps" of "Step by step", pressed, and "All steps", not pressed, followed by "Step 1 of N", step 1, "Previous" and "Next", when opened with no saved view', async () => {
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      harness = await createHarness('/recipes/spaghetti-carbonara');
       const steps = stepsOf('Spaghetti carbonara');
       const block = page().querySelector('div.steps');
       expect(block, 'no div.steps').not.toBeNull();
@@ -477,7 +479,7 @@ describe('RecipePage', () => {
     });
 
     it('shows the N steps in order with exactly their texts in an ol.all below the switch, with "All steps" pressed, no counter, p.step, "Previous", "Next", "Done" or live region, "Back" still shown and all saved in fooplan.stepsView, on "All steps"', async () => {
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      harness = await createHarness('/recipes/spaghetti-carbonara');
       const steps = stepsOf('Spaghetti carbonara');
       await click(viewButton('All steps'));
 
@@ -492,7 +494,7 @@ describe('RecipePage', () => {
     });
 
     it('shows the step of step 3 again, "Step 3 of N", with steps saved in fooplan.stepsView, on "All steps" and then "Step by step"', async () => {
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      harness = await createHarness('/recipes/spaghetti-carbonara');
       const steps = stepsOf('Spaghetti carbonara');
       await click(button('Next'));
       await click(button('Next'));
@@ -508,7 +510,7 @@ describe('RecipePage', () => {
     });
 
     it('changes nothing on a click on the pressed button: "Step by step" on step 3 keeps step 3 and fooplan.stepsView absent, and "All steps" in its view keeps the list, calls no setItem and keeps step 3', async () => {
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      harness = await createHarness('/recipes/spaghetti-carbonara');
       const steps = stepsOf('Spaghetti carbonara');
       await click(button('Next'));
       await click(button('Next'));
@@ -531,24 +533,24 @@ describe('RecipePage', () => {
     it('opens and reloads a recipe page in the "All steps" view with all saved in fooplan.stepsView, and in the step view with nothing saved', async () => {
       const steps = stepsOf('Spaghetti carbonara');
       localStorage.setItem(STEPS_VIEW_KEY, 'all');
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      harness = await createHarness('/recipes/spaghetti-carbonara');
       expectAllStepsView(steps, 'opened');
 
       // A fresh app on the same URL and localStorage, as a reload makes
       TestBed.resetTestingModule();
       configure();
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      harness = await createHarness('/recipes/spaghetti-carbonara');
       expectAllStepsView(steps, 'reloaded');
 
       TestBed.resetTestingModule();
       localStorage.clear();
       configure();
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      harness = await createHarness('/recipes/spaghetti-carbonara');
       expectStepView(1, steps, 'nothing saved');
     });
 
     it('shows "Niçoise salad", opened after "Spaghetti carbonara" was switched to "All steps" on step 3, in the "All steps" view, and at "Step 1 of 7" with its step 1 on "Step by step"', async () => {
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      harness = await createHarness('/recipes/spaghetti-carbonara');
       await click(button('Next'));
       await click(button('Next'));
       await click(viewButton('All steps'));
@@ -564,7 +566,7 @@ describe('RecipePage', () => {
     });
 
     it('keeps the focus on "All steps" and on "Step by step" when the focused button is clicked', async () => {
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+      harness = await createHarness('/recipes/spaghetti-carbonara');
       const steps = stepsOf('Spaghetti carbonara');
       const all = viewButton('All steps');
       all.focus();
@@ -583,7 +585,7 @@ describe('RecipePage', () => {
 
     it('shows no group "Show steps" on the page of the own recipe "Quick Dal"', async () => {
       storeOwnRecipes(QUICK_DAL);
-      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      harness = await createHarness('/recipes/quick-dal');
       expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
       expect(viewGroups()).toEqual([]);
       expect(buttonsLabelled('Step by step')).toEqual([]);
@@ -593,7 +595,7 @@ describe('RecipePage', () => {
 
     describe('edge cases', () => {
       it('lists every step from step 1, not from the current one, on "All steps" on step 3', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         const steps = stepsOf('Spaghetti carbonara');
         await click(button('Next'));
         await click(button('Next'));
@@ -603,7 +605,7 @@ describe('RecipePage', () => {
       });
 
       it('shows no "Done" and no "Previous", and every step, on "All steps" on the last step', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         const steps = stepsOf('Spaghetti carbonara');
         await stepToLast(steps);
         doneLink();
@@ -613,7 +615,7 @@ describe('RecipePage', () => {
       });
 
       it('keeps the ingredient lines exactly the ingredients, apart from the steps listed in ol.all, in the "All steps" view', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         const recipe = recipeNamed('Spaghetti carbonara');
         await click(viewButton('All steps'));
         expect(allSteps(), 'steps not listed').toEqual(stepsOf('Spaghetti carbonara'));
@@ -622,7 +624,7 @@ describe('RecipePage', () => {
       });
 
       it('shows "Step N of N" with the last step and "Done" again on "All steps" and then "Step by step" on the last step', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         const steps = stepsOf('Spaghetti carbonara');
         await stepToLast(steps);
         await click(viewButton('All steps'));
@@ -633,7 +635,7 @@ describe('RecipePage', () => {
       });
 
       it('goes on to step 4 on "Next" after switching to "All steps" and back on step 3', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         const steps = stepsOf('Spaghetti carbonara');
         await click(button('Next'));
         await click(button('Next'));
@@ -644,7 +646,7 @@ describe('RecipePage', () => {
       });
 
       it('calls no setItem and keeps step 3 on a click on the pressed "Step by step" with steps saved in fooplan.stepsView', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         const steps = stepsOf('Spaghetti carbonara');
         await click(button('Next'));
         await click(button('Next'));
@@ -659,7 +661,7 @@ describe('RecipePage', () => {
       });
 
       it('keeps "Step N of N" and "Done" on a click on the pressed "Step by step" on the last step', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         const steps = stepsOf('Spaghetti carbonara');
         await stepToLast(steps);
         await click(viewButton('Step by step'));
@@ -670,7 +672,7 @@ describe('RecipePage', () => {
 
       it('shows "Step 1 of N" with step 1 on "Step by step" on a page opened in the "All steps" view', async () => {
         localStorage.setItem(STEPS_VIEW_KEY, 'all');
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         const steps = stepsOf('Spaghetti carbonara');
         expectAllStepsView(steps, 'opened');
         await click(viewButton('Step by step'));
@@ -680,7 +682,7 @@ describe('RecipePage', () => {
 
       it('opens "Spaghetti carbonara" in the step view at step 1, with steps saved, after "Step by step" was chosen on "Niçoise salad"', async () => {
         localStorage.setItem(STEPS_VIEW_KEY, 'all');
-        harness = await RouterTestingHarness.create('/recipes/nicoise-salad');
+        harness = await createHarness('/recipes/nicoise-salad');
         await click(viewButton('Step by step'));
         expectStepView(1, stepsOf('Niçoise salad'), 'Niçoise salad');
 
@@ -691,7 +693,7 @@ describe('RecipePage', () => {
       });
 
       it('opens "Niçoise salad" in the "All steps" view when reached through the Plan page after "All steps" was chosen on "Spaghetti carbonara"', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         await click(viewButton('All steps'));
         await harness.navigateByUrl('/plan');
         expect(textOf(page().querySelector('h1')), 'Plan page not shown').toBe('Plan');
@@ -702,7 +704,7 @@ describe('RecipePage', () => {
       });
 
       it('keeps the group "Show steps" and both its buttons as the same elements across "All steps" and "Step by step"', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-carbonara');
+        harness = await createHarness('/recipes/spaghetti-carbonara');
         const steps = stepsOf('Spaghetti carbonara');
         const group = viewGroup();
         const [stepByStep, all] = [viewButton('Step by step'), viewButton('All steps')];
@@ -723,7 +725,7 @@ describe('RecipePage', () => {
       it('shows no group "Show steps" and no ol.all on the page of the own recipe "Quick Dal" with all saved, keeps all saved and opens "Spaghetti carbonara" afterwards in the "All steps" view', async () => {
         storeOwnRecipes(QUICK_DAL);
         localStorage.setItem(STEPS_VIEW_KEY, 'all');
-        harness = await RouterTestingHarness.create('/recipes/quick-dal');
+        harness = await createHarness('/recipes/quick-dal');
         expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
         expect(viewGroups()).toEqual([]);
         expect(page().querySelector('ol.all')).toBeNull();
@@ -795,7 +797,7 @@ describe('RecipePage', () => {
 
   describe('ingredient amounts in the steps', () => {
     it('shows "Bring a large pot of salted water to the boil for the spaghetti (200 g)." with one span.amount "(200 g)" in p.step of "Spaghetti pomodoro", and "Peel and thinly slice the garlic cloves (2 pc)." with "Step 2 of 7" in the same live region on "Next"', async () => {
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      harness = await createHarness('/recipes/spaghetti-pomodoro');
       const first = stepParagraph();
       expect(textOf(first)).toBe(
         'Bring a large pot of salted water to the boil for the spaghetti (200 g).',
@@ -815,7 +817,7 @@ describe('RecipePage', () => {
 
     it('shows "Peel and thinly slice the garlic cloves (2 pc)." with one span.amount in the second li of ol.all of "Spaghetti pomodoro", and no span.amount in the steps of "Beef burgers with oven fries" that name no ingredient', async () => {
       localStorage.setItem(STEPS_VIEW_KEY, 'all');
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      harness = await createHarness('/recipes/spaghetti-pomodoro');
       const second = allStepItems()[1];
       expect(textOf(second)).toBe('Peel and thinly slice the garlic cloves (2 pc).');
       expect(amountsIn(second)).toEqual(['(2 pc)']);
@@ -841,7 +843,7 @@ describe('RecipePage', () => {
           { name, servings, ingredients, steps: ['Chop the onion.', 'Cook the canned chickpeas.'] },
         ]),
       );
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      harness = await createHarness('/recipes/spaghetti-pomodoro');
       expect(amountsIn(page()), 'built-in recipe').not.toEqual([]);
 
       await harness.navigateByUrl('/recipes/quick-dal');
@@ -856,7 +858,7 @@ describe('RecipePage', () => {
 
     describe('edge cases', () => {
       it('keeps the space before an amount outside span.amount, so the textContent of p.step and of an li of ol.all is exactly the step with " (2 pc)" inserted', async () => {
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+        harness = await createHarness('/recipes/spaghetti-pomodoro');
         await click(button('Next'));
         const step = stepParagraph();
         expect(step.textContent).toBe('Peel and thinly slice the garlic cloves (2 pc).');
@@ -895,7 +897,7 @@ describe('RecipePage', () => {
         RECIPES_KEY,
         JSON.stringify([{ name, servings, ingredients, steps: ['Cook the dal.', 'Serve it.'] }]),
       );
-      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      harness = await createHarness('/recipes/quick-dal');
 
       expect(router().url).toBe('/recipes/quick-dal');
       expect(backLink().getAttribute('href')).toBe('/recipes');
@@ -921,7 +923,7 @@ describe('RecipePage', () => {
       );
       localStorage.setItem(RECIPES_KEY, JSON.stringify(stored));
 
-      harness = await RouterTestingHarness.create('/recipes/single-soup');
+      harness = await createHarness('/recipes/single-soup');
       expect(headings().map(textOf), 'Single Soup not shown').toEqual(['Single Soup']);
       expect(textOf(page().querySelector('p.servings'))).toBe('1 serving');
       await harness.navigateByUrl('/recipes/family-stew');
@@ -932,7 +934,7 @@ describe('RecipePage', () => {
 
   describe('"Don\'t suggest" and "Suggest again"', () => {
     it('shows a "Don\'t suggest" button in a p.suggest between the servings and the ingredients, which turns into "Not suggested" and a focused "Suggest again", and back into a focused "Don\'t suggest", on clicks, removing the recipe at once without a dialog', async () => {
-      harness = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
+      harness = await createHarness('/recipes/shakshuka-with-bread');
       const suggest = page().querySelector('p.servings')?.nextElementSibling;
       expect(suggest?.matches('p.suggest'), 'p.suggest after the servings').toBe(true);
       expect(suggest!.nextElementSibling?.tagName, 'after p.suggest').toBe('UL');
@@ -964,8 +966,9 @@ describe('RecipePage', () => {
     });
 
     it('shows that at least 15 recipes stay suggested in a p.note instead of "Don\'t suggest" on the page of a suggested recipe while exactly 15 are suggested', async () => {
+      await loadStoresOnce();
       leaveSuggested(TestBed.inject(PlanStore), 15, 'Shakshuka with bread');
-      harness = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
+      harness = await createHarness('/recipes/shakshuka-with-bread');
 
       const notes = Array.from(page().querySelectorAll('p.note'));
       expect(notes.map(textOf)).toEqual([LIMIT_NOTE]);
@@ -977,11 +980,12 @@ describe('RecipePage', () => {
     });
 
     it('shows "Not suggested" and "Suggest again", without the note, on the page of a removed recipe while exactly 15 are suggested', async () => {
+      await loadStoresOnce();
       leaveSuggested(TestBed.inject(PlanStore), 15);
       expect(TestBed.inject(PlanStore).removed(), 'Penne arrabbiata not removed').toContain(
         'Penne arrabbiata',
       );
-      harness = await RouterTestingHarness.create('/recipes/penne-arrabbiata');
+      harness = await createHarness('/recipes/penne-arrabbiata');
 
       const suggest = page().querySelector('p.suggest');
       expect(suggest, 'no p.suggest').not.toBeNull();
@@ -1080,8 +1084,9 @@ describe('RecipePage', () => {
 
     it('shows that at least 15 recipes stay suggested instead of "Delete" while "Quick Dal" is one of exactly 15 suggested, next to #21\'s note, and "Delete" while it is removed instead', async () => {
       storeOwnRecipes(QUICK_DAL);
+      await loadStoresOnce();
       leaveSuggested(TestBed.inject(PlanStore), 15, 'Quick Dal');
-      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      harness = await createHarness('/recipes/quick-dal');
       expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
       expectNote(DELETE_LIMIT_NOTE, '15 suggested');
       expect(Array.from(page().querySelectorAll('p.note')).map(textOf)).toEqual([
@@ -1093,9 +1098,10 @@ describe('RecipePage', () => {
       localStorage.clear();
       configure();
       storeOwnRecipes(QUICK_DAL);
+      await loadStoresOnce();
       leaveSuggested(TestBed.inject(PlanStore), 15);
       expect(TestBed.inject(PlanStore).removed(), 'Quick Dal not removed').toContain('Quick Dal');
-      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      harness = await createHarness('/recipes/quick-dal');
       expect(manageNotes()).toEqual([]);
       button('Delete');
     });
@@ -1189,6 +1195,7 @@ describe('RecipePage', () => {
       // A fresh app on the same localStorage, as a reload makes
       TestBed.resetTestingModule();
       configure();
+      await loadStores();
       expect(TestBed.inject(PlanStore).plan()).toEqual(deleted);
     });
 
@@ -1222,7 +1229,7 @@ describe('RecipePage', () => {
       if (removed) {
         localStorage.setItem('fooplan.removed', JSON.stringify(removed));
       }
-      harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      harness = await createHarness('/recipes/quick-dal');
       expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
       if (plan) {
         expect(TestBed.inject(PlanStore).plan(), 'saved plan not loaded').toEqual(plan);
@@ -1327,7 +1334,7 @@ describe('RecipePage', () => {
     });
 
     it('shows "Zurück", "2 Portionen", the switch "Schritt für Schritt" / "Alle Schritte" in a group named "Schritte anzeigen", "Schritt 1 von 7", "Zurück" disabled and "Weiter" at /recipes/spaghetti-pomodoro, and "Fertig" on the last step; and "Dein Rezept", "Bearbeiten", "Löschen" and the dialog "Spaghetti mit Ei löschen?" with "Rezept behalten" and "Rezept löschen" on the page of an own recipe', async () => {
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      harness = await createHarness('/recipes/spaghetti-pomodoro');
       const back = page().querySelector('a.back');
       expect(textOf(back)).toBe('Zurück');
       expect(back?.getAttribute('href')).toBe('/recipes');
@@ -1356,7 +1363,7 @@ describe('RecipePage', () => {
       TestBed.resetTestingModule();
       configure();
       storeOwnRecipes(SPAGHETTI_MIT_EI);
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-mit-ei');
+      harness = await createHarness('/recipes/spaghetti-mit-ei');
       expect(textOf(page().querySelector('p.own'))).toBe('Dein Rezept');
       const edit = page().querySelector('div.manage a');
       expect(textOf(edit)).toBe('Bearbeiten');
@@ -1378,7 +1385,7 @@ describe('RecipePage', () => {
       it('shows the units of the step amounts in German, "(2 EL)" for the olive oil keeping "(200 g)" on "Spaghetti Pomodoro" and "Die Paprikaschoten (3 Stk.) und die rote Zwiebel (1 Stk.) in dünne Streifen schneiden." on "Hähnchen-Fajitas" (#37), in the step view and in "Alle Schritte"', async () => {
         const fajitasStep4 =
           'Die Paprikaschoten (3 Stk.) und die rote Zwiebel (1 Stk.) in dünne Streifen schneiden.';
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+        harness = await createHarness('/recipes/spaghetti-pomodoro');
         expect(amountsIn(stepParagraph())).toEqual(['(200 g)']);
         await click(button('Weiter'));
         await click(button('Weiter'));
@@ -1403,7 +1410,7 @@ describe('RecipePage', () => {
       });
 
       it('shows the ingredients with German units and decimal commas, "0,5 Stk. rote Zwiebel" on the page of "Griechischer Salat mit Feta und Brot" and "2 EL Olivenöl" on "Spaghetti Pomodoro"', async () => {
-        harness = await RouterTestingHarness.create('/recipes/greek-salad-with-feta-and-bread');
+        harness = await createHarness('/recipes/greek-salad-with-feta-and-bread');
         expect(ingredientLines()).toContain('0,5 Stk. rote Zwiebel');
         expect(ingredientLines().filter((line) => /\b(pc|tbsp|tsp)\b|\d\.\d/.test(line))).toEqual(
           [],
@@ -1430,7 +1437,7 @@ describe('RecipePage', () => {
             ]),
           ),
         );
-        harness = await RouterTestingHarness.create('/recipes/solo-dal');
+        harness = await createHarness('/recipes/solo-dal');
         expect(TestBed.inject(PlanStore).plan().days[0].lunch.recipe, 'plan not loaded').toBe(
           'Solo Dal',
         );
@@ -1462,7 +1469,7 @@ describe('RecipePage', () => {
 
     it('shows "Spaghetti Pomodoro", the ingredient lines "200 g Spaghetti", "400 g Dosentomaten", "2 Stk. Knoblauchzehe", "2 EL Olivenöl", "10 g Basilikum" and "30 g Parmesan" and the German step 1 at /recipes/spaghetti-pomodoro in German, and the page as before in English', async () => {
       localStorage.setItem(LANGUAGE_KEY, 'de');
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      harness = await createHarness('/recipes/spaghetti-pomodoro');
       expect(headings().map(textOf)).toEqual(['Spaghetti Pomodoro']);
       expect(ingredientLines()).toEqual([
         '200 g Spaghetti',
@@ -1477,7 +1484,7 @@ describe('RecipePage', () => {
       TestBed.resetTestingModule();
       configure();
       localStorage.setItem(LANGUAGE_KEY, 'en');
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      harness = await createHarness('/recipes/spaghetti-pomodoro');
       const recipe = recipeNamed('Spaghetti pomodoro');
       expect(headings().map(textOf)).toEqual(['Spaghetti pomodoro']);
       expect(ingredientLines()).toEqual(linesOf(recipe));
@@ -1487,7 +1494,7 @@ describe('RecipePage', () => {
     // The header's "EN" button sets the language on the LanguageStore, which the page follows
     it('shows "Spaghetti pomodoro" and the English step 3 at "Step 3 of 7" when the user switches to English on step 3 of the German page', async () => {
       localStorage.setItem(LANGUAGE_KEY, 'de');
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      harness = await createHarness('/recipes/spaghetti-pomodoro');
       await click(button('Weiter'));
       await click(button('Weiter'));
       expect(textOf(page().querySelector('p.counter'))).toBe('Schritt 3 von 7');
@@ -1504,7 +1511,7 @@ describe('RecipePage', () => {
 
     it('shows the German step 2 at /recipes/spaghetti-pomodoro as "Die Knoblauchzehen (2 Stk.) schälen und in dünne Scheiben schneiden.", and as "Peel and thinly slice the garlic cloves (2 pc)." when the user switches to English (#37)', async () => {
       localStorage.setItem(LANGUAGE_KEY, 'de');
-      harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+      harness = await createHarness('/recipes/spaghetti-pomodoro');
       await click(button('Weiter'));
       expect(textOf(page().querySelector('p.counter'))).toBe('Schritt 2 von 7');
       expect(textOf(stepParagraph())).toBe(POMODORO_STEP_2);
@@ -1527,7 +1534,7 @@ describe('RecipePage', () => {
         TestBed.resetTestingModule();
         configure();
         localStorage.setItem(LANGUAGE_KEY, language);
-        harness = await RouterTestingHarness.create('/recipes/omas-eintopf');
+        harness = await createHarness('/recipes/omas-eintopf');
         expect(headings().map(textOf), `${language}: heading`).toEqual(['Omas Eintopf']);
         expect(ingredientLines(), `${language}: ingredients`).toEqual(['200 g linsen']);
         expect(page().querySelector('div.steps'), `${language}: steps`).toBeNull();
@@ -1541,7 +1548,7 @@ describe('RecipePage', () => {
     describe('edge cases', () => {
       it('shows "(200 g)" after "Spaghetti" in the German step 1, "(2 Stk.)" after "Knoblauchzehen" in step 2 (#37) and "(2 EL)" after "Olivenöl" in step 3, in the step view and in "Alle Schritte"', async () => {
         localStorage.setItem(LANGUAGE_KEY, 'de');
-        harness = await RouterTestingHarness.create('/recipes/spaghetti-pomodoro');
+        harness = await createHarness('/recipes/spaghetti-pomodoro');
         expect(textOf(stepParagraph())).toBe(
           'Einen großen Topf Salzwasser für die Spaghetti (200 g) zum Kochen bringen.',
         );
@@ -1560,7 +1567,7 @@ describe('RecipePage', () => {
 
       it('opens "Pesto-Pasta mit Kirschtomaten" at its English slug /recipes/pesto-pasta-with-cherry-tomatoes in German, and no recipe page at /recipes/pesto-pasta-mit-kirschtomaten', async () => {
         localStorage.setItem(LANGUAGE_KEY, 'de');
-        harness = await RouterTestingHarness.create('/recipes/pesto-pasta-with-cherry-tomatoes');
+        harness = await createHarness('/recipes/pesto-pasta-with-cherry-tomatoes');
         expect(router().url).toBe('/recipes/pesto-pasta-with-cherry-tomatoes');
         expect(headings().map(textOf)).toEqual(['Pesto-Pasta mit Kirschtomaten']);
 
@@ -1594,6 +1601,12 @@ describe('RecipePage', () => {
         { provide: TODAY, useValue: () => '2026-10-24' },
       ],
     });
+  }
+
+  // As the app shows its pages: once the saved plan and recipes are loaded
+  async function createHarness(url?: string): Promise<RouterTestingHarness> {
+    await loadStoresOnce();
+    return RouterTestingHarness.create(url);
   }
 
   async function stepToLast(steps: string[], next = 'Next') {

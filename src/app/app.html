@@ -53,5 +53,9 @@
   }
 </header>
 <main>
-  <router-outlet />
+  @if (loaded()) {
+    <router-outlet />
+  } @else {
+    <p role="status">{{ language.t('app.loading') }}</p>
+  }
 </main>

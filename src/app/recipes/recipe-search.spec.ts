@@ -104,7 +104,7 @@ describe('searchRecipes', () => {
   describe('German texts (#36)', () => {
     let store: RecipeStore;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       localStorage.clear();
       TestBed.configureTestingModule({
         providers: [
@@ -113,6 +113,7 @@ describe('searchRecipes', () => {
         ],
       });
       store = TestBed.inject(RecipeStore);
+      await store.load();
     });
 
     it('matches the German recipe and ingredient names in German, not the English ones, and the English names in English, not the German ones', () => {
@@ -146,10 +147,11 @@ describe('searchRecipes', () => {
       expect(namesIn('kase')).toEqual([]);
     });
 
-    it('matches the ingredients of an own recipe as typed in German, "onion" and not "zwiebel", and its name as typed', () => {
+    it('matches the ingredients of an own recipe as typed in German, "onion" and not "zwiebel", and its name as typed', async () => {
       storeOwnRecipes(ownRecipe('Kuchen vom Blech'));
       TestBed.resetTestingModule();
       store = TestBed.inject(RecipeStore);
+      await store.load();
 
       TestBed.inject(LanguageStore).set('de');
       expect(namesIn('onion')).toEqual(['Kuchen vom Blech']);

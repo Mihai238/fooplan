@@ -48,6 +48,20 @@ export function seededRandom(seed: number): Random {
   };
 }
 
+// For a spec opening its pages in turn: the first page loads what the spec saved before, as the app
+// does on start, and the later ones find the stores as the earlier ones left them
+export async function loadStoresOnce(): Promise<PlanStore> {
+  const store = TestBed.inject(PlanStore);
+  return store.ready() ? store : loadStores();
+}
+
+// Loads the plan, and the recipes before it, as the app does before it shows a page
+export async function loadStores(): Promise<PlanStore> {
+  const store = TestBed.inject(PlanStore);
+  await store.load();
+  return store;
+}
+
 export function acceptOneDayPlan(store: PlanStore): void {
   store.newPlan({ ...DEFAULT_SETTINGS, days: 1 });
   for (const meal of [LUNCH, DINNER]) {

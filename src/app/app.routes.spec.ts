@@ -5,19 +5,23 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from './app.routes';
 import { FakeSupabase, provideSupabase, sessionFor } from './auth/testing';
 import { PlanStore } from './plan/plan-store';
+import { loadStores } from './plan/testing';
 import { RecipeStore } from './recipes/recipe-store';
 import { RECIPES } from './recipes/recipes';
 import { ownRecipe, QUICK_DAL, shownStep, storeOwnRecipes } from './recipes/testing';
+import { LocalStorageBackend, StorageBackend } from './storage';
+import { HeldBackend } from './testing';
 
 describe('routes', () => {
   let fake: FakeSupabase;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
     fake = new FakeSupabase();
     TestBed.configureTestingModule({
       providers: [provideRouter(routes), provideSupabase(fake)],
     });
+    await loadStores();
   });
 
   it('opens the home page at the root URL', async () => {
@@ -63,6 +67,7 @@ describe('routes', () => {
         // A fresh app on the same URL, as a reload makes
         TestBed.resetTestingModule();
         TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+        await loadStores();
       }
     }
   });
@@ -90,6 +95,7 @@ describe('routes', () => {
       );
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+      await loadStores();
     }
   });
 
@@ -107,6 +113,7 @@ describe('routes', () => {
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+    await loadStores();
     const recipePage = await RouterTestingHarness.create('/recipes/nicoise-salad');
     expect(TestBed.inject(Router).url).toBe('/recipes/nicoise-salad');
     expect(recipePage.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
@@ -121,6 +128,7 @@ describe('routes', () => {
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+    await loadStores();
     const recipePage = await RouterTestingHarness.create('/recipes/shakshuka-with-bread');
     expect(TestBed.inject(Router).url).toBe('/recipes/shakshuka-with-bread');
     expect(recipePage.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
@@ -141,11 +149,13 @@ describe('routes', () => {
       );
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+      await loadStores();
     }
   });
 
   it('shows the recipe page of an own recipe named "Lentil soup" at /recipes/lentil-soup opened directly', async () => {
     storeOwnRecipes(ownRecipe('Lentil soup'));
+    await loadStores();
     const recipePage = await RouterTestingHarness.create('/recipes/lentil-soup');
     expect(TestBed.inject(Router).url).toBe('/recipes/lentil-soup');
     expect(recipePage.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
@@ -156,6 +166,7 @@ describe('routes', () => {
 
   it('shows the recipe page of the own recipe "Quick Dal" at /recipes/quick-dal opened directly, and the Recipes page for /recipes/no-such-dal', async () => {
     storeOwnRecipes(QUICK_DAL);
+    await loadStores();
     const recipePage = await RouterTestingHarness.create('/recipes/quick-dal');
     expect(TestBed.inject(Router).url).toBe('/recipes/quick-dal');
     expect(recipePage.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
@@ -164,6 +175,7 @@ describe('routes', () => {
 
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+    await loadStores();
     const harness = await RouterTestingHarness.create('/recipes/no-such-dal');
     expect(TestBed.inject(Router).url).toBe('/recipes');
     expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Recipes');
@@ -196,11 +208,13 @@ describe('routes', () => {
       );
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({ providers: [provideRouter(routes)] });
+      await loadStores();
     }
   });
 
   it('shows the Recipes page for the page and the edit form of "Grandma\'s Soup" once it is renamed to "Red Soup", and of "Quick Dal" once it is deleted', async () => {
     storeOwnRecipes(ownRecipe("Grandma's Soup"), QUICK_DAL);
+    await loadStores();
     const harness = await RouterTestingHarness.create('/recipes/grandmas-soup');
     expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
       "Grandma's Soup",
@@ -259,6 +273,89 @@ describe('routes', () => {
     expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
       'Grocery list',
     );
+  });
+
+  describe('loading (#44)', () => {
+    it('opens /recipes/quick-dal of a saved own recipe directly once the recipes are loaded, and shows /recipes for /recipes/no-such-dal, replacing the URL (#44 6)', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      let backend = new HeldBackend();
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [provideRouter(routes), { provide: StorageBackend, useValue: backend }],
+      });
+      let harness = await RouterTestingHarness.create();
+      // Imported beforehand, so that only the guard can hold the navigation up
+      await import('./recipes/recipe-page/recipe-page');
+      const opening = harness.navigateByUrl('/recipes/quick-dal');
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(TestBed.inject(Router).url, 'before the recipes are loaded').toBe('/');
+
+      backend.release();
+      await opening;
+      expect(TestBed.inject(Router).url).toBe('/recipes/quick-dal');
+      expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+        'Quick Dal',
+      );
+
+      TestBed.resetTestingModule();
+      backend = new HeldBackend();
+      TestBed.configureTestingModule({
+        providers: [provideRouter(routes), { provide: StorageBackend, useValue: backend }],
+      });
+      harness = await RouterTestingHarness.create('/groceries');
+      const refused = harness.navigateByUrl('/recipes/no-such-dal');
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(TestBed.inject(Router).url, 'before the recipes are loaded').toBe('/groceries');
+      backend.release();
+      await refused;
+      expect(TestBed.inject(Router).url).toBe('/recipes');
+      expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe('Recipes');
+      const location = TestBed.inject(Location);
+      location.back();
+      await harness.fixture.whenStable();
+      expect(location.path(), 'back from /recipes').toBe('/groceries');
+    });
+
+    it('reads nothing again when the recipe pages are opened once the stores are loaded (#44 6b)', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      await loadStores();
+      const read = vi.spyOn(LocalStorageBackend.prototype, 'read');
+
+      const harness = await RouterTestingHarness.create('/recipes/quick-dal');
+      expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+        'Quick Dal',
+      );
+      await harness.navigateByUrl('/recipes/quick-dal/edit');
+      expect(TestBed.inject(Router).url).toBe('/recipes/quick-dal/edit');
+      await harness.navigateByUrl('/recipes/spaghetti-carbonara');
+      expect(TestBed.inject(Router).url).toBe('/recipes/spaghetti-carbonara');
+      expect(read).not.toHaveBeenCalled();
+      read.mockRestore();
+    });
+
+    describe('edge cases', () => {
+      it('opens the edit form /recipes/quick-dal/edit of a saved own recipe directly once the recipes are loaded (#44 6a)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        const backend = new HeldBackend();
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+          providers: [provideRouter(routes), { provide: StorageBackend, useValue: backend }],
+        });
+        const harness = await RouterTestingHarness.create();
+        // Imported beforehand, so that only the guard can hold the navigation up
+        await import('./recipes/recipe-form/recipe-form');
+        const opening = harness.navigateByUrl('/recipes/quick-dal/edit');
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(TestBed.inject(Router).url, 'before the recipes are loaded').toBe('/');
+
+        backend.release();
+        await opening;
+        expect(TestBed.inject(Router).url).toBe('/recipes/quick-dal/edit');
+        expect(harness.routeNativeElement!.querySelector('h1')?.textContent?.trim()).toBe(
+          'Edit recipe',
+        );
+      });
+    });
   });
 
   describe('sign-in (#43)', () => {

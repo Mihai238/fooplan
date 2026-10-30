@@ -8,6 +8,7 @@ import {
   day,
   DINNER,
   eatingOut,
+  loadStores,
   LUNCH,
   open,
   picked,
@@ -270,7 +271,7 @@ describe('Home', () => {
         { provide: TODAY, useValue: () => TODAY_DATE },
       ],
     });
-    store = TestBed.inject(PlanStore);
+    store = await loadStores();
     if (saved) {
       expect(store.plan(), 'saved plan not loaded').toEqual(saved);
     }

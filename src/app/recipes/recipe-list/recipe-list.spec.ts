@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
-import { leaveSuggested, seededRandom } from '../../plan/testing';
+import { leaveSuggested, loadStoresOnce, seededRandom } from '../../plan/testing';
 import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
 import { RecipeStore } from '../recipe-store';
@@ -835,6 +835,7 @@ describe('RecipeList', () => {
   }
 
   async function openPage() {
+    await loadStoresOnce();
     fixture = TestBed.createComponent(RecipeList);
     await fixture.whenStable();
     element = fixture.nativeElement as HTMLElement;

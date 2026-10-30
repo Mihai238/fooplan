@@ -1,10 +1,12 @@
-import { computed } from '@angular/core';
+import { computed, Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { groceryList, itemKey } from '../groceries/groceries';
 import { RecipeStore } from '../recipes/recipe-store';
 import { Recipe } from '../recipes/recipe';
 import { RECIPES } from '../recipes/recipes';
 import { ownRecipe, PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '../recipes/testing';
+import { LocalStorageBackend, StorageBackend } from '../storage';
+import { RejectingBackend, ThrowingOnceBackend, unhandledRejections } from '../testing';
 import { addedKey, DEFAULT_SETTINGS, MealRef, Plan } from './plan';
 import { PlanStore, RANDOM, TODAY } from './plan-store';
 import { scoreWith } from './ranking';
@@ -15,6 +17,7 @@ import {
   DINNER,
   KID_FRIENDLY,
   leaveSuggested,
+  loadStores,
   LUNCH,
   mealRefs,
   NOT_KID_FRIENDLY,
@@ -54,11 +57,11 @@ describe('PlanStore', () => {
   let seed: number;
   let store: PlanStore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
     today = '2026-10-24';
     seed = 1;
-    store = createStore();
+    store = await createStore();
   });
 
   it('starts a plan for today with the default days when nothing is stored', () => {
@@ -89,11 +92,11 @@ describe('PlanStore', () => {
     expect(suggestionsOf(store.plan()).filter((name) => /soup/i.test(name))).toEqual([]);
   });
 
-  it('suggests 30 different recipes for the 10 meals of a new 5-day plan, leaving 14 of the 44 unshown, whatever the draw', () => {
+  it('suggests 30 different recipes for the 10 meals of a new 5-day plan, leaving 14 of the 44 unshown, whatever the draw', async () => {
     for (let draw = 1; draw <= 10; draw++) {
       localStorage.clear();
       seed = draw * 7;
-      store = reload();
+      store = await reload();
       const suggestions = suggestionsOf(store.plan());
       expect(new Set(suggestions).size, `draw ${draw}: different recipes`).toBe(30);
       expect(
@@ -103,11 +106,11 @@ describe('PlanStore', () => {
     }
   });
 
-  it('suggests for each meal of a new 5-day plan from a Monday, and for the first dinner on "Other suggestions" after its lunch is picked, three different recipes, each one scoring highest among the recipes not shown yet with the ones chosen before it alongside', () => {
+  it('suggests for each meal of a new 5-day plan from a Monday, and for the first dinner on "Other suggestions" after its lunch is picked, three different recipes, each one scoring highest among the recipes not shown yet with the ones chosen before it alongside', async () => {
     localStorage.clear();
     today = '2026-10-26';
     seed = 1;
-    store = reload();
+    store = await reload();
     const score = scoreWith(RECIPES);
     const scores: number[] = [];
 
@@ -212,12 +215,12 @@ describe('PlanStore', () => {
     expect([...fifth].sort()).toEqual([...left, before[0]].sort());
   });
 
-  it('suggests all 30 recipes still suggested, the own recipe "Grandma\'s Soup" among them, in a new 5-day plan of the 44 recipes and "Grandma\'s Soup" with the 5 easy ones and the 10 family ones taken out', () => {
+  it('suggests all 30 recipes still suggested, the own recipe "Grandma\'s Soup" among them, in a new 5-day plan of the 44 recipes and "Grandma\'s Soup" with the 5 easy ones and the 10 family ones taken out', async () => {
     localStorage.clear();
     storeOwnRecipes(ownRecipe("Grandma's Soup"));
     const takenOut = [...EASY_RECIPES, ...FAMILY_RECIPES];
     localStorage.setItem(REMOVED_KEY, JSON.stringify(takenOut));
-    store = reload();
+    store = await reload();
     expect(store.removed(), 'taken out').toEqual(takenOut);
 
     const suggested = [...NAMES.filter((name) => !takenOut.includes(name)), "Grandma's Soup"];
@@ -225,7 +228,7 @@ describe('PlanStore', () => {
     expect([...suggestionsOf(store.plan())].sort()).toEqual(suggested.sort());
   });
 
-  it('starts a fresh plan for today when the stored plan suggests "Lentil soup", and reads "Lentil soup" in the saved removed recipes as unknown', () => {
+  it('starts a fresh plan for today when the stored plan suggests "Lentil soup", and reads "Lentil soup" in the saved removed recipes as unknown', async () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify(
@@ -240,34 +243,34 @@ describe('PlanStore', () => {
     );
     localStorage.setItem(REMOVED_KEY, JSON.stringify(['Lentil soup', 'Fish tacos']));
 
-    store = reload();
+    store = await reload();
     expectFreshPlan(store.plan(), '2026-10-24');
     expect(suggestionsOf(store.plan())).not.toContain('Lentil soup');
     expect(store.removed()).toEqual(['Fish tacos']);
   });
 
-  it('shows the same fresh plan after a reload without any change', () => {
+  it('shows the same fresh plan after a reload without any change', async () => {
     const before = store.plan();
-    expect(reload().plan()).toEqual(before);
+    expect((await reload()).plan()).toEqual(before);
   });
 
-  it('shows the same days, people, picks and suggestions of a plan in progress after a reload', () => {
+  it('shows the same days, people, picks and suggestions of a plan in progress after a reload', async () => {
     store.newPlan({ days: 2, people: 3, kidFriendly: false });
     pickFirstSuggestion(LUNCH);
     const before = store.plan();
     expect(before.days, 'days not set').toHaveLength(2);
 
-    expect(reload().plan()).toEqual(before);
+    expect((await reload()).plan()).toEqual(before);
   });
 
-  it('shows an accepted plan as accepted after a reload', () => {
+  it('shows an accepted plan as accepted after a reload', async () => {
     acceptOneDayPlan(store);
     const before = store.plan();
 
-    expect(reload().plan()).toEqual(before);
+    expect((await reload()).plan()).toEqual(before);
   });
 
-  it('turns on "Cook extra" for a dinner, covering the next lunch, and keeps it after a reload', () => {
+  it('turns on "Cook extra" for a dinner, covering the next lunch, and keeps it after a reload', async () => {
     store.newPlan({ ...DEFAULT_SETTINGS, days: 2 });
     pickFirstSuggestion(DINNER);
     store.setCookExtra(0, true);
@@ -275,10 +278,10 @@ describe('PlanStore', () => {
     expect(before.days[0].cookExtra).toBe(true);
     expect(before.days[1].lunch).toEqual({ recipe: null, suggestions: [] });
 
-    expect(reload().plan()).toEqual(before);
+    expect((await reload()).plan()).toEqual(before);
   });
 
-  it('does not suggest the recipes a plan has shown again after a reload, while recipes not shown yet are left', () => {
+  it('does not suggest the recipes a plan has shown again after a reload, while recipes not shown yet are left', async () => {
     const names = RECIPES.map((recipe) => recipe.name);
     const saved: Plan = {
       days: [day('2026-10-24', open(...names.slice(0, 3)), open(...names.slice(3, 6)))],
@@ -290,13 +293,13 @@ describe('PlanStore', () => {
       kidFriendly: false,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-    store = reload();
+    store = await reload();
     expect(store.plan(), 'saved plan not loaded').toEqual(saved);
 
     // 38 of the 44 recipes start unshown, enough for 3 new ones on each of the 7 clicks
     clickOtherSuggestions(1, 3);
     const before = store.plan();
-    store = reload();
+    store = await reload();
     expect(store.plan()).toEqual(before);
     clickOtherSuggestions(4, 7);
     expect(store.plan().shown).toHaveLength(27);
@@ -315,17 +318,17 @@ describe('PlanStore', () => {
     }
   });
 
-  it('opens a picked meal with the suggestions it showed when picked, in the same order, on "Undo" after a reload', () => {
+  it('opens a picked meal with the suggestions it showed when picked, in the same order, on "Undo" after a reload', async () => {
     const suggestions = store.plan().days[0].lunch.suggestions;
     pickFirstSuggestion(LUNCH);
 
-    store = reload();
+    store = await reload();
     expect(store.plan().days[0].lunch.recipe, 'pick lost on reload').toBe(suggestions[0]);
     store.clear(LUNCH);
     expect(store.plan().days[0].lunch).toEqual({ recipe: null, suggestions });
   });
 
-  it('loads a plan saved before picked meals remembered their suggestions with its days, picks and accepted state, and opens such a meal with three unpicked suggestions on "Undo"', () => {
+  it('loads a plan saved before picked meals remembered their suggestions with its days, picks and accepted state, and opens such a meal with three unpicked suggestions on "Undo"', async () => {
     const [lunch, dinner, other, ...rest] = RECIPES.map((recipe) => recipe.name);
     const saved = {
       days: [
@@ -351,7 +354,7 @@ describe('PlanStore', () => {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 
-    store = reload();
+    store = await reload();
     expect(store.plan()).toEqual(saved);
     store.clear(LUNCH);
     const suggestions = store.plan().days[0].lunch.suggestions;
@@ -367,24 +370,24 @@ describe('PlanStore', () => {
       shown: [dinner, other],
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(accepted));
-    expect(reload().plan()).toEqual(accepted);
+    expect((await reload()).plan()).toEqual(accepted);
   });
 
-  it('keeps the start date of a stored plan when reloaded on a later day', () => {
+  it('keeps the start date of a stored plan when reloaded on a later day', async () => {
     store.newPlan({ ...DEFAULT_SETTINGS, days: 2 });
     const before = store.plan();
     expect(before.days, 'days not set').toHaveLength(2);
     today = '2026-10-27';
 
-    expect(reload().plan()).toEqual(before);
+    expect((await reload()).plan()).toEqual(before);
   });
 
-  it('starts a fresh plan for today when the stored plan is not valid JSON', () => {
+  it('starts a fresh plan for today when the stored plan is not valid JSON', async () => {
     localStorage.setItem(STORAGE_KEY, '{"days": [');
-    expectFreshPlan(reload().plan(), '2026-10-24');
+    expectFreshPlan((await reload()).plan(), '2026-10-24');
   });
 
-  it('starts a fresh plan for today when the stored plan names a recipe that does not exist', () => {
+  it('starts a fresh plan for today when the stored plan names a recipe that does not exist', async () => {
     const plan: Plan = {
       days: [
         {
@@ -405,16 +408,16 @@ describe('PlanStore', () => {
       kidFriendly: false,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
-    expectFreshPlan(reload().plan(), '2026-10-24');
+    expectFreshPlan((await reload()).plan(), '2026-10-24');
   });
 
-  it('starts a fresh plan for today on "New plan" and saves it', () => {
+  it('starts a fresh plan for today on "New plan" and saves it', async () => {
     acceptOneDayPlan(store);
     today = '2026-10-26';
 
     store.newPlan(DEFAULT_SETTINGS);
     expectFreshPlan(store.plan(), '2026-10-26');
-    expect(reload().plan()).toEqual(store.plan());
+    expect((await reload()).plan()).toEqual(store.plan());
   });
 
   it('forgets the recipes the old plan has shown on "New plan", so only the new suggestions count as shown', () => {
@@ -429,16 +432,16 @@ describe('PlanStore', () => {
     );
   });
 
-  it('keeps a ticked grocery item ticked after a reload', () => {
+  it('keeps a ticked grocery item ticked after a reload', async () => {
     acceptOneDayPlan(store);
     const key = firstItemKey();
     store.toggleTicked(key);
     expect(store.plan().ticked, 'item not ticked').toEqual([key]);
 
-    expect(reload().plan().ticked).toEqual([key]);
+    expect((await reload()).plan().ticked).toEqual([key]);
   });
 
-  it('starts "New plan" not accepted with nothing ticked, and nothing ticked after a reload or once the next plan is accepted', () => {
+  it('starts "New plan" not accepted with nothing ticked, and nothing ticked after a reload or once the next plan is accepted', async () => {
     acceptOneDayPlan(store);
     store.toggleTicked(firstItemKey());
     expect(store.plan().ticked, 'item not ticked').toHaveLength(1);
@@ -446,13 +449,13 @@ describe('PlanStore', () => {
     store.newPlan(DEFAULT_SETTINGS);
     expect(store.plan().ticked).toEqual([]);
     expect(store.plan().accepted).toBe(false);
-    store = reload();
+    store = await reload();
     expect(store.plan().ticked).toEqual([]);
     acceptOneDayPlan(store);
     expect(store.plan().ticked).toEqual([]);
   });
 
-  it('keeps the added items, in their order, and their ticks after a reload', () => {
+  it('keeps the added items, in their order, and their ticks after a reload', async () => {
     acceptOneDayPlan(store);
     store.addItem('toilet paper');
     store.addItem('coffee');
@@ -462,12 +465,12 @@ describe('PlanStore', () => {
     expect(store.plan().added, 'items not added').toEqual(['toilet paper', 'coffee', '2 l milk']);
     expect(store.plan().ticked, 'items not ticked').toEqual(ticked);
 
-    store = reload();
+    store = await reload();
     expect(store.plan().added).toEqual(['toilet paper', 'coffee', '2 l milk']);
     expect(store.plan().ticked).toEqual(ticked);
   });
 
-  it('starts "New plan" without the added items, and none after a reload or once the next plan is accepted', () => {
+  it('starts "New plan" without the added items, and none after a reload or once the next plan is accepted', async () => {
     acceptOneDayPlan(store);
     store.addItem('toilet paper');
     store.addItem('coffee');
@@ -477,14 +480,14 @@ describe('PlanStore', () => {
     store.newPlan(DEFAULT_SETTINGS);
     expect(store.plan().added).toEqual([]);
     expect(store.plan().ticked).toEqual([]);
-    store = reload();
+    store = await reload();
     expect(store.plan().added).toEqual([]);
     acceptOneDayPlan(store);
     expect(store.plan().added).toEqual([]);
   });
 
   describe('newPlan with settings (#41)', () => {
-    it('starts 2 open days from today for 3 people with no pick, tick or added item and only the new suggestions shown on store.newPlan({ days: 2, people: 3, kidFriendly: false }) from a 5-day plan for 2 with 3 picks and a tick, and saves it; draws only kid-friendly recipes with kidFriendly: true; and keeps the same plan for kidFriendly: true with 14 kid-friendly recipes suggested, days 0, 6 or 2.5 or people 0', () => {
+    it('starts 2 open days from today for 3 people with no pick, tick or added item and only the new suggestions shown on store.newPlan({ days: 2, people: 3, kidFriendly: false }) from a 5-day plan for 2 with 3 picks and a tick, and saves it; draws only kid-friendly recipes with kidFriendly: true; and keeps the same plan for kidFriendly: true with 14 kid-friendly recipes suggested, days 0, 6 or 2.5 or people 0', async () => {
       for (const meal of [LUNCH, DINNER, { day: 1, kind: 'lunch' } as const]) {
         pickFirstSuggestion(meal);
       }
@@ -503,10 +506,10 @@ describe('PlanStore', () => {
         }
       }
       expect([...plan.shown].sort()).toEqual([...new Set(suggestionsOf(plan))].sort());
-      expect(reload().plan(), 'after a reload').toEqual(plan);
+      expect((await reload()).plan(), 'after a reload').toEqual(plan);
 
       // Grocery lines can only be ticked on an accepted plan
-      store = reload();
+      store = await reload();
       acceptOneDayPlan(store);
       store.toggleTicked(firstItemKey());
       store.addItem('toilet paper');
@@ -515,14 +518,14 @@ describe('PlanStore', () => {
       expect(store.plan()).toMatchObject({ accepted: false, ticked: [], added: [], people: 3 });
       expect(store.plan().days).toHaveLength(2);
 
-      store = reload();
+      store = await reload();
       store.newPlan({ days: 5, people: 2, kidFriendly: true });
       expect(store.plan().kidFriendly).toBe(true);
       expectKidFriendly('kid-friendly new plan');
 
       // A kid-friendly plan stops removals at 15 kid-friendly recipes
       localStorage.clear();
-      store = reload();
+      store = await reload();
       leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
       const before = store.plan();
       for (const settings of [
@@ -598,7 +601,7 @@ describe('PlanStore', () => {
   });
 
   describe('own recipes', () => {
-    it('suggests the own recipe "Quick Dal" on the next "Other suggestions" once added, leaving an unaccepted plan that has shown every built-in recipe unchanged until then, and an accepted plan unchanged', () => {
+    it('suggests the own recipe "Quick Dal" on the next "Other suggestions" once added, leaving an unaccepted plan that has shown every built-in recipe unchanged until then, and an accepted plan unchanged', async () => {
       const saved: Plan = {
         ...planOf([
           day(
@@ -610,7 +613,7 @@ describe('PlanStore', () => {
         shown: NAMES,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-      store = reload();
+      store = await reload();
       expect(store.plan(), 'saved plan not loaded').toEqual(saved);
 
       recipes().add(QUICK_DAL);
@@ -620,7 +623,7 @@ describe('PlanStore', () => {
       expect(store.plan().days[0].lunch.suggestions).toContain('Quick Dal');
 
       localStorage.clear();
-      store = reload();
+      store = await reload();
       acceptOneDayPlan(store);
       const accepted = store.plan();
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -629,7 +632,7 @@ describe('PlanStore', () => {
       expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
     });
 
-    it('loads a saved plan that picked the own recipe "Quick Dal" with the pick after a reload', () => {
+    it('loads a saved plan that picked the own recipe "Quick Dal" with the pick after a reload', async () => {
       storeOwnRecipes(QUICK_DAL);
       const saved = planOf([
         day(
@@ -640,7 +643,7 @@ describe('PlanStore', () => {
       ]);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 
-      expect(reload().plan()).toEqual(saved);
+      expect((await reload()).plan()).toEqual(saved);
     });
 
     it('changes nothing on removeRecipe("Quick Dal") while it is one of exactly 15 recipes suggested, and lets it be removed once another own recipe is added', () => {
@@ -658,15 +661,15 @@ describe('PlanStore', () => {
       expect(store.removed()).toContain('Quick Dal');
     });
 
-    it('reads a saved list of removed recipes that leaves 14 built-in recipes and the own recipe "Quick Dal" suggested', () => {
+    it('reads a saved list of removed recipes that leaves 14 built-in recipes and the own recipe "Quick Dal" suggested', async () => {
       storeOwnRecipes(QUICK_DAL);
       const removals = NAMES.slice(14);
       localStorage.setItem(REMOVED_KEY, JSON.stringify(removals));
 
-      expect(reload().removed()).toEqual(removals);
+      expect((await reload()).removed()).toEqual(removals);
     });
 
-    it('ranks the next draw with the own recipe "Own pasta" as soon as it is added, and once it is deleted with the recipe added under its name since', () => {
+    it('ranks the next draw with the own recipe "Own pasta" as soon as it is added, and once it is deleted with the recipe added under its name since', async () => {
       localStorage.clear();
       today = '2026-10-26';
       // Only "Pesto pasta with cherry tomatoes" and "Greek salad with feta and bread" are not shown yet
@@ -682,7 +685,7 @@ describe('PlanStore', () => {
         shown: NAMES.filter((name) => !fresh.includes(name)),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-      store = reload();
+      store = await reload();
       expect(store.plan(), 'saved plan not loaded').toEqual(saved);
 
       recipes().add(R('Own pasta', ['spaghetti', 'onion']));
@@ -709,9 +712,9 @@ describe('PlanStore', () => {
     });
 
     describe('editing and deleting', () => {
-      it('changes nothing on deleteRecipe("Quick Dal") and tells "picked" from deleteBlock while it is picked in an unaccepted plan or as a dinner cooked extra there, null once the pick is undone, and "accepted" while it is picked in an accepted plan', () => {
+      it('changes nothing on deleteRecipe("Quick Dal") and tells "picked" from deleteBlock while it is picked in an unaccepted plan or as a dinner cooked extra there, null once the pick is undone, and "accepted" while it is picked in an accepted plan', async () => {
         storeOwnRecipes(QUICK_DAL);
-        load(
+        await load(
           planOf([
             day(
               '2026-10-24',
@@ -730,7 +733,7 @@ describe('PlanStore', () => {
         expect(store.plan().days[0].lunch.recipe, 'pick not undone').toBeNull();
         expect(store.deleteBlock('Quick Dal'), 'pick undone').toBeNull();
 
-        load(
+        await load(
           planOf([
             day(
               '2026-10-24',
@@ -748,7 +751,7 @@ describe('PlanStore', () => {
         expect(store.deleteBlock('Quick Dal'), 'dinner cooked extra').toBe('picked');
         expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
 
-        load(
+        await load(
           planOf([day('2026-10-24', picked('Quick Dal'), picked('Shakshuka with bread'))], {
             accepted: true,
           }),
@@ -757,28 +760,28 @@ describe('PlanStore', () => {
         expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
       });
 
-      it('changes neither fooplan.recipes, the plan nor the removed recipes on deleteRecipe("Quick Dal") and tells "limit" from deleteBlock while it is one of exactly 15 recipes suggested and not picked, and null while it is removed instead', () => {
+      it('changes neither fooplan.recipes, the plan nor the removed recipes on deleteRecipe("Quick Dal") and tells "limit" from deleteBlock while it is one of exactly 15 recipes suggested and not picked, and null while it is removed instead', async () => {
         storeOwnRecipes(QUICK_DAL);
-        store = reload();
+        store = await reload();
         leaveSuggested(store, 15, 'Quick Dal');
         expect(store.deleteBlock('Quick Dal')).toBe('limit');
         expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
 
         localStorage.clear();
         storeOwnRecipes(QUICK_DAL);
-        store = reload();
+        store = await reload();
         leaveSuggested(store, 15);
         expect(store.removed(), 'Quick Dal not removed').toContain('Quick Dal');
         expect(store.deleteBlock('Quick Dal')).toBeNull();
       });
 
-      it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" in the plan and in its place in the removed recipes on recipeEdited after RecipeStore.replace, and loads both unchanged after a reload', () => {
+      it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" in the plan and in its place in the removed recipes on recipeEdited after RecipeStore.replace, and loads both unchanged after a reload', async () => {
         storeOwnRecipes(QUICK_DAL);
         localStorage.setItem(
           REMOVED_KEY,
           JSON.stringify(['Shakshuka with bread', 'Quick Dal', 'Fish tacos']),
         );
-        load(
+        await load(
           planOf([
             day(
               '2026-10-24',
@@ -814,7 +817,7 @@ describe('PlanStore', () => {
         expect(store.removed()).toEqual(['Shakshuka with bread', 'Daily Dal', 'Fish tacos']);
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(expected);
 
-        store = reload();
+        store = await reload();
         expect(store.plan(), 'plan after a reload').toEqual(expected);
         expect(store.removed(), 'removed after a reload').toEqual([
           'Shakshuka with bread',
@@ -823,10 +826,10 @@ describe('PlanStore', () => {
         ]);
       });
 
-      it('deletes "Quick Dal", not picked and removed, from the own recipes, fooplan.recipes, the removed recipes and the plan\'s shown recipes and remembered suggestions on deleteRecipe, saving each', () => {
+      it('deletes "Quick Dal", not picked and removed, from the own recipes, fooplan.recipes, the removed recipes and the plan\'s shown recipes and remembered suggestions on deleteRecipe, saving each', async () => {
         storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
         localStorage.setItem(REMOVED_KEY, JSON.stringify(['Shakshuka with bread', 'Quick Dal']));
-        load(
+        await load(
           planOf([
             day(
               '2026-10-24',
@@ -859,10 +862,10 @@ describe('PlanStore', () => {
         expect(localStorage.getItem(STORAGE_KEY)).not.toContain('Quick Dal');
       });
 
-      it('loads the plan saved without "Quick Dal", and "Quick Dal" still removed, after a reload when saving fooplan.recipes, and every write after it, fails on deleteRecipe', () => {
+      it('loads the plan saved without "Quick Dal", and "Quick Dal" still removed, after a reload when saving fooplan.recipes, and every write after it, fails on deleteRecipe', async () => {
         storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
         localStorage.setItem(REMOVED_KEY, JSON.stringify(['Quick Dal']));
-        load(
+        await load(
           planOf([
             day(
               '2026-10-24',
@@ -899,16 +902,16 @@ describe('PlanStore', () => {
         const deleted = store.plan();
         expect(JSON.stringify(deleted)).not.toContain('Quick Dal');
 
-        store = reload();
+        store = await reload();
         expect(recipes().own()).toEqual([QUICK_DAL, PLAIN_RICE]);
         expect(store.removed()).toEqual(['Quick Dal']);
         expect(store.plan()).toEqual(deleted);
       });
 
       describe('edge cases', () => {
-        it('tells "picked" from deleteBlock for "Quick Dal" picked while exactly 15 recipes are suggested, and "accepted" once the plan is accepted', () => {
+        it('tells "picked" from deleteBlock for "Quick Dal" picked while exactly 15 recipes are suggested, and "accepted" once the plan is accepted', async () => {
           storeOwnRecipes(QUICK_DAL);
-          load(
+          await load(
             planOf([
               day(
                 '2026-10-24',
@@ -939,9 +942,9 @@ describe('PlanStore', () => {
           expectNotDeleted(() => store.deleteRecipe('Quick Dal'));
         });
 
-        it('deletes the removed "Quick Dal" while exactly 15 recipes are suggested, leaving 15 suggested', () => {
+        it('deletes the removed "Quick Dal" while exactly 15 recipes are suggested, leaving 15 suggested', async () => {
           storeOwnRecipes(QUICK_DAL);
-          store = reload();
+          store = await reload();
           const suggested = leaveSuggested(store, 15);
           expect(store.removed(), 'Quick Dal not removed').toContain('Quick Dal');
 
@@ -951,9 +954,9 @@ describe('PlanStore', () => {
           expect(suggestedNames()).toEqual(suggested);
         });
 
-        it('deletes "Quick Dal" while it is one of 16 recipes suggested, leaving 15 suggested and telling "limit" for the own recipe "Plain Rice" among them', () => {
+        it('deletes "Quick Dal" while it is one of 16 recipes suggested, leaving 15 suggested and telling "limit" for the own recipe "Plain Rice" among them', async () => {
           storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
-          store = reload();
+          store = await reload();
           const suggested = leaveSuggested(store, 16, 'Quick Dal', 'Plain Rice');
           expect(store.deleteBlock('Quick Dal')).toBeNull();
 
@@ -963,9 +966,9 @@ describe('PlanStore', () => {
           expect(store.deleteBlock('Plain Rice')).toBe('limit');
         });
 
-        it('turns deleteBlock("Quick Dal") read in a computed from "limit" to null when another own recipe is added', () => {
+        it('turns deleteBlock("Quick Dal") read in a computed from "limit" to null when another own recipe is added', async () => {
           storeOwnRecipes(QUICK_DAL);
-          store = reload();
+          store = await reload();
           leaveSuggested(store, 15, 'Quick Dal');
           const block = computed(() => store.deleteBlock('Quick Dal'));
           expect(block()).toBe('limit');
@@ -974,13 +977,13 @@ describe('PlanStore', () => {
           expect(block()).toBeNull();
         });
 
-        it('replaces a suggestion of the deleted "Quick Dal" with a recipe neither removed nor "Quick Dal", in its place, and saves the plan', () => {
+        it('replaces a suggestion of the deleted "Quick Dal" with a recipe neither removed nor "Quick Dal", in its place, and saves the plan', async () => {
           storeOwnRecipes(QUICK_DAL);
           const removed = NAMES.slice(20);
           localStorage.setItem(REMOVED_KEY, JSON.stringify(removed));
           // Every recipe still suggested has been shown, so a draw among all recipes would take a
           // removed one, never shown
-          load({
+          await load({
             ...planOf([
               day(
                 '2026-10-24',
@@ -1003,9 +1006,9 @@ describe('PlanStore', () => {
         });
       });
 
-      function load(plan: Plan) {
+      async function load(plan: Plan) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
-        store = reload();
+        store = await reload();
         expect(store.plan(), 'saved plan not loaded').toEqual(plan);
       }
 
@@ -1041,7 +1044,7 @@ describe('PlanStore', () => {
   });
 
   describe('kid-friendly', () => {
-    it('starts a kid-friendly plan with newPlan, suggesting none of the 11 recipes that are not kid-friendly, saves it and keeps it after a reload', () => {
+    it('starts a kid-friendly plan with newPlan, suggesting none of the 11 recipes that are not kid-friendly, saves it and keeps it after a reload', async () => {
       expect(store.plan().kidFriendly, 'new plan').toBe(false);
       expect(
         suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)).length,
@@ -1051,7 +1054,7 @@ describe('PlanStore', () => {
       store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
       expect(store.plan().kidFriendly).toBe(true);
       expectKidFriendly('new plan');
-      store = reload();
+      store = await reload();
       expect(store.plan().kidFriendly, 'after a reload').toBe(true);
       expectKidFriendly('after a reload');
     });
@@ -1106,7 +1109,7 @@ describe('PlanStore', () => {
       expect(store.removed()).toEqual([...before, NOT_KID_FRIENDLY[0]]);
     });
 
-    it('replaces "Penne arrabbiata" and "Niçoise salad" suggested by a saved kid-friendly plan in their places with kid-friendly recipes when loading it, keeps the other suggestions and the dinner picked as "Pad thai with chicken", and saves the plan with the replacements', () => {
+    it('replaces "Penne arrabbiata" and "Niçoise salad" suggested by a saved kid-friendly plan in their places with kid-friendly recipes when loading it, keeps the other suggestions and the dinner picked as "Pad thai with chicken", and saves the plan with the replacements', async () => {
       const saved = planOf(
         [
           day(
@@ -1124,7 +1127,7 @@ describe('PlanStore', () => {
       );
       localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 
-      store = reload();
+      store = await reload();
       const [first, second] = store.plan().days;
       expect(store.plan().kidFriendly).toBe(true);
       expect(first.lunch.suggestions[0]).toBe('Spaghetti carbonara');
@@ -1142,9 +1145,9 @@ describe('PlanStore', () => {
       );
     });
 
-    it('replaces the own recipe "Plain Rice" in its place with a kid-friendly recipe once it is edited to use chili flakes while kid-friendly is on, keeping its name, and "Onion Rice" once it is edited and renamed to "Spicy Rice", and saves the plan', () => {
+    it('replaces the own recipe "Plain Rice" in its place with a kid-friendly recipe once it is edited to use chili flakes while kid-friendly is on, keeping its name, and "Onion Rice" once it is edited and renamed to "Spicy Rice", and saves the plan', async () => {
       storeOwnRecipes(PLAIN_RICE, ownRecipe('Onion Rice'));
-      load(
+      await load(
         planOf(
           [
             day(
@@ -1178,9 +1181,9 @@ describe('PlanStore', () => {
       );
     });
 
-    it('turns kid-friendly off once the own recipe "Plain Rice", one of exactly 15 kid-friendly recipes suggested, is edited to use chili flakes with kid-friendly on and 9 meals picked, so "Other suggestions" still gives the open meal 3 suggestions and the saved plan loads again', () => {
+    it('turns kid-friendly off once the own recipe "Plain Rice", one of exactly 15 kid-friendly recipes suggested, is edited to use chili flakes with kid-friendly on and 9 meals picked, so "Other suggestions" still gives the open meal 3 suggestions and the saved plan loads again', async () => {
       storeOwnRecipes(PLAIN_RICE);
-      store = reload();
+      store = await reload();
       leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 14), PLAIN_RICE.name, ...NOT_KID_FRIENDLY);
       store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
       expect(store.plan().kidFriendly, 'not kid-friendly').toBe(true);
@@ -1205,12 +1208,12 @@ describe('PlanStore', () => {
         ).toHaveLength(3);
       }
       const plan = store.plan();
-      expect(reload().plan(), 'saved plan not loaded').toEqual(plan);
+      expect((await reload()).plan(), 'saved plan not loaded').toEqual(plan);
     });
 
-    it('replaces the deleted own recipe "Plain Rice" with a kid-friendly recipe while kid-friendly is on, also when only recipes that are not kid-friendly have not been shown yet', () => {
+    it('replaces the deleted own recipe "Plain Rice" with a kid-friendly recipe while kid-friendly is on, also when only recipes that are not kid-friendly have not been shown yet', async () => {
       storeOwnRecipes(PLAIN_RICE);
-      load({
+      await load({
         ...planOf(
           [
             day(
@@ -1232,8 +1235,8 @@ describe('PlanStore', () => {
       expect(suggestions[2]).toBe('Mac and cheese');
     });
 
-    it('replaces "Penne arrabbiata" among the remembered suggestions with a kid-friendly recipe when the user undoes the pick of "Mac and cheese" while kid-friendly is on, also when only recipes that are not kid-friendly have not been shown yet', () => {
-      load({
+    it('replaces "Penne arrabbiata" among the remembered suggestions with a kid-friendly recipe when the user undoes the pick of "Mac and cheese" while kid-friendly is on, also when only recipes that are not kid-friendly have not been shown yet', async () => {
+      await load({
         ...planOf(
           [
             day(
@@ -1266,7 +1269,7 @@ describe('PlanStore', () => {
     });
 
     describe('edge cases', () => {
-      it('loads a saved kid-friendly plan not kid-friendly, with its suggestions, and saves it while only 14 kid-friendly recipes are suggested', () => {
+      it('loads a saved kid-friendly plan not kid-friendly, with its suggestions, and saves it while only 14 kid-friendly recipes are suggested', async () => {
         localStorage.setItem(REMOVED_KEY, JSON.stringify(KID_FRIENDLY.slice(14)));
         const saved = planOf(
           [day('2026-10-24', open(...KID_FRIENDLY.slice(0, 3)), open(...KID_FRIENDLY.slice(3, 6)))],
@@ -1274,14 +1277,14 @@ describe('PlanStore', () => {
         );
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 
-        store = reload();
+        store = await reload();
         expect(store.plan()).toEqual({ ...saved, kidFriendly: false });
         expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null'), 'not saved').toEqual(
           store.plan(),
         );
       });
 
-      it('keeps a saved accepted kid-friendly plan kid-friendly while only 14 kid-friendly recipes are suggested, saving nothing, tells kidFriendly false for it, and starts a new plan from it only when it is not kid-friendly, drawing from every suggested recipe', () => {
+      it('keeps a saved accepted kid-friendly plan kid-friendly while only 14 kid-friendly recipes are suggested, saving nothing, tells kidFriendly false for it, and starts a new plan from it only when it is not kid-friendly, drawing from every suggested recipe', async () => {
         localStorage.setItem(REMOVED_KEY, JSON.stringify(KID_FRIENDLY.slice(14)));
         const stored = JSON.stringify(
           planOf([day('2026-10-24', picked(KID_FRIENDLY[0]), picked(KID_FRIENDLY[1]))], {
@@ -1291,7 +1294,7 @@ describe('PlanStore', () => {
         );
         localStorage.setItem(STORAGE_KEY, stored);
 
-        store = reload();
+        store = await reload();
         expect(store.plan().kidFriendly, 'accepted plan').toBe(true);
         expect(localStorage.getItem(STORAGE_KEY), 'accepted plan saved').toBe(stored);
         expect(store.kidFriendly()).toBe(false);
@@ -1307,7 +1310,7 @@ describe('PlanStore', () => {
         ).toBeGreaterThan(0);
       });
 
-      it('keeps "Penne arrabbiata" suggested by a saved plan that is not kid-friendly when loading it, and saves nothing', () => {
+      it('keeps "Penne arrabbiata" suggested by a saved plan that is not kid-friendly when loading it, and saves nothing', async () => {
         const stored = JSON.stringify(
           planOf(
             [
@@ -1322,14 +1325,14 @@ describe('PlanStore', () => {
         );
         localStorage.setItem(STORAGE_KEY, stored);
 
-        store = reload();
+        store = await reload();
         expect(store.plan().days).toEqual(JSON.parse(stored).days);
         expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
       });
 
-      it('keeps the same plan and writes nothing once the own recipe "Plain Rice", suggested, is edited to use chili flakes, keeping its name, while kid-friendly is off', () => {
+      it('keeps the same plan and writes nothing once the own recipe "Plain Rice", suggested, is edited to use chili flakes, keeping its name, while kid-friendly is off', async () => {
         storeOwnRecipes(PLAIN_RICE);
-        load(
+        await load(
           planOf(
             [
               day(
@@ -1354,9 +1357,9 @@ describe('PlanStore', () => {
         expect(store.plan()).toBe(before);
       });
 
-      it('tells "limit" from deleteBlock for the own recipe "Plain Rice" and deletes nothing while it is one of exactly 15 kid-friendly recipes suggested with kid-friendly on, and null while it is off', () => {
+      it('tells "limit" from deleteBlock for the own recipe "Plain Rice" and deletes nothing while it is one of exactly 15 kid-friendly recipes suggested with kid-friendly on, and null while it is off', async () => {
         storeOwnRecipes(PLAIN_RICE);
-        store = reload();
+        store = await reload();
         leaveSuggested(
           store,
           26,
@@ -1377,9 +1380,9 @@ describe('PlanStore', () => {
       });
     });
 
-    function load(plan: Plan) {
+    async function load(plan: Plan) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
-      store = reload();
+      store = await reload();
       expect(store.plan(), 'saved plan not loaded').toEqual(plan);
     }
 
@@ -1433,7 +1436,7 @@ describe('PlanStore', () => {
       expect(suggestionsOf(store.plan())).toContain('Penne arrabbiata');
     });
 
-    it('keeps a plan with a pick of a removed recipe, and a meal remembering it among the suggestions it showed, unchanged after a reload', () => {
+    it('keeps a plan with a pick of a removed recipe, and a meal remembering it among the suggestions it showed, unchanged after a reload', async () => {
       const saved = planOf([
         day(
           '2026-10-24',
@@ -1454,18 +1457,18 @@ describe('PlanStore', () => {
           picked('Mac and cheese'),
         ),
       ]);
-      load(saved);
+      await load(saved);
 
       store.removeRecipe('Shakshuka with bread');
-      store = reload();
+      store = await reload();
       expect(store.removed(), 'Shakshuka with bread not removed after the reload').toEqual([
         'Shakshuka with bread',
       ]);
       expect(store.plan()).toEqual(saved);
     });
 
-    it('keeps a pick of a removed recipe, and leaves an accepted plan unchanged', () => {
-      load(
+    it('keeps a pick of a removed recipe, and leaves an accepted plan unchanged', async () => {
+      await load(
         planOf([
           day(
             '2026-10-24',
@@ -1483,7 +1486,7 @@ describe('PlanStore', () => {
         [day('2026-10-24', picked('Shakshuka with bread'), picked('Spaghetti carbonara'))],
         { accepted: true },
       );
-      load(accepted);
+      await load(accepted);
       store.removeRecipe('Shakshuka with bread');
       expect(store.removed(), 'Shakshuka with bread not removed from an accepted plan').toEqual([
         'Shakshuka with bread',
@@ -1491,8 +1494,8 @@ describe('PlanStore', () => {
       expect(store.plan()).toEqual(accepted);
     });
 
-    it('brings back the other suggestions in their places on "Undo" of a meal that picked one of them, and another recipe not removed where the removed one was', () => {
-      load(
+    it('brings back the other suggestions in their places on "Undo" of a meal that picked one of them, and another recipe not removed where the removed one was', async () => {
+      await load(
         planOf([
           day(
             '2026-10-24',
@@ -1509,8 +1512,8 @@ describe('PlanStore', () => {
       expectReopenedWithout('Shakshuka with bread');
     });
 
-    it('brings back the other suggestions in their places on "Undo" of a meal that picked the removed recipe, and another recipe not removed in its place', () => {
-      load(
+    it('brings back the other suggestions in their places on "Undo" of a meal that picked the removed recipe, and another recipe not removed in its place', async () => {
+      await load(
         planOf([
           day(
             '2026-10-24',
@@ -1568,12 +1571,12 @@ describe('PlanStore', () => {
       expect(store.canRemove()).toBe(false);
     });
 
-    it('keeps the removed recipes, saved in the order removed, after a reload and "New plan", and reads a saved list without unknown names and duplicates, or as empty when it is not a list of names or leaves fewer than 15 suggested', () => {
+    it('keeps the removed recipes, saved in the order removed, after a reload and "New plan", and reads a saved list without unknown names and duplicates, or as empty when it is not a list of names or leaves fewer than 15 suggested', async () => {
       store.removeRecipe('Chickpea and spinach curry');
       store.removeRecipe('Shakshuka with bread');
       expect(store.removed()).toEqual(['Chickpea and spinach curry', 'Shakshuka with bread']);
       expect(storedRemoved()).toEqual(['Chickpea and spinach curry', 'Shakshuka with bread']);
-      store = reload();
+      store = await reload();
       expect(store.removed(), 'after a reload').toEqual([
         'Chickpea and spinach curry',
         'Shakshuka with bread',
@@ -1592,20 +1595,22 @@ describe('PlanStore', () => {
         REMOVED_KEY,
         JSON.stringify(['Shakshuka with bread', 'Imaginary stew', 'Shakshuka with bread']),
       );
-      expect(reload().removed(), 'unknown name and duplicate').toEqual(['Shakshuka with bread']);
+      expect((await reload()).removed(), 'unknown name and duplicate').toEqual([
+        'Shakshuka with bread',
+      ]);
       localStorage.setItem(REMOVED_KEY, '{}');
-      expect(reload().removed(), '{}').toEqual([]);
+      expect((await reload()).removed(), '{}').toEqual([]);
       localStorage.setItem(REMOVED_KEY, JSON.stringify(NAMES.slice(14)));
-      expect(reload().removed(), 'leaving 14 suggested').toEqual([]);
+      expect((await reload()).removed(), 'leaving 14 suggested').toEqual([]);
     });
 
-    it('saves the removed recipes without one brought back, the others in their order, and with it last when it is removed again', () => {
+    it('saves the removed recipes without one brought back, the others in their order, and with it last when it is removed again', async () => {
       store.removeRecipe('Chickpea and spinach curry');
       store.removeRecipe('Shakshuka with bread');
       store.removeRecipe('Fish tacos');
       store.restoreRecipe('Shakshuka with bread');
       expect(storedRemoved()).toEqual(['Chickpea and spinach curry', 'Fish tacos']);
-      store = reload();
+      store = await reload();
       expect(store.removed(), 'after a reload').toEqual([
         'Chickpea and spinach curry',
         'Fish tacos',
@@ -1624,8 +1629,8 @@ describe('PlanStore', () => {
       ]);
     });
 
-    it('saves the plan with the replacement of a removed suggestion, so a reload shows it', () => {
-      load(
+    it('saves the plan with the replacement of a removed suggestion, so a reload shows it', async () => {
+      await load(
         planOf([
           day(
             '2026-10-24',
@@ -1640,10 +1645,10 @@ describe('PlanStore', () => {
         'Shakshuka with bread',
       );
 
-      expect(reload().plan()).toEqual(after);
+      expect((await reload()).plan()).toEqual(after);
     });
 
-    it('replaces a removed recipe still suggested by the saved plan when loading it, keeps the other suggestions in their places and saves the plan with the replacement', () => {
+    it('replaces a removed recipe still suggested by the saved plan when loading it, keeps the other suggestions in their places and saves the plan with the replacement', async () => {
       localStorage.setItem(REMOVED_KEY, JSON.stringify(['Shakshuka with bread']));
       localStorage.setItem(
         STORAGE_KEY,
@@ -1658,7 +1663,7 @@ describe('PlanStore', () => {
         ),
       );
 
-      store = reload();
+      store = await reload();
       const [lunch, dinner] = [store.plan().days[0].lunch, store.plan().days[0].dinner];
       expect(lunch.suggestions[0]).toBe('Spaghetti carbonara');
       expect(lunch.suggestions[1]).not.toBe('Shakshuka with bread');
@@ -1677,11 +1682,11 @@ describe('PlanStore', () => {
       const before = saved();
       store.removeRecipe('Shakshuka with bread');
       expect(saved(), 'after removing Shakshuka with bread again').toEqual(before);
-      expect(reload().plan(), 'after a reload').toEqual(before.plan);
+      expect((await reload()).plan(), 'after a reload').toEqual(before.plan);
     });
 
-    it('removes a recipe and replaces it in the plan when saving fails', () => {
-      load(
+    it('removes a recipe and replaces it in the plan when saving fails', async () => {
+      await load(
         planOf([
           day(
             '2026-10-24',
@@ -1699,17 +1704,17 @@ describe('PlanStore', () => {
       expect(store.plan().days[0].lunch.suggestions).not.toContain('Shakshuka with bread');
     });
 
-    it('reads a saved list holding something other than a name as empty', () => {
+    it('reads a saved list holding something other than a name as empty', async () => {
       localStorage.setItem(REMOVED_KEY, JSON.stringify(['Shakshuka with bread', 42]));
 
-      expect(reload().removed()).toEqual([]);
+      expect((await reload()).removed()).toEqual([]);
     });
 
-    it('reads a saved list leaving exactly 15 recipes suggested once its unknown names are dropped', () => {
+    it('reads a saved list leaving exactly 15 recipes suggested once its unknown names are dropped', async () => {
       const removals = NAMES.slice(15);
       localStorage.setItem(REMOVED_KEY, JSON.stringify(['Imaginary stew', ...removals]));
 
-      expect(reload().removed()).toEqual(removals);
+      expect((await reload()).removed()).toEqual(removals);
     });
 
     function expectReopenedWithout(removed: string) {
@@ -1724,9 +1729,9 @@ describe('PlanStore', () => {
       expect(store.removed()).not.toContain(lunch.suggestions[0]);
     }
 
-    function load(plan: Plan) {
+    async function load(plan: Plan) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
-      store = reload();
+      store = await reload();
       expect(store.plan(), 'saved plan not loaded').toEqual(plan);
     }
 
@@ -1744,7 +1749,214 @@ describe('PlanStore', () => {
     }
   });
 
-  function createStore(): PlanStore {
+  describe('load (#44)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('creates a 5-day plan for 2 people starting today and saves it under fooplan.plan when nothing is saved (#44 3)', async () => {
+      localStorage.clear();
+      const loaded = unloaded();
+
+      await loaded.load();
+      expect(loaded.ready()).toBe(true);
+      expectFreshPlan(loaded.plan(), '2026-10-24');
+      expect(loaded.plan().people).toBe(2);
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null')).toEqual(loaded.plan());
+    });
+
+    it('replaces the plan and the removed recipes with the ones saved since when loaded again, and is not ready while that load runs (#44 4b)', async () => {
+      const loaded = unloaded();
+      await loaded.load();
+      const saved = planOf([
+        day(
+          '2026-10-22',
+          picked('Spaghetti carbonara'),
+          open('Fish tacos', 'Bean burritos', 'Potato goulash'),
+        ),
+      ]);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      localStorage.setItem(REMOVED_KEY, JSON.stringify(['Niçoise salad']));
+
+      const loading = loaded.load();
+      expect(loaded.ready(), 'during the load').toBe(false);
+      await loading;
+      expect(loaded.ready(), 'after the load').toBe(true);
+      expect(loaded.plan()).toEqual(saved);
+      expect(loaded.removed()).toEqual(['Niçoise salad']);
+    });
+
+    it('reads the backend once per key for two loads started before the first is done, which share one promise (#44 5)', async () => {
+      const read = vi.spyOn(LocalStorageBackend.prototype, 'read');
+      const loaded = unloaded();
+
+      const first = loaded.load();
+      const second = loaded.load();
+      expect(second).toBe(first);
+      await Promise.all([first, second]);
+      expect(read.mock.calls.map(([key]) => key).sort()).toEqual([
+        STORAGE_KEY,
+        RECIPES_KEY,
+        REMOVED_KEY,
+      ]);
+    });
+
+    it('shows a meal picked while saving fails, and throws nothing (#44 7)', async () => {
+      const loaded = unloaded();
+      await loaded.load();
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new DOMException('blocked', 'SecurityError');
+      });
+      const recipe = loaded.plan().days[0].lunch.suggestions[0];
+
+      expect(() => loaded.pick(LUNCH, recipe)).not.toThrow();
+      expect(loaded.plan().days[0].lunch.recipe).toBe(recipe);
+    });
+
+    describe('edge cases', () => {
+      it('reads and writes nothing, and is not ready, before its first load (#44 3a)', () => {
+        const saved = JSON.stringify(
+          planOf([day('2026-10-22', picked('Spaghetti carbonara'), picked('Fish tacos'))]),
+        );
+        localStorage.setItem(STORAGE_KEY, saved);
+        localStorage.setItem(REMOVED_KEY, JSON.stringify(['Niçoise salad']));
+        storeOwnRecipes(QUICK_DAL);
+        const getItem = vi.spyOn(Storage.prototype, 'getItem');
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+        const created = unloaded();
+        expect(created.ready()).toBe(false);
+        expect(created.plan().days).toEqual([]);
+        expect(created.removed()).toEqual([]);
+        const keys = [STORAGE_KEY, REMOVED_KEY, RECIPES_KEY];
+        expect(getItem.mock.calls.filter(([key]) => keys.includes(key))).toEqual([]);
+        expect(setItem.mock.calls.filter(([key]) => keys.includes(key))).toEqual([]);
+        expect(localStorage.getItem(STORAGE_KEY), 'saved plan').toBe(saved);
+      });
+
+      it('ignores changes before its first load: nothing is saved, and the load brings the saved plan and removed recipes (#44 3b)', async () => {
+        const saved = planOf([
+          day(
+            '2026-10-22',
+            picked('Spaghetti carbonara'),
+            open('Fish tacos', 'Potato goulash', 'Pizza toast'),
+          ),
+        ]);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        localStorage.setItem(REMOVED_KEY, JSON.stringify(['Niçoise salad']));
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+        const created = unloaded();
+
+        created.removeRecipe('Bean burritos');
+        created.addItem('toilet paper');
+        expect(created.newPlan({ ...DEFAULT_SETTINGS, days: 2 }), 'new plan started').toBe(false);
+        expect(created.plan().days, 'plan changed').toEqual([]);
+        expect(created.removed(), 'removed changed').toEqual([]);
+        expect(setItem).not.toHaveBeenCalled();
+
+        await created.load();
+        expect(created.plan()).toEqual(saved);
+        expect(created.removed()).toEqual(['Niçoise salad']);
+      });
+
+      it('ignores changes while it loads again: nothing is saved, and the load brings what is saved (#44 4e)', async () => {
+        const loaded = unloaded();
+        await loaded.load();
+        const saved = loaded.plan();
+        const recipe = saved.days[0].lunch.suggestions[0];
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+        const loading = loaded.load();
+        loaded.pick(LUNCH, recipe);
+        loaded.removeRecipe('Bean burritos');
+        await loading;
+        expect(setItem).not.toHaveBeenCalled();
+        expect(loaded.plan()).toEqual(saved);
+        expect(loaded.removed()).toEqual([]);
+      });
+
+      it('deletes no own recipe while it is not loaded, even with the recipes loaded (#44 3c)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        const created = unloaded();
+        await TestBed.inject(RecipeStore).load();
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+        created.deleteRecipe('Quick Dal');
+        expect(TestBed.inject(RecipeStore).own()).toEqual([QUICK_DAL]);
+        expect(setItem).not.toHaveBeenCalled();
+      });
+
+      it('loads again after a load whose backend read threw at once (#44 5d)', async () => {
+        const loaded = unloaded({ provide: StorageBackend, useValue: new ThrowingOnceBackend() });
+
+        await expect(loaded.load()).rejects.toThrow('not read');
+        expect(loaded.ready(), 'ready after the failed load').toBe(false);
+        await loaded.load();
+        expect(loaded.ready()).toBe(true);
+        expect(loaded.plan().days).toHaveLength(5);
+      });
+
+      it('reads again on a load() called as soon as a load has made the store ready (#44 5b)', async () => {
+        const read = vi.spyOn(LocalStorageBackend.prototype, 'read');
+        const loaded = unloaded();
+        const first = loaded.load();
+        for (let step = 0; step < 100 && !loaded.ready(); step++) {
+          await Promise.resolve();
+        }
+        expect(loaded.ready(), 'not ready').toBe(true);
+
+        const second = loaded.load();
+        expect(second).not.toBe(first);
+        await second;
+        expect(read).toHaveBeenCalledTimes(6);
+      });
+
+      it('loads the own recipes again first, so a saved plan picking one saved since keeps its pick (#44 4c)', async () => {
+        const loaded = unloaded();
+        await loaded.load();
+        storeOwnRecipes(QUICK_DAL);
+        const saved = planOf([
+          day(
+            '2026-10-24',
+            picked('Quick Dal'),
+            open('Fish tacos', 'Bean burritos', 'Potato goulash'),
+          ),
+        ]);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+
+        await loaded.load();
+        expect(TestBed.inject(RecipeStore).own()).toEqual([QUICK_DAL]);
+        expect(loaded.plan()).toEqual(saved);
+      });
+
+      it('shows a meal picked when the backend rejects the write, passes the plan to it, and leaves no rejection unhandled (#44 7a)', async () => {
+        const backend = new RejectingBackend();
+        const loaded = unloaded({ provide: StorageBackend, useValue: backend });
+        await loaded.load();
+        const recipe = loaded.plan().days[0].lunch.suggestions[0];
+
+        const unhandled = await unhandledRejections(() => loaded.pick(LUNCH, recipe));
+        expect(loaded.plan().days[0].lunch.recipe).toBe(recipe);
+        expect(backend.writes.at(-1)).toEqual([STORAGE_KEY, loaded.plan()]);
+        expect(unhandled).toEqual([]);
+      });
+    });
+
+    // A fresh injector, as a page reload makes, with the store not loaded yet
+    function unloaded(...providers: Provider[]): PlanStore {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: RANDOM, useValue: seededRandom(seed++) },
+          { provide: TODAY, useValue: () => today },
+          ...providers,
+        ],
+      });
+      return TestBed.inject(PlanStore);
+    }
+  });
+
+  function createStore(): Promise<PlanStore> {
     TestBed.configureTestingModule({
       providers: [
         // A new seed on every load, so a reload draws other suggestions unless the plan was saved
@@ -1752,11 +1964,11 @@ describe('PlanStore', () => {
         { provide: TODAY, useValue: () => today },
       ],
     });
-    return TestBed.inject(PlanStore);
+    return loadStores();
   }
 
   // A fresh injector reading the same localStorage, as a page reload would
-  function reload(): PlanStore {
+  function reload(): Promise<PlanStore> {
     TestBed.resetTestingModule();
     return createStore();
   }

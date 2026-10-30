@@ -26,7 +26,7 @@ export function ownRecipe(name: string, servings = 4): Recipe {
   return { name, servings, ingredients: [{ name: 'onion', amount: 1, unit: 'pc' }], own: true };
 }
 
-// Saved the way RecipeStore saves them, without `own`, so a store created afterwards loads them
+// Saved the way RecipeStore saves them, without `own`, so the next load of the store reads them
 export function storeOwnRecipes(...recipes: Recipe[]): void {
   const stored = recipes.map(({ name, servings, ingredients }) => ({
     name,

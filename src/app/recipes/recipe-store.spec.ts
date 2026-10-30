@@ -1,8 +1,11 @@
+import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { LanguageStore } from '../language-store';
 import { DEFAULT_SETTINGS } from '../plan/plan';
 import { PlanStore, RANDOM, TODAY } from '../plan/plan-store';
 import { seededRandom } from '../plan/testing';
+import { LocalStorageBackend, StorageBackend } from '../storage';
+import { RejectingBackend, ThrowingOnceBackend, unhandledRejections } from '../testing';
 import { checkRecipe } from './own-recipe';
 import { Ingredient, Recipe } from './recipe';
 import { recipeSlug } from './recipe-slug';
@@ -13,9 +16,9 @@ import { ownRecipe, PLAIN_RICE, QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from '
 describe('RecipeStore', () => {
   let store: RecipeStore;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
-    store = createStore();
+    store = await createStore();
   });
 
   afterEach(() => {
@@ -30,7 +33,7 @@ describe('RecipeStore', () => {
     expect(store.all()).toEqual([...RECIPES, ownRecipe("Grandma's Soup"), QUICK_DAL]);
   });
 
-  it('keeps the own recipes after a reload and "New plan", saved in fooplan.recipes in the order added without `own`', () => {
+  it('keeps the own recipes after a reload and "New plan", saved in fooplan.recipes in the order added without `own`', async () => {
     store.add(QUICK_DAL);
     store.add(PLAIN_RICE);
     const saved = [QUICK_DAL, PLAIN_RICE].map(({ name, servings, ingredients }) => ({
@@ -40,14 +43,16 @@ describe('RecipeStore', () => {
     }));
     expect(storedRecipes()).toEqual(saved);
 
-    store = reload();
+    store = await reload();
     expect(store.own(), 'after a reload').toEqual([QUICK_DAL, PLAIN_RICE]);
-    TestBed.inject(PlanStore).newPlan(DEFAULT_SETTINGS);
+    const plan = TestBed.inject(PlanStore);
+    await plan.load();
+    plan.newPlan(DEFAULT_SETTINGS);
     expect(store.own(), 'after "New plan"').toEqual([QUICK_DAL, PLAIN_RICE]);
     expect(storedRecipes(), 'saved after "New plan"').toEqual(saved);
   });
 
-  it('loads only the valid entry from a list holding entries named "Spaghetti carbonara" or " Quick Dal", with 13 servings, 31 ingredients, the ingredient "Onion", the amount 1.234, the unit kg or no ingredients, and a second entry of the valid name', () => {
+  it('loads only the valid entry from a list holding entries named "Spaghetti carbonara" or " Quick Dal", with 13 servings, 31 ingredients, the ingredient "Onion", the amount 1.234, the unit kg or no ingredients, and a second entry of the valid name', async () => {
     const valid = stored(QUICK_DAL);
     localStorage.setItem(
       RECIPES_KEY,
@@ -73,21 +78,21 @@ describe('RecipeStore', () => {
       ]),
     );
 
-    expect(reload().own()).toEqual([QUICK_DAL]);
+    expect((await reload()).own()).toEqual([QUICK_DAL]);
   });
 
-  it('loads no own recipe from {} or text that is not JSON, where it loads a stored list', () => {
+  it('loads no own recipe from {} or text that is not JSON, where it loads a stored list', async () => {
     storeOwnRecipes(QUICK_DAL);
-    expect(reload().own(), 'stored list').toEqual([QUICK_DAL]);
+    expect((await reload()).own(), 'stored list').toEqual([QUICK_DAL]);
     for (const text of ['{}', 'not json']) {
       localStorage.setItem(RECIPES_KEY, text);
-      const reloaded = reload();
+      const reloaded = await reload();
       expect(reloaded.own(), text).toEqual([]);
       expect(reloaded.all(), text).toEqual(RECIPES);
     }
   });
 
-  it('keeps the amount 1.15 of an own recipe checked with the amount 1,15 after a reload', () => {
+  it('keeps the amount 1.15 of an own recipe checked with the amount 1,15 after a reload', async () => {
     const checked = checkRecipe(
       {
         name: 'Quick Dal',
@@ -101,31 +106,31 @@ describe('RecipeStore', () => {
     expect(recipe.ingredients[0].amount).toBe(1.15);
     store.add(recipe);
 
-    expect(reload().own()).toEqual([
+    expect((await reload()).own()).toEqual([
       { ...QUICK_DAL, ingredients: [{ name: 'onion', amount: 1.15, unit: 'pc' }] },
     ]);
   });
 
-  it('loads an entry with an extra `steps` key as an own recipe without steps', () => {
+  it('loads an entry with an extra `steps` key as an own recipe without steps', async () => {
     localStorage.setItem(
       RECIPES_KEY,
       JSON.stringify([{ ...stored(QUICK_DAL), steps: ['Cook the dal.', 'Serve it.'] }]),
     );
 
-    expect(reload().own()).toStrictEqual([QUICK_DAL]);
+    expect((await reload()).own()).toStrictEqual([QUICK_DAL]);
   });
 
-  it('finds the own recipe "Quick Dal" by the slug quick-dal once added and after a reload, and no recipe for no-such-dal', () => {
+  it('finds the own recipe "Quick Dal" by the slug quick-dal once added and after a reload, and no recipe for no-such-dal', async () => {
     store.add(QUICK_DAL);
     expect(store.bySlug('quick-dal')).toEqual(QUICK_DAL);
     expect(store.bySlug('no-such-dal')).toBeUndefined();
 
-    store = reload();
+    store = await reload();
     expect(store.bySlug('quick-dal'), 'after a reload').toEqual(QUICK_DAL);
     expect(store.bySlug('no-such-dal'), 'after a reload').toBeUndefined();
   });
 
-  it('replaces "Grandma\'s Soup" by "Red Soup" in its place before "Quick Dal", as an own recipe found by red-soup and no longer by grandmas-soup, saved in fooplan.recipes in that order and kept after a reload', () => {
+  it('replaces "Grandma\'s Soup" by "Red Soup" in its place before "Quick Dal", as an own recipe found by red-soup and no longer by grandmas-soup, saved in fooplan.recipes in that order and kept after a reload', async () => {
     store.add(ownRecipe("Grandma's Soup"));
     store.add(QUICK_DAL);
 
@@ -137,11 +142,11 @@ describe('RecipeStore', () => {
     expect(store.bySlug('grandmas-soup')).toBeUndefined();
     expect(storedRecipes()).toEqual([stored(ownRecipe('Red Soup', 2)), stored(QUICK_DAL)]);
 
-    store = reload();
+    store = await reload();
     expect(store.own(), 'after a reload').toEqual([ownRecipe('Red Soup', 2), QUICK_DAL]);
   });
 
-  it('removes "Quick Dal" from own(), all(), bySlug and fooplan.recipes, keeping the other own recipes in their order, also after a reload', () => {
+  it('removes "Quick Dal" from own(), all(), bySlug and fooplan.recipes, keeping the other own recipes in their order, also after a reload', async () => {
     store.add(ownRecipe("Grandma's Soup"));
     store.add(QUICK_DAL);
     store.add(PLAIN_RICE);
@@ -152,7 +157,7 @@ describe('RecipeStore', () => {
     expect(store.bySlug('quick-dal')).toBeUndefined();
     expect(storedRecipes()).toEqual([stored(ownRecipe("Grandma's Soup")), stored(PLAIN_RICE)]);
 
-    store = reload();
+    store = await reload();
     expect(store.own(), 'after a reload').toEqual([ownRecipe("Grandma's Soup"), PLAIN_RICE]);
   });
 
@@ -185,7 +190,7 @@ describe('RecipeStore', () => {
       expect(store.all().at(-1)).toEqual(QUICK_DAL);
     });
 
-    it('skips entries that are not recipes or hold values of the wrong type, and loads the others, one of them with exactly 30 ingredients', () => {
+    it('skips entries that are not recipes or hold values of the wrong type, and loads the others, one of them with exactly 30 ingredients', async () => {
       const valid = stored(QUICK_DAL);
       const thirty: Recipe = {
         name: 'Thirty spices',
@@ -219,19 +224,19 @@ describe('RecipeStore', () => {
         ]),
       );
 
-      expect(reload().own()).toEqual([thirty, QUICK_DAL]);
+      expect((await reload()).own()).toEqual([thirty, QUICK_DAL]);
     });
 
-    it('checks a stored name only against the entries kept before it, so an entry after a skipped one of the same name loads', () => {
+    it('checks a stored name only against the entries kept before it, so an entry after a skipped one of the same name loads', async () => {
       localStorage.setItem(
         RECIPES_KEY,
         JSON.stringify([{ ...stored(QUICK_DAL), servings: 13 }, stored(QUICK_DAL)]),
       );
 
-      expect(reload().own()).toEqual([QUICK_DAL]);
+      expect((await reload()).own()).toEqual([QUICK_DAL]);
     });
 
-    it('drops other keys of a stored ingredient', () => {
+    it('drops other keys of a stored ingredient', async () => {
       const valid = stored(QUICK_DAL);
       localStorage.setItem(
         RECIPES_KEY,
@@ -243,7 +248,7 @@ describe('RecipeStore', () => {
         ]),
       );
 
-      expect(reload().own()).toStrictEqual([QUICK_DAL]);
+      expect((await reload()).own()).toStrictEqual([QUICK_DAL]);
     });
   });
 
@@ -316,18 +321,146 @@ describe('RecipeStore', () => {
     }
   });
 
-  function createStore(): RecipeStore {
+  describe('load (#44)', () => {
+    it('replaces the own recipes with the ones saved since when loaded again, and is not ready while that load runs (#44 4)', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      const loaded = unloaded();
+      await loaded.load();
+      expect(loaded.own(), 'first load').toEqual([QUICK_DAL]);
+      expect(loaded.ready(), 'after the first load').toBe(true);
+      storeOwnRecipes(PLAIN_RICE, ownRecipe("Grandma's Soup"));
+
+      const loading = loaded.load();
+      expect(loaded.ready(), 'during the load').toBe(false);
+      await loading;
+      expect(loaded.ready(), 'after the load').toBe(true);
+      expect(loaded.own()).toEqual([PLAIN_RICE, ownRecipe("Grandma's Soup")]);
+      expect(loaded.bySlug('plain-rice')).toEqual(PLAIN_RICE);
+      expect(loaded.bySlug('quick-dal'), 'recipe no longer saved').toBeUndefined();
+    });
+
+    it('reads the backend once for two loads started before the first is done, which share one promise (#44 5a)', async () => {
+      const read = vi.spyOn(LocalStorageBackend.prototype, 'read');
+      const loaded = unloaded();
+
+      const first = loaded.load();
+      const second = loaded.load();
+      expect(second).toBe(first);
+      await Promise.all([first, second]);
+      expect(read.mock.calls).toEqual([[RECIPES_KEY]]);
+    });
+
+    describe('edge cases', () => {
+      it('holds no own recipe once loaded again after fooplan.recipes was removed (#44 4a)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        const loaded = unloaded();
+        await loaded.load();
+        localStorage.removeItem(RECIPES_KEY);
+
+        await loaded.load();
+        expect(loaded.own()).toEqual([]);
+        expect(loaded.all()).toEqual(RECIPES);
+      });
+
+      it('reads nothing, holds no own recipe and is not ready before its first load (#44 4d)', () => {
+        storeOwnRecipes(QUICK_DAL);
+        const getItem = vi.spyOn(Storage.prototype, 'getItem');
+
+        const created = unloaded();
+        expect(created.ready()).toBe(false);
+        expect(created.own()).toEqual([]);
+        expect(created.bySlug('quick-dal')).toBeUndefined();
+        expect(getItem.mock.calls.filter(([key]) => key === RECIPES_KEY)).toEqual([]);
+      });
+
+      it('ignores add, replace and remove before its first load: nothing is saved, and the load brings the saved recipes (#44 4f)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+        const created = unloaded();
+
+        created.add(PLAIN_RICE);
+        created.replace('Quick Dal', ownRecipe('Red Soup'));
+        created.remove('Quick Dal');
+        expect(created.own(), 'recipes changed').toEqual([]);
+        expect(setItem).not.toHaveBeenCalled();
+
+        await created.load();
+        expect(created.own()).toEqual([QUICK_DAL]);
+      });
+
+      it('ignores an add while it loads again: nothing is saved, and the load brings the saved recipes (#44 4g)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        const loaded = unloaded();
+        await loaded.load();
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+        const loading = loaded.load();
+        loaded.add(PLAIN_RICE);
+        await loading;
+        expect(setItem).not.toHaveBeenCalled();
+        expect(loaded.own()).toEqual([QUICK_DAL]);
+      });
+
+      it('loads again after a load whose backend read threw at once (#44 5e)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        const loaded = unloaded({ provide: StorageBackend, useValue: new ThrowingOnceBackend() });
+
+        await expect(loaded.load()).rejects.toThrow('not read');
+        expect(loaded.ready(), 'ready after the failed load').toBe(false);
+        await loaded.load();
+        expect(loaded.ready()).toBe(true);
+        expect(loaded.own()).toEqual([QUICK_DAL]);
+      });
+
+      it('reads again on a load() called as soon as a load has made the store ready (#44 5c)', async () => {
+        const read = vi.spyOn(LocalStorageBackend.prototype, 'read');
+        const loaded = unloaded();
+        const first = loaded.load();
+        for (let step = 0; step < 100 && !loaded.ready(); step++) {
+          await Promise.resolve();
+        }
+        expect(loaded.ready(), 'not ready').toBe(true);
+
+        const second = loaded.load();
+        expect(second).not.toBe(first);
+        await second;
+        expect(read).toHaveBeenCalledTimes(2);
+      });
+
+      it('adds a recipe when the backend rejects the write, passes the recipes to it, and leaves no rejection unhandled (#44 7b)', async () => {
+        const backend = new RejectingBackend();
+        const loaded = unloaded({ provide: StorageBackend, useValue: backend });
+        await loaded.load();
+
+        const unhandled = await unhandledRejections(() => loaded.add(QUICK_DAL));
+        expect(loaded.own()).toEqual([QUICK_DAL]);
+        expect(backend.writes).toEqual([[RECIPES_KEY, [stored(QUICK_DAL)]]]);
+        expect(unhandled).toEqual([]);
+      });
+    });
+
+    // A fresh injector, as a page reload makes, with the store not loaded yet
+    function unloaded(...providers: Provider[]): RecipeStore {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({ providers });
+      return TestBed.inject(RecipeStore);
+    }
+  });
+
+  async function createStore(): Promise<RecipeStore> {
     TestBed.configureTestingModule({
       providers: [
         { provide: RANDOM, useValue: seededRandom(1) },
         { provide: TODAY, useValue: () => '2026-10-24' },
       ],
     });
-    return TestBed.inject(RecipeStore);
+    const created = TestBed.inject(RecipeStore);
+    await created.load();
+    return created;
   }
 
   // A fresh injector reading the same localStorage, as a page reload would
-  function reload(): RecipeStore {
+  function reload(): Promise<RecipeStore> {
     TestBed.resetTestingModule();
     return createStore();
   }

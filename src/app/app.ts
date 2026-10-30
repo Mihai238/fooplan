@@ -5,6 +5,8 @@ import {
   ElementRef,
   inject,
   Injector,
+  PendingTasks,
+  signal,
   viewChild,
 } from '@angular/core';
 import {
@@ -22,6 +24,7 @@ import {
 import { filter, firstValueFrom } from 'rxjs';
 import { AuthStore } from './auth/auth-store';
 import { Language, LanguageStore } from './language-store';
+import type { PlanStore } from './plan/plan-store';
 
 @Component({
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
@@ -42,11 +45,24 @@ export class App {
   protected readonly inRecipes = computed(() => this.underRecipes() || this.onAddRecipe());
   private readonly underRecipes = isActive('/recipes', this.router);
   private readonly onAddRecipe = isActive('/add-recipe', this.router);
+  private readonly planStore = signal<PlanStore | undefined>(undefined);
+  protected readonly loaded = computed(() => this.planStore()?.ready() ?? false);
 
   constructor() {
+    // Pending until the pages can show, so the app only counts as stable from then on
+    inject(PendingTasks).run(() => this.loadStores());
     if (this.auth.openedFromLink) {
       void this.goToPlanAfterLink();
     }
+  }
+
+  // Imported on demand, as the guards in app.routes.ts do, to keep the recipes out of the initial
+  // bundle. Loading the plan loads the recipes too
+  private async loadStores(): Promise<void> {
+    const { PlanStore } = await import('./plan/plan-store');
+    const store = this.injector.get(PlanStore);
+    this.planStore.set(store);
+    await store.load();
   }
 
   protected showLanguage(language: Language): void {

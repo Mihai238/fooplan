@@ -17,6 +17,7 @@ import {
   eatingOut,
   KID_FRIENDLY,
   leaveSuggested,
+  loadStores,
   NOT_KID_FRIENDLY,
   open,
   picked,
@@ -3620,10 +3621,10 @@ describe('PlanPage', () => {
         { provide: TODAY, useValue: () => today },
       ],
     });
+    store = await loadStores();
     fixture = TestBed.createComponent(PlanPage);
     await fixture.whenStable();
     element = fixture.nativeElement as HTMLElement;
-    store = TestBed.inject(PlanStore);
   }
 
   async function acceptOneDayPlan(): Promise<string[]> {

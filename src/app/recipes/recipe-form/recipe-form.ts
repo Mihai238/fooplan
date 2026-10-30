@@ -41,6 +41,7 @@ interface ShownProblems extends Omit<RecipeProblems, 'rows'> {
 export class RecipeForm {
   private readonly router = inject(Router);
   private readonly recipes = inject(RecipeStore);
+  private readonly plan = inject(PlanStore);
   private readonly host: HTMLElement = inject(ElementRef).nativeElement;
   private readonly injector = inject(Injector);
   protected readonly language = inject(LanguageStore);
@@ -98,12 +99,8 @@ export class RecipeForm {
     );
     if ('recipe' in check) {
       if (savedName !== undefined) {
-        // Taken only here: creating the store can draw and save a plan, which adding a recipe
-        // doesn't. And before the rename, as creating it loads the plan and the removed recipes,
-        // dropping a name RecipeStore no longer has and rejecting a plan that holds one
-        const store = this.injector.get(PlanStore);
         this.recipes.replace(savedName, check.recipe);
-        store.recipeEdited(savedName, check.recipe.name);
+        this.plan.recipeEdited(savedName, check.recipe.name);
         this.savedName.set(check.recipe.name);
       } else {
         this.recipes.add(check.recipe);

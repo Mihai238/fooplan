@@ -5,10 +5,11 @@ import { routes } from './app.routes';
 import { FakeSupabase, provideSupabase, sessionFor, SIGN_OUT_FAILED } from './auth/testing';
 import { LanguageStore } from './language-store';
 import { PlanStore } from './plan/plan-store';
-import { day, picked, planOf } from './plan/testing';
+import { day, open, picked, planOf } from './plan/testing';
 import { RecipeStore } from './recipes/recipe-store';
 import { QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from './recipes/testing';
-import { LANGUAGE_KEY, TABBABLE } from './testing';
+import { StorageBackend } from './storage';
+import { HeldBackend, LANGUAGE_KEY, TABBABLE } from './testing';
 
 describe('App', () => {
   let fake: FakeSupabase;
@@ -22,10 +23,12 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('should create the app', () => {
+  it('should create the app', async () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();
+    // Lets the first load end before the test tears the app down
+    await fixture.whenStable();
   });
 
   it('renders the brand "Fooplan" as a link to the home page, marked as the current page there only', async () => {
@@ -145,6 +148,116 @@ describe('App', () => {
         a.textContent?.trim(),
       ),
     ).toEqual(['Recipes']);
+  });
+
+  describe('loading (#44)', () => {
+    it('shows the 2 picks of the saved plan on the Plan page once loaded, and on the Recipes page "Niçoise salad" as "Not suggested" and the own recipe "Quick Dal" as "Your recipe" (#44 1)', async () => {
+      localStorage.setItem(
+        'fooplan.plan',
+        JSON.stringify(
+          planOf([
+            day('2026-10-26', picked('Spaghetti carbonara'), picked('Fish tacos')),
+            day(
+              '2026-10-27',
+              open('Bean burritos', 'Potato goulash', 'Shakshuka with bread'),
+              open('Pizza toast', 'Pad thai with chicken', 'Chicken fajitas'),
+            ),
+          ]),
+        ),
+      );
+      localStorage.setItem('fooplan.removed', JSON.stringify(['Niçoise salad']));
+      storeOwnRecipes(QUICK_DAL);
+      const fixture = TestBed.createComponent(App);
+      const compiled = fixture.nativeElement as HTMLElement;
+
+      await TestBed.inject(Router).navigateByUrl('/plan');
+      await fixture.whenStable();
+      expect(
+        Array.from(compiled.querySelectorAll('main .meal .recipe a.name')).map((name) =>
+          name.textContent?.trim(),
+        ),
+      ).toEqual(['Spaghetti carbonara', 'Fish tacos']);
+
+      await TestBed.inject(Router).navigateByUrl('/recipes');
+      await fixture.whenStable();
+      expect(cardText(compiled, 'Niçoise salad')).toContain('Not suggested');
+      expect(cardText(compiled, 'Quick Dal')).toContain('Your recipe');
+      expect(cardText(compiled, 'Spaghetti carbonara')).not.toContain('Not suggested');
+    });
+
+    it('holds only "Loading…" with the role status in <main>, and no page, until the first load is done, then the page of the URL (#44 2)', async () => {
+      const backend = new HeldBackend();
+      TestBed.overrideProvider(StorageBackend, { useValue: backend });
+      const fixture = TestBed.createComponent(App);
+      const main = (fixture.nativeElement as HTMLElement).querySelector('main')!;
+
+      await TestBed.inject(Router).navigateByUrl('/plan');
+      await rendered();
+      expect(
+        Array.from(main.children).map((child) => [
+          child.tagName,
+          child.getAttribute('role'),
+          child.textContent?.trim(),
+        ]),
+      ).toEqual([['P', 'status', 'Loading…']]);
+
+      backend.release();
+      await fixture.whenStable();
+      expect(main.querySelector('h1')?.textContent?.trim()).toBe('Plan');
+      expect(main.textContent).not.toContain('Loading…');
+    });
+
+    describe('edge cases', () => {
+      it('shows the header as always while loading (#44 2a)', async () => {
+        fake.load(null);
+        const backend = new HeldBackend();
+        TestBed.overrideProvider(StorageBackend, { useValue: backend });
+        const fixture = TestBed.createComponent(App);
+        const compiled = fixture.nativeElement as HTMLElement;
+
+        await TestBed.inject(Router).navigateByUrl('/plan');
+        await rendered();
+        expect(compiled.querySelector('main')?.textContent?.trim(), 'not loading').toBe('Loading…');
+        expect(compiled.querySelector('header a.brand')?.textContent?.trim()).toBe('Fooplan');
+        expect(
+          Array.from(compiled.querySelectorAll('header nav a')).map((a) => a.textContent?.trim()),
+        ).toEqual(['Plan', 'Grocery list', 'Recipes']);
+        expect(compiled.querySelector('header [aria-label="Language"]')).not.toBeNull();
+        expect(compiled.querySelector('header [aria-label="Account"]')).not.toBeNull();
+        backend.release();
+        await fixture.whenStable();
+      });
+
+      it('says "Wird geladen…" while loading in German (#44 2b)', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        const backend = new HeldBackend();
+        TestBed.overrideProvider(StorageBackend, { useValue: backend });
+        const fixture = TestBed.createComponent(App);
+
+        await TestBed.inject(Router).navigateByUrl('/plan');
+        await rendered();
+        const status = (fixture.nativeElement as HTMLElement).querySelector('main > p');
+        expect(status?.getAttribute('role')).toBe('status');
+        expect(status?.textContent?.trim()).toBe('Wird geladen…');
+        backend.release();
+        await fixture.whenStable();
+      });
+    });
+
+    // The load is held, so the fixture never becomes stable: the render scheduled by the
+    // navigation is run here instead
+    async function rendered() {
+      await new Promise((resolve) => setTimeout(resolve));
+      TestBed.tick();
+    }
+
+    function cardText(compiled: HTMLElement, name: string): string {
+      const card = Array.from(compiled.querySelectorAll('main article')).find(
+        (article) => article.querySelector('h2')?.textContent?.trim() === name,
+      );
+      expect(card, `no card "${name}"`).toBeDefined();
+      return card!.textContent ?? '';
+    }
   });
 
   describe('language switch (#35)', () => {

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { DEFAULT_SETTINGS } from '../plan/plan';
-import { PlanStore, RANDOM, TODAY } from '../plan/plan-store';
-import { seededRandom } from '../plan/testing';
+import { RANDOM, TODAY } from '../plan/plan-store';
+import { loadStores, seededRandom } from '../plan/testing';
 import { StepsViewStore } from './steps-view-store';
 import { STEPS_VIEW_KEY } from './testing';
 
@@ -64,7 +64,7 @@ describe('StepsViewStore', () => {
       expect(reload().view(), 'steps after a reload').toBe('steps');
     });
 
-    it('keeps all, also saved, after "New plan"', () => {
+    it('keeps all, also saved, after "New plan"', async () => {
       TestBed.configureTestingModule({
         providers: [
           { provide: RANDOM, useValue: seededRandom(1) },
@@ -73,7 +73,8 @@ describe('StepsViewStore', () => {
       });
       const store = createStore();
       store.set('all');
-      TestBed.inject(PlanStore).newPlan(DEFAULT_SETTINGS);
+      const plan = await loadStores();
+      expect(plan.newPlan(DEFAULT_SETTINGS), 'no new plan').toBe(true);
       expect(store.view()).toBe('all');
       expect(localStorage.getItem(STEPS_VIEW_KEY)).toBe('all');
       expect(reload().view(), 'after a reload').toBe('all');

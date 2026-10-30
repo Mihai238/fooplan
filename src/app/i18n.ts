@@ -12,6 +12,7 @@ const EN = {
   'account.group': 'Account',
   'account.signIn': 'Sign in',
   'account.signOut': 'Sign out',
+  'app.loading': 'Loading…',
   'home.title': 'Lunch and dinner, planned in a few minutes',
   'home.intro':
     'Pick meals for the next few days from quick recipes, then shop from one grocery list.',
@@ -204,6 +205,7 @@ export const MESSAGES: Record<Language, Record<MessageId, string>> = {
     'account.group': 'Konto',
     'account.signIn': 'Anmelden',
     'account.signOut': 'Abmelden',
+    'app.loading': 'Wird geladen…',
     'home.title': 'Mittag- und Abendessen in wenigen Minuten geplant',
     'home.intro':
       'Wähle Mahlzeiten für die nächsten Tage aus schnellen Rezepten und kauf dann mit einer einzigen Einkaufsliste ein.',

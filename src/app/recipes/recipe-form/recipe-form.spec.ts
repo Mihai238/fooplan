@@ -5,7 +5,15 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { LanguageStore } from '../../language-store';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
-import { day, open, picked, planOf, seededRandom } from '../../plan/testing';
+import {
+  day,
+  loadStores,
+  loadStoresOnce,
+  open,
+  picked,
+  planOf,
+  seededRandom,
+} from '../../plan/testing';
 import { Recipe, Unit } from '../recipe';
 import { RecipeStore } from '../recipe-store';
 import { LANGUAGE_KEY } from '../../testing';
@@ -34,7 +42,7 @@ describe('RecipeForm', () => {
   });
 
   it('opens from "Add a recipe" on the Recipes page with the heading "Add a recipe", an empty name, 2 servings and one empty row with "Amount 1", "Unit 1" (g of g, ml, pc, tbsp, tsp) and "Ingredient 1" but no "Remove", then "Add ingredient", "Save recipe" and "Cancel", and no message', async () => {
-    harness = await RouterTestingHarness.create('/recipes');
+    harness = await createHarness('/recipes');
     const link = Array.from(page().querySelectorAll<HTMLAnchorElement>('a')).find(
       (candidate) => textOf(candidate) === 'Add a recipe',
     );
@@ -103,7 +111,7 @@ describe('RecipeForm', () => {
   });
 
   it('saves "  Grandma\'s   Soup " for " 4 " with (1,5 pc " Onion "), (200 g "canned chickpeas") and an empty row as "Grandma\'s Soup", and shows its page at /recipes/grandmas-soup with its servings, "Your recipe", both ingredients, no steps and "Back" to /recipes', async () => {
-    harness = await RouterTestingHarness.create('/plan');
+    harness = await createHarness('/plan');
     await harness.navigateByUrl('/add-recipe');
     await type('Name', "  Grandma's   Soup ");
     await type('Servings', ' 4 ');
@@ -251,7 +259,7 @@ describe('RecipeForm', () => {
   });
 
   it('shows the Recipes page and saves nothing on "Cancel" after opening the form from it, and links "Cancel" to /recipes when the app started on the form', async () => {
-    harness = await RouterTestingHarness.create('/recipes');
+    harness = await createHarness('/recipes');
     await harness.navigateByUrl('/add-recipe');
     await type('Name', 'Quick Dal');
     await fillRows(['1', 'pc', 'onion']);
@@ -284,7 +292,7 @@ describe('RecipeForm', () => {
   });
 
   it('replaces the form in the history on saving, so going back from the new recipe page leads to the page before the form', async () => {
-    harness = await RouterTestingHarness.create('/plan');
+    harness = await createHarness('/plan');
     await harness.navigateByUrl('/recipes');
     await harness.navigateByUrl('/add-recipe');
     await type('Name', 'Quick Dal');
@@ -335,6 +343,7 @@ describe('RecipeForm', () => {
     });
 
     it('shows "A recipe with this name already exists." for the name of an own recipe in another case', async () => {
+      await loadStoresOnce();
       recipeStore().add(QUICK_DAL);
       await openForm();
       await type('Name', 'quick  DAL');
@@ -432,7 +441,7 @@ describe('RecipeForm', () => {
   describe('editing an own recipe', () => {
     it('opens the form "Edit recipe" from "Edit" on the page of "Quick Dal", filled with its name, 4 servings and the rows 1.5 pc onion and 200 g canned chickpeas, with "Save changes", and shows its page on "Cancel", whose "Back" leads to /recipes', async () => {
       storeOwnRecipes(DAL);
-      harness = await RouterTestingHarness.create('/plan');
+      harness = await createHarness('/plan');
       await harness.navigateByUrl('/recipes/quick-dal');
       const edit = Array.from(page().querySelectorAll<HTMLAnchorElement>('a')).filter(
         (link) => textOf(link) === 'Edit',
@@ -483,7 +492,7 @@ describe('RecipeForm', () => {
 
     it('renames "Grandma\'s Soup" to "Red Soup" on "Save changes", showing its page at /recipes/red-soup with "Back" to /recipes, and lists it before "Quick Dal"', async () => {
       storeOwnRecipes(ownRecipe("Grandma's Soup"), QUICK_DAL);
-      harness = await RouterTestingHarness.create('/recipes');
+      harness = await createHarness('/recipes');
       await harness.navigateByUrl('/recipes/grandmas-soup/edit');
       await type('Name', 'Red Soup');
       await click(control('Save changes'));
@@ -501,7 +510,7 @@ describe('RecipeForm', () => {
       expect(listed.slice(-2)).toEqual(['Red Soup', 'Quick Dal']);
     });
 
-    it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" through the edit form, keeping it second there, and loads the plan and the removed recipes unchanged after a reload', async () => {
+    it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" through the edit form opened directly, keeping it second there, saves the plan and the removed recipes so, and loads them unchanged after a reload', async () => {
       storeOwnRecipes(QUICK_DAL);
       localStorage.setItem(
         'fooplan.plan',
@@ -535,56 +544,19 @@ describe('RecipeForm', () => {
       );
       const plan = planStore().plan();
       const removed = planStore().removed();
+      expect(JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null'), 'saved plan').toEqual(
+        plan,
+      );
+      expect(
+        JSON.parse(localStorage.getItem('fooplan.removed') ?? 'null'),
+        'saved removed',
+      ).toEqual(removed);
 
       // A fresh app on the same localStorage, as a reload makes
       TestBed.resetTestingModule();
       configure();
+      await loadStores();
       expect(planStore().plan(), 'plan after a reload').toEqual(plan);
-      expect(planStore().removed(), 'removed recipes after a reload').toEqual(removed);
-    });
-
-    it('renames "Quick Dal", picked and second in the removed recipes, to "Daily Dal" in the saved plan and removed recipes, in place, when the edit form is opened directly and PlanStore is first created on "Save changes"', async () => {
-      storeOwnRecipes(QUICK_DAL);
-      localStorage.setItem(
-        'fooplan.plan',
-        JSON.stringify(
-          planOf([
-            day(
-              '2026-10-24',
-              picked('Quick Dal', [
-                'Shakshuka with bread',
-                'Quick Dal',
-                'Chickpea and spinach curry',
-              ]),
-              open('Spaghetti carbonara', 'Niçoise salad', 'Potato goulash'),
-            ),
-          ]),
-        ),
-      );
-      localStorage.setItem(
-        'fooplan.removed',
-        JSON.stringify(['Bean burritos', 'Quick Dal', 'Fish tacos']),
-      );
-      await openEditForm('quick-dal');
-      await type('Name', 'Daily Dal');
-      await click(control('Save changes'));
-
-      expect(router().url).toBe('/recipes/daily-dal');
-      const lunch = picked('Daily Dal', [
-        'Shakshuka with bread',
-        'Daily Dal',
-        'Chickpea and spinach curry',
-      ]);
-      const removed = ['Bean burritos', 'Daily Dal', 'Fish tacos'];
-      expect(JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null').days[0].lunch).toEqual(
-        lunch,
-      );
-      expect(JSON.parse(localStorage.getItem('fooplan.removed') ?? 'null')).toEqual(removed);
-
-      // A fresh app on the same localStorage, as a reload makes
-      TestBed.resetTestingModule();
-      configure();
-      expect(planStore().plan().days[0].lunch, 'plan after a reload').toEqual(lunch);
       expect(planStore().removed(), 'removed recipes after a reload').toEqual(removed);
     });
 
@@ -709,7 +681,7 @@ describe('RecipeForm', () => {
     });
 
     async function openEditForm(slug: string) {
-      harness = await RouterTestingHarness.create(`/recipes/${slug}/edit`);
+      harness = await createHarness(`/recipes/${slug}/edit`);
       expect(router().url, 'edit form not opened').toBe(`/recipes/${slug}/edit`);
     }
 
@@ -771,7 +743,7 @@ describe('RecipeForm', () => {
       TestBed.resetTestingModule();
       configure();
       storeOwnRecipes(QUICK_DAL);
-      harness = await RouterTestingHarness.create('/recipes/quick-dal/edit');
+      harness = await createHarness('/recipes/quick-dal/edit');
       expect(Array.from(page().querySelectorAll('h1')).map(textOf)).toEqual(['Rezept bearbeiten']);
       expect(control<HTMLButtonElement>('Änderungen speichern').type).toBe('submit');
     });
@@ -872,7 +844,13 @@ describe('RecipeForm', () => {
   }
 
   async function openForm() {
-    harness = await RouterTestingHarness.create('/add-recipe');
+    harness = await createHarness('/add-recipe');
+  }
+
+  // As the app shows its pages: once the saved plan and recipes are loaded
+  async function createHarness(url?: string): Promise<RouterTestingHarness> {
+    await loadStoresOnce();
+    return RouterTestingHarness.create(url);
   }
 
   async function fillRows(...rows: [string, Unit, string][]) {

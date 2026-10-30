@@ -1,7 +1,7 @@
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { isKidFriendly } from '../recipes/kid-friendly';
 import { RecipeStore } from '../recipes/recipe-store';
-import { isStringList, readStored, writeStored } from '../storage';
+import { isStringList, StorageBackend } from '../storage';
 import {
   acceptPlan,
   addItem,
@@ -49,18 +49,24 @@ export const TODAY = new InjectionToken<() => string>('TODAY', {
 
 const STORAGE_KEY = 'fooplan.plan';
 const REMOVED_KEY = 'fooplan.removed';
+// Held until the first load; no page shows meanwhile
+const NO_PLAN: Plan = {
+  days: [],
+  people: DEFAULT_SETTINGS.people,
+  accepted: false,
+  ticked: [],
+  added: [],
+  shown: [],
+  kidFriendly: false,
+};
 
 @Injectable({ providedIn: 'root' })
 export class PlanStore {
   private readonly random = inject(RANDOM);
   private readonly today = inject(TODAY);
   private readonly recipes = inject(RecipeStore);
-  // Declared before the plan down to score, since loading it reads them all: it draws from the
-  // recipes not removed, and from the kid-friendly ones among them for a kid-friendly plan while
-  // enough of them are suggested, ranked by the score
-  private readonly removedState = signal<string[]>(
-    parseRemoved(readStored(REMOVED_KEY), this.recipeNames()),
-  );
+  private readonly backend = inject(StorageBackend);
+  private readonly removedState = signal<string[]>([]);
   readonly removed = this.removedState.asReadonly();
   private readonly suggested = computed(() => {
     const removed = this.removed();
@@ -75,11 +81,23 @@ export class PlanStore {
   });
   readonly canBeKidFriendly = computed(() => this.kidFriendlySuggested().length >= MIN_SUGGESTED);
   private readonly score = computed(() => scoreWith(this.recipes.all()));
-  private readonly state = signal<Plan>(this.load());
+  private readonly state = signal<Plan>(NO_PLAN);
   readonly plan = this.state.asReadonly();
+  private readonly readyState = signal(false);
+  readonly ready = this.readyState.asReadonly();
+  private loading: Promise<void> | undefined;
   readonly kidFriendly = computed(() => this.plan().kidFriendly && this.canBeKidFriendly());
   private readonly candidates = computed(() => this.candidatesOf(this.kidFriendly()));
   readonly canRemove = computed(() => this.candidates().length > MIN_SUGGESTED);
+
+  load(): Promise<void> {
+    if (!this.loading) {
+      this.readyState.set(false);
+      // Read from a promise, so that a read failing at once ends the load after it is stored here
+      this.loading = Promise.resolve().then(() => this.read());
+    }
+    return this.loading;
+  }
 
   pick(meal: MealRef, recipe: string): void {
     this.update((plan) =>
@@ -142,6 +160,7 @@ export class PlanStore {
 
   deleteRecipe(name: string): void {
     if (
+      !this.ready() ||
       !this.recipes.own().some((recipe) => recipe.name === name) ||
       this.deleteBlock(name) !== null
     ) {
@@ -171,7 +190,7 @@ export class PlanStore {
   }
 
   newPlan(settings: PlanSettings): boolean {
-    if (!this.isValid(settings)) {
+    if (!this.ready() || !this.isValid(settings)) {
       return false;
     }
     const candidates = this.candidatesOf(settings.kidFriendly);
@@ -179,16 +198,34 @@ export class PlanStore {
     return true;
   }
 
-  private load(): Plan {
+  // The plan is validated against the recipe names, so it is parsed once the recipes are loaded,
+  // and draws from the recipes not removed, so the removed ones are set before it. The load ends in
+  // the step that makes the store ready, so a load() from then on reads again
+  private async read(): Promise<void> {
+    try {
+      const [, removed, plan] = await Promise.all([
+        this.recipes.load(),
+        this.backend.read(REMOVED_KEY),
+        this.backend.read(STORAGE_KEY),
+      ]);
+      this.removedState.set(parseRemoved(removed, this.recipeNames()));
+      this.state.set(this.planFrom(plan));
+      this.readyState.set(true);
+    } finally {
+      this.loading = undefined;
+    }
+  }
+
+  private planFrom(value: unknown): Plan {
     // A plan can hold recipes picked or suggested before they were removed
-    const stored = parsePlan(readStored(STORAGE_KEY), this.recipeNames());
+    const stored = parsePlan(value, this.recipeNames());
     if (stored) {
       // A saved plan can still suggest a removed recipe, e.g. one another tab saved, or when saving
       // the plan failed after the removal was saved, and a kid-friendly one a recipe that isn't
       // kid-friendly, e.g. an own recipe edited since, or be left with too few to stay kid-friendly
       const plan = this.withinCandidates(stored);
       if (plan !== stored) {
-        writeStored(STORAGE_KEY, plan);
+        this.save(STORAGE_KEY, plan);
       }
       return plan;
     }
@@ -199,7 +236,7 @@ export class PlanStore {
       this.random,
       this.score(),
     );
-    writeStored(STORAGE_KEY, plan);
+    this.save(STORAGE_KEY, plan);
     return plan;
   }
 
@@ -233,17 +270,30 @@ export class PlanStore {
     return kidFriendly ? this.kidFriendlySuggested() : this.suggested();
   }
 
+  // Until a load is done, a change would be made to a state the load then replaces, or before the
+  // first load saved over the saved data: it is ignored
   private update(change: (plan: Plan) => Plan): void {
+    if (!this.ready()) {
+      return;
+    }
     const plan = change(this.state());
     if (plan !== this.state()) {
       this.state.set(plan);
-      writeStored(STORAGE_KEY, plan);
+      this.save(STORAGE_KEY, plan);
     }
   }
 
   private setRemoved(removed: string[]): void {
+    if (!this.ready()) {
+      return;
+    }
     this.removedState.set(removed);
-    writeStored(REMOVED_KEY, removed);
+    this.save(REMOVED_KEY, removed);
+  }
+
+  // A failed write is ignored: the change lives until the page is reloaded
+  private save(key: string, value: unknown): void {
+    this.backend.write(key, value).catch(() => undefined);
   }
 
   private recipeNames(): string[] {

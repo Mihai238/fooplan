@@ -52,19 +52,22 @@ function ownRecipe(route: ActivatedRouteSnapshot): Promise<true | UrlTree> {
 }
 
 // Imported on demand to keep the recipes out of the initial bundle; inject() works only before the
-// import resolves, so the store comes from the injector taken here. Returning a UrlTree, rather than
-// navigating from here, replaces the refused URL instead of leaving it in the history
-function recipeGuard(
+// import resolves, so the store comes from the injector taken here. A link opened directly comes
+// before the recipes are loaded; once they are, a navigation inside the app doesn't read them again.
+// Returning a UrlTree, rather than navigating from here, replaces the refused URL instead of leaving
+// it in the history
+async function recipeGuard(
   route: ActivatedRouteSnapshot,
   allows: (recipe: Recipe | undefined) => boolean,
 ): Promise<true | UrlTree> {
   const router = inject(Router);
   const injector = inject(Injector);
-  return import('./recipes/recipe-store').then(({ RecipeStore }) =>
-    allows(injector.get(RecipeStore).bySlug(route.paramMap.get('slug')!))
-      ? true
-      : router.parseUrl('/recipes'),
-  );
+  const { RecipeStore } = await import('./recipes/recipe-store');
+  const recipes = injector.get(RecipeStore);
+  if (!recipes.ready()) {
+    await recipes.load();
+  }
+  return allows(recipes.bySlug(route.paramMap.get('slug')!)) ? true : router.parseUrl('/recipes');
 }
 
 // The client reads the saved session asynchronously on start, so /sign-in opened directly waits for

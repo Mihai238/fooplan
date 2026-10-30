@@ -3,7 +3,15 @@ import { provideRouter } from '@angular/router';
 import { LanguageStore } from '../../language-store';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
 import { addedKey } from '../../plan/plan';
-import { acceptOneDayPlan, day, eatingOut, picked, planOf, seededRandom } from '../../plan/testing';
+import {
+  acceptOneDayPlan,
+  day,
+  eatingOut,
+  loadStores,
+  picked,
+  planOf,
+  seededRandom,
+} from '../../plan/testing';
 import { displayAmount } from '../../recipes/amount';
 import { RECIPES } from '../../recipes/recipes';
 import { Recipe, Unit } from '../../recipes/recipe';
@@ -21,10 +29,10 @@ describe('GroceryList', () => {
   let element: HTMLElement;
   const restores: (() => void)[] = [];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     localStorage.clear();
     configure();
-    store = TestBed.inject(PlanStore);
+    store = await loadStores();
   });
 
   afterEach(() => {
@@ -448,7 +456,7 @@ describe('GroceryList', () => {
     // A fresh app on this localStorage, as a reload makes
     TestBed.resetTestingModule();
     configure();
-    store = TestBed.inject(PlanStore);
+    store = await loadStores();
     expect(store.plan(), 'saved plan not loaded').toEqual(saved);
     await open();
 
@@ -470,7 +478,7 @@ describe('GroceryList', () => {
     // A fresh app on this localStorage, as a reload makes
     TestBed.resetTestingModule();
     configure();
-    store = TestBed.inject(PlanStore);
+    store = await loadStores();
     expect(store.plan(), 'saved plan not loaded').toEqual(saved);
     await open();
 
@@ -570,7 +578,7 @@ describe('GroceryList', () => {
     // A fresh app on this localStorage, as a reload makes
     TestBed.resetTestingModule();
     configure();
-    store = TestBed.inject(PlanStore);
+    store = await loadStores();
     expect(store.plan(), 'saved plan not loaded').toEqual(saved);
     await open();
     expect(inCart().map(labelOf), 'ticked before the edit').toEqual(['100 g canned chickpeas']);
@@ -1593,7 +1601,7 @@ describe('GroceryList', () => {
     async function reload() {
       TestBed.resetTestingModule();
       configure();
-      store = TestBed.inject(PlanStore);
+      store = await loadStores();
       await open();
     }
 
@@ -1683,7 +1691,7 @@ describe('GroceryList', () => {
       localStorage.removeItem('fooplan.plan');
       TestBed.resetTestingModule();
       configure();
-      store = TestBed.inject(PlanStore);
+      store = await loadStores();
       await open();
       const message = element.querySelector('p.empty');
       expect(textOf(message)).toBe(
@@ -1808,7 +1816,7 @@ describe('GroceryList', () => {
         localStorage.setItem(LANGUAGE_KEY, 'en');
         TestBed.resetTestingModule();
         configure();
-        store = TestBed.inject(PlanStore);
+        store = await loadStores();
         await open();
         expect(inCart().map(labelOf)).toEqual(['2 pc garlic clove']);
         expect(labelsIn(sectionHeaded('Fruit & vegetables'))).not.toContain('2 pc garlic clove');
@@ -2149,7 +2157,7 @@ describe('GroceryList', () => {
       localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(items));
       TestBed.resetTestingModule();
       configure();
-      store = TestBed.inject(PlanStore);
+      store = await loadStores();
       acceptOneDayPlan(store);
       await open();
     }
@@ -2172,7 +2180,7 @@ describe('GroceryList', () => {
       localStorage.setItem('fooplan.plan', JSON.stringify(saved));
       TestBed.resetTestingModule();
       configure();
-      store = TestBed.inject(PlanStore);
+      store = await loadStores();
       expect(store.plan(), 'saved plan not loaded').toEqual(saved);
       await open();
     }
@@ -2208,7 +2216,7 @@ describe('GroceryList', () => {
     localStorage.setItem('fooplan.plan', JSON.stringify(saved));
     TestBed.resetTestingModule();
     configure();
-    store = TestBed.inject(PlanStore);
+    store = await loadStores();
     expect(store.plan(), 'saved plan not loaded').toEqual(saved);
     await open();
   }

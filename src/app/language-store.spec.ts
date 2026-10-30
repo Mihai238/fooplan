@@ -4,8 +4,8 @@ import { App } from './app';
 import { SECTIONS } from './groceries/sections';
 import { Language, LanguageStore } from './language-store';
 import { DEFAULT_SETTINGS } from './plan/plan';
-import { PlanStore, RANDOM, TODAY } from './plan/plan-store';
-import { seededRandom } from './plan/testing';
+import { RANDOM, TODAY } from './plan/plan-store';
+import { loadStores, seededRandom } from './plan/testing';
 import { UNITS } from './recipes/recipe';
 import { LANGUAGE_KEY } from './testing';
 
@@ -106,7 +106,7 @@ describe('LanguageStore', () => {
       expectLoaded('en', 'after a reload');
     });
 
-    it('saves set("de") as the plain text de and set("en") as en in fooplan.language, setting lang each time, and keeps the language after a reload and after "New plan"', () => {
+    it('saves set("de") as the plain text de and set("en") as en in fooplan.language, setting lang each time, and keeps the language after a reload and after "New plan"', async () => {
       TestBed.configureTestingModule({
         providers: [
           { provide: RANDOM, useValue: seededRandom(1) },
@@ -121,7 +121,8 @@ describe('LanguageStore', () => {
       expect(localStorage.getItem(LANGUAGE_KEY)).toBe('de');
       expect(document.documentElement.lang).toBe('de');
 
-      TestBed.inject(PlanStore).newPlan(DEFAULT_SETTINGS);
+      const plan = await loadStores();
+      expect(plan.newPlan(DEFAULT_SETTINGS), 'no new plan').toBe(true);
       expect(store.language(), 'after "New plan"').toBe('de');
       expect(localStorage.getItem(LANGUAGE_KEY), 'saved after "New plan"').toBe('de');
       expectLoaded('de', 'de after a reload');
