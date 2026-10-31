@@ -9,7 +9,7 @@ import { QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
 import { App } from '../../app';
 import { LanguageStore } from '../../language-store';
 import { installDialog, LANGUAGE_KEY, modalDialogs, TABBABLE } from '../../testing';
-import { Plan, PlanSettings } from '../plan';
+import { addedKey, Plan, PlanSettings } from '../plan';
 import { PlanStore, RANDOM, TODAY } from '../plan-store';
 import {
   covered,
@@ -1990,6 +1990,55 @@ describe('PlanPage', () => {
       expect(textOf(dialog.querySelector('p#new-plan-lost'))).toBe(
         'The plan for Sat 24 Oct, with 2 of 2 meals picked, will be discarded. This plan is accepted. Your grocery list ticks will be cleared. Your added grocery items will be removed.',
       );
+      expectLostDialog(dialog);
+    });
+
+    it('says "Your added grocery items will be removed." for a plan that is not accepted with 1 pick and an added item, and also "Your grocery list ticks will be cleared." once it is ticked, but never "This plan is accepted." (#52 8a)', async () => {
+      await pickFirstSuggestion(0);
+      store.addItem('Toilet paper');
+      await fixture.whenStable();
+      let dialog = await openNewPlan();
+      expect(textOf(dialog.querySelector('p#new-plan-lost'))).toBe(
+        'The plan for Sat 24 Oct – Wed 28 Oct, with 1 of 10 meals picked, will be discarded. Your added grocery items will be removed.',
+      );
+      await click(button(dialog, 'Keep this plan'));
+
+      store.toggleTicked(addedKey('Toilet paper'));
+      await fixture.whenStable();
+      dialog = await openNewPlan();
+      expect(textOf(dialog.querySelector('p#new-plan-lost'))).toBe(
+        'The plan for Sat 24 Oct – Wed 28 Oct, with 1 of 10 meals picked, will be discarded. Your grocery list ticks will be cleared. Your added grocery items will be removed.',
+      );
+      expectLostDialog(dialog);
+    });
+
+    it('shows no #new-plan-lost for a plan with no meal picked, no added item and no tick, and with no meal picked shows it with "Start new plan" as danger, saying "Your added grocery items will be removed." for an added item and also "Your grocery list ticks will be cleared." once it is ticked (#52 8c)', async () => {
+      let dialog = await openNewPlan();
+      expect(dialog.querySelector('#new-plan-lost'), 'nothing to lose').toBeNull();
+      expect(button(dialog, 'Start new plan').className).toBe('primary');
+      await click(button(dialog, 'Keep this plan'));
+
+      store.addItem('Toilet paper');
+      await fixture.whenStable();
+      expect(store.plan().added, 'item not added').toEqual(['Toilet paper']);
+      dialog = await openNewPlan();
+      expect(
+        dialog.querySelector('#new-plan-lost'),
+        'no #new-plan-lost with an added item',
+      ).not.toBeNull();
+      let lost = textOf(dialog.querySelector('#new-plan-lost'));
+      expect(lost).toContain('Your added grocery items will be removed.');
+      expect(lost).not.toContain('Your grocery list ticks will be cleared.');
+      expectLostDialog(dialog);
+      await click(button(dialog, 'Keep this plan'));
+
+      store.toggleTicked(addedKey('Toilet paper'));
+      await fixture.whenStable();
+      dialog = await openNewPlan();
+      lost = textOf(dialog.querySelector('#new-plan-lost'));
+      expect(lost).toContain('Your grocery list ticks will be cleared.');
+      expect(lost).toContain('Your added grocery items will be removed.');
+      expect(lost).not.toContain('This plan is accepted.');
       expectLostDialog(dialog);
     });
 

@@ -510,7 +510,7 @@ describe('PlanStore', () => {
       expect([...plan.shown].sort()).toEqual([...new Set(suggestionsOf(plan))].sort());
       expect((await reload()).plan(), 'after a reload').toEqual(plan);
 
-      // Grocery lines can only be ticked on an accepted plan
+      // An accepted plan with a tick and an added item
       store = await reload();
       acceptOneDayPlan(store);
       store.toggleTicked(firstItemKey());
@@ -584,6 +584,22 @@ describe('PlanStore', () => {
         leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
         expect(store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true })).toBe(false);
         expect(store.newPlan(DEFAULT_SETTINGS)).toBe(true);
+      });
+
+      it('counts a plan started with the same settings as the one before in started, but not a refused newPlan, an item added, ticked or removed, or a reload (#52)', async () => {
+        expect(store.started()).toBe(0);
+        store.newPlan(DEFAULT_SETTINGS);
+        store.newPlan(DEFAULT_SETTINGS);
+        expect(store.started(), 'same settings').toBe(2);
+
+        store.newPlan({ ...DEFAULT_SETTINGS, days: 6 });
+        store.addItem('tea');
+        store.toggleTicked(addedKey('tea'));
+        store.removeItem('tea');
+        expect(store.started(), 'refused or changed').toBe(2);
+
+        await store.reload();
+        expect(store.started(), 'reloaded').toBe(2);
       });
 
       it('starts a plan that is not kid-friendly from a kid-friendly one on newPlan with kidFriendly: false, drawing from every suggested recipe', () => {

@@ -57,6 +57,13 @@ export class PlanPage {
     this.plan().accepted ? this.language.t('plan.acceptedStatus') : '',
   );
   protected readonly filled = computed(() => filledMeals(this.plan()));
+  protected readonly lost = computed(
+    () =>
+      this.filled() > 0 ||
+      this.plan().accepted ||
+      this.plan().added.length > 0 ||
+      this.plan().ticked.length > 0,
+  );
   protected readonly dateFormat = computed(() => DATE_FORMATS[this.language.language()]);
   protected readonly summary = computed(() => this.language.planSummary(this.plan()));
   protected readonly newPlanSettings = signal<PlanSettings>(DEFAULT_SETTINGS);

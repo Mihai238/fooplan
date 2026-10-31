@@ -148,9 +148,8 @@
   @let days = plan().days;
   @let firstDate = days[0].date | date: dateFormat() : undefined : language.locale();
   @let lastDate = days[days.length - 1].date | date: dateFormat() : undefined : language.locale();
-  @let lost = filled() > 0 || plan().accepted;
   <h2 id="new-plan-title">{{ language.t('newPlan.title') }}</h2>
-  @if (lost) {
+  @if (lost()) {
     <p id="new-plan-lost">
       {{
         language.t('newPlan.lost', {
@@ -270,7 +269,7 @@
     <button
       type="button"
       class="primary"
-      [class.danger]="lost"
+      [class.danger]="lost()"
       (click)="startNewPlan(newPlanDialog)"
     >
       {{ language.t('newPlan.start') }}

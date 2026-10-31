@@ -2045,18 +2045,6 @@ describe('plan', () => {
       expect(toggleTicked(both, 'onion').ticked).toEqual(['rice']);
       expect(plan.ticked, 'the input plan was modified').toEqual([]);
     });
-
-    it('leaves a plan that is not accepted unchanged', () => {
-      const complete = oneDayPlan(picked('Chili'), picked('Curry'));
-      expect(toggleTicked(acceptPlan(complete), 'onion').ticked, 'accepted plan').toEqual([
-        'onion',
-      ]);
-
-      expectUnchanged(complete, (p) => toggleTicked(p, 'onion'));
-      expectUnchanged(oneDayPlan(picked('Chili'), open('Curry', 'Dal')), (p) =>
-        toggleTicked(p, 'onion'),
-      );
-    });
   });
 
   describe('addItem', () => {
@@ -2067,16 +2055,6 @@ describe('plan', () => {
 
       expect(addItem(plan, '  coffee  ').added).toEqual(['coffee']);
       expect(plan.added, 'the input plan was modified').toEqual([]);
-    });
-
-    it('leaves a plan that is not accepted unchanged', () => {
-      const complete = oneDayPlan(picked('Chili'), picked('Curry'));
-      expect(addItem(acceptPlan(complete), 'coffee').added, 'accepted plan').toEqual(['coffee']);
-
-      expectUnchanged(complete, (p) => addItem(p, 'coffee'));
-      expectUnchanged(oneDayPlan(picked('Chili'), open('Curry', 'Dal', 'Fajitas')), (p) =>
-        addItem(p, 'coffee'),
-      );
     });
 
     it('keeps the items in the order they were added, as typed, a quantity included', () => {
@@ -2144,18 +2122,53 @@ describe('plan', () => {
       expectUnchanged(plan, (p) => removeItem(p, 'tea'));
       expectUnchanged(plan, (p) => removeItem(p, 'COFFEE'));
     });
+  });
 
-    it('leaves a plan that is not accepted unchanged', () => {
-      const complete: Plan = {
-        ...oneDayPlan(picked('Chili'), picked('Curry')),
-        added: ['coffee'],
-        ticked: [addedKey('coffee')],
+  describe('own items before acceptance (#52)', () => {
+    it('adds "toilet paper" to a plan that is not accepted, ticks it, removes it with its tick, and keeps it and its tick when the complete plan is accepted (#52 1)', () => {
+      const complete = oneDayPlan(picked('Chili'), picked('Curry'));
+      const withPaper = addItem(complete, 'toilet paper');
+      expect(withPaper.added).toEqual(['toilet paper']);
+      const ticked = toggleTicked(withPaper, addedKey('toilet paper'));
+      expect(ticked.ticked).toEqual([addedKey('toilet paper')]);
+      const removed = removeItem(ticked, 'toilet paper');
+      expect(removed.added).toEqual([]);
+      expect(removed.ticked).toEqual([]);
+
+      const saved: Plan = {
+        ...complete,
+        added: ['toilet paper'],
+        ticked: [addedKey('toilet paper')],
       };
-      expect(removeItem({ ...complete, accepted: true }, 'coffee').added, 'accepted plan').toEqual(
-        [],
+      const accepted = acceptPlan(saved);
+      expect(accepted.accepted).toBe(true);
+      expect(accepted.added).toEqual(['toilet paper']);
+      expect(accepted.ticked).toEqual([addedKey('toilet paper')]);
+    });
+
+    it('adds nothing for a blank entry or the same text in another case to a plan that is not accepted (#52 1a)', () => {
+      const plan = oneDayPlan(picked('Chili'), picked('Curry'));
+      expectUnchanged(plan, (p) => addItem(p, ''));
+      expectUnchanged(plan, (p) => addItem(p, '   '));
+
+      const withCoffee = addItem(plan, ' Coffee ');
+      expect(withCoffee.added, 'item not added').toEqual(['Coffee']);
+      expectUnchanged(withCoffee, (p) => addItem(p, 'coffee'));
+      expectUnchanged(withCoffee, (p) => addItem(p, ' COFFEE '));
+    });
+
+    it('adds, ticks and removes an item on a plan with an open meal, which acceptPlan still leaves as it is (#52 1b)', () => {
+      const inProgress = oneDayPlan(picked('Chili'), open('Curry', 'Dal', 'Fajitas'));
+      expectUnchanged({ ...inProgress, added: ['tea'], ticked: [addedKey('tea')] }, (p) =>
+        acceptPlan(p),
       );
 
-      expectUnchanged(complete, (p) => removeItem(p, 'coffee'));
+      const withTea = toggleTicked(addItem(inProgress, 'tea'), addedKey('tea'));
+      expect(withTea.added).toEqual(['tea']);
+      expect(withTea.ticked).toEqual([addedKey('tea')]);
+      const removed = removeItem(withTea, 'tea');
+      expect(removed.added).toEqual([]);
+      expect(removed.ticked).toEqual([]);
     });
   });
 
@@ -2220,11 +2233,34 @@ describe('plan', () => {
       }
     });
 
-    it('returns null for a plan that is not accepted with ticked items', () => {
-      for (const plan of [storedPlan(), completeCookExtraPlan(false)]) {
-        expect(parsePlan(plan, RECIPES), 'valid base plan').not.toBeNull();
-        expect(parsePlan({ ...plan, ticked: ['onion'] }, RECIPES), JSON.stringify(plan)).toBeNull();
-      }
+    it('reads back a plan that is not accepted with the added "coffee" ticked, and one with a tick on no list as saved (#52 2)', () => {
+      const saved = { ...storedPlan(), added: ['coffee'], ticked: ['["coffee"]'] };
+      expect(parsePlan(JSON.parse(JSON.stringify(saved)), RECIPES)).toEqual(saved);
+
+      const stale = { ...storedPlan(), added: ['coffee'], ticked: ['["onion","pc"]'] };
+      expect(parsePlan(JSON.parse(JSON.stringify(stale)), RECIPES)).toEqual(stale);
+    });
+
+    it('returns null for an accepted plan with an open meal, also with an added item and its tick, which loads when not accepted (#52 2a)', () => {
+      const withCoffee = { ...storedPlan(), added: ['coffee'], ticked: [addedKey('coffee')] };
+      expect(parsePlan({ ...storedPlan(), accepted: true }, RECIPES)).toBeNull();
+      expect(parsePlan({ ...withCoffee, accepted: true }, RECIPES)).toBeNull();
+
+      expect(parsePlan(withCoffee, RECIPES), 'not accepted').toEqual(withCoffee);
+    });
+
+    it('reads back a plan that is not accepted saved with added items and without ticks as nothing ticked, and one saved before items could be added without either (#52 2b)', () => {
+      const withoutTicks: any = { ...storedPlan(), added: ['coffee', 'toilet paper'] };
+      delete withoutTicks.ticked;
+      expect(parsePlan(withoutTicks, RECIPES)).toEqual({
+        ...storedPlan(),
+        added: ['coffee', 'toilet paper'],
+      });
+
+      const savedBefore: any = storedPlan();
+      delete savedBefore.ticked;
+      delete savedBefore.added;
+      expect(parsePlan(savedBefore, RECIPES)).toEqual(storedPlan());
     });
 
     it('reads back the added items of an accepted plan in their order, and a plan saved without added items as none', () => {
@@ -2242,13 +2278,6 @@ describe('plan', () => {
           ...plan,
           added: [],
         });
-      }
-    });
-
-    it('returns null for a plan that is not accepted with added items', () => {
-      for (const plan of [storedPlan(), completeCookExtraPlan(false)]) {
-        expect(parsePlan({ ...plan, added: [] }, RECIPES), 'valid base plan').not.toBeNull();
-        expect(parsePlan({ ...plan, added: ['coffee'] }, RECIPES), JSON.stringify(plan)).toBeNull();
       }
     });
 

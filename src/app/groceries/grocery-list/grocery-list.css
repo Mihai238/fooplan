@@ -1,24 +1,12 @@
+/* Room for the undo bar at the end of the scroll, also without the bar so the page doesn't jump */
 :host {
   display: block;
-}
-
-/* Room for the undo bar at the end of the scroll, also without the bar so the page doesn't jump */
-:host(.accepted) {
   padding-bottom: 4.5rem;
 }
 
 h1 {
   margin: 0 0 1.5rem;
   font-size: 1.75rem;
-}
-
-.empty {
-  margin: 0;
-  color: var(--muted);
-}
-
-.empty a {
-  color: var(--accent);
 }
 
 /* Reaches into main's side padding, so the lines scrolling under it don't show at its sides */
@@ -116,6 +104,16 @@ button {
 
 .status:not(:empty) {
   margin-top: 0.5rem;
+}
+
+.note {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.note a {
+  color: var(--accent);
 }
 
 .sections {

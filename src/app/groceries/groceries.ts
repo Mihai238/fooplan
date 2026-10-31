@@ -77,9 +77,6 @@ export function groceryList(plan: Plan, recipes: readonly Recipe[]): GroceryItem
 }
 
 export function addedItems(plan: Plan, language: Language = 'en'): AddedItem[] {
-  if (!plan.accepted) {
-    return [];
-  }
   return plan.added.map((name) => ({ name, section: addedSection(name, language), added: true }));
 }
 
@@ -90,7 +87,7 @@ export function addFeedback(
   language: Language = 'en',
 ): AddFeedback | null {
   const item = text.trim();
-  if (!plan.accepted || item === '') {
+  if (item === '') {
     return null;
   }
   const stored = plan.added.find((other) => sameItem(other, item));

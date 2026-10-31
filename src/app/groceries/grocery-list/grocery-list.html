@@ -1,141 +1,140 @@
 <h1>{{ language.t('groceries.title') }}</h1>
-@if (!plan().accepted) {
-  <p class="empty">
-    {{ language.t('groceries.acceptFirst') }}
-    <a routerLink="/plan">{{ language.t('groceries.goToPlan') }}</a>
-  </p>
-} @else {
-  <div class="add">
-    <form class="field" (submit)="add($event, itemInput)">
-      <label for="new-item">{{ language.t('groceries.addItem') }}</label>
-      <div class="suggestions">
-        <input
-          #itemInput
-          type="text"
-          id="new-item"
-          autocomplete="off"
-          enterkeyhint="done"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-controls="new-item-suggestions"
-          [attr.aria-expanded]="suggested().length > 0"
-          [attr.aria-activedescendant]="activeOption()"
-          (input)="typeInField(itemInput)"
-          (focus)="focusField()"
-          (blur)="blurField()"
-          (keydown)="keyInField($event, itemInput)"
-        />
-        @if (suggested().length > 0) {
-          <ul
-            id="new-item-suggestions"
-            role="listbox"
-            [attr.aria-label]="language.t('groceries.suggestions')"
-          >
-            @for (item of suggested(); track item) {
-              <li
-                role="option"
-                [id]="'new-item-suggestion-' + $index"
-                [attr.aria-selected]="$index === highlight()"
-                (pointerdown)="pressSuggestion($event)"
-                (mousedown)="pressSuggestion($event)"
-                (click)="addFromField(item, itemInput)"
-              >
-                {{ item }}
-              </li>
-            }
-          </ul>
-        }
-      </div>
-    </form>
-    <!-- Screen readers announce changes inside a live region already on the page, not a region
-         added along with its text, so this one stays, empty until the first entry -->
-    <p class="status" role="status">{{ feedbackText() }}</p>
-  </div>
-  @if (view().sections.length > 0) {
-    <div class="sections">
-      @for (group of view().sections; track group.section) {
-        <section>
-          <h2>{{ language.section(group.section) }}</h2>
-          <ul class="items">
-            @for (item of group.items; track key(item)) {
-              <li animate.leave="leaving">
-                <label>
-                  <input
-                    #checkbox
-                    type="checkbox"
-                    [attr.data-key]="key(item)"
-                    (change)="toggle(item, checkbox)"
-                  />
-                  {{ labelOf(item) }}
-                </label>
-                @if ('added' in item) {
-                  <button
-                    #removeButton
-                    type="button"
-                    class="link"
-                    [attr.aria-label]="language.t('groceries.removeItem', { item: item.name })"
-                    (click)="remove(item, removeButton)"
-                  >
-                    {{ language.t('groceries.remove') }}
-                  </button>
-                }
-              </li>
-            }
-          </ul>
-        </section>
+<div class="add">
+  <form class="field" (submit)="add($event, itemInput)">
+    <label for="new-item">{{ language.t('groceries.addItem') }}</label>
+    <div class="suggestions">
+      <input
+        #itemInput
+        type="text"
+        id="new-item"
+        autocomplete="off"
+        enterkeyhint="done"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls="new-item-suggestions"
+        [attr.aria-expanded]="suggested().length > 0"
+        [attr.aria-activedescendant]="activeOption()"
+        (input)="typeInField(itemInput)"
+        (focus)="focusField()"
+        (blur)="blurField()"
+        (keydown)="keyInField($event)"
+      />
+      @if (suggested().length > 0) {
+        <ul
+          id="new-item-suggestions"
+          role="listbox"
+          [attr.aria-label]="language.t('groceries.suggestions')"
+        >
+          @for (item of suggested(); track item) {
+            <li
+              role="option"
+              [id]="'new-item-suggestion-' + $index"
+              [attr.aria-selected]="$index === highlight()"
+              (pointerdown)="pressSuggestion($event)"
+              (mousedown)="pressSuggestion($event)"
+              (click)="addFromField(item)"
+            >
+              {{ item }}
+            </li>
+          }
+        </ul>
       }
     </div>
-  }
-  @if (view().inCart.length > 0) {
-    <details class="cart">
-      <summary>{{ language.t('groceries.inCart', { count: view().inCart.length }) }}</summary>
-      <ul class="items">
-        @for (item of view().inCart; track key(item)) {
-          <li animate.leave="leaving">
-            <label>
-              <input
-                #checkbox
-                type="checkbox"
-                checked
-                [attr.data-key]="key(item)"
-                (change)="toggle(item, checkbox)"
-              />
-              {{ labelOf(item) }}
-            </label>
-            @if ('added' in item) {
-              <button
-                #removeButton
-                type="button"
-                class="link"
-                [attr.aria-label]="language.t('groceries.removeItem', { item: item.name })"
-                (click)="remove(item, removeButton)"
-              >
-                {{ language.t('groceries.remove') }}
-              </button>
-            }
-          </li>
-        }
-      </ul>
-    </details>
-  }
-  @if (undoBar(); as line) {
-    <div
-      #undoBarElement
-      class="undo-bar"
-      (pointerenter)="undoHovered.set(true)"
-      (pointerleave)="undoHovered.set(false)"
-      (pointerdown)="startPress($event)"
-      (click)="undoPress.set(null)"
-      (contextmenu)="undoPress.set(null)"
-      (pointercancel)="endPress($event)"
-      (document:pointerup)="endPressOutside($event, undoBarElement)"
-      (focusin)="undoFocused.set(true)"
-      (focusout)="undoFocused.set(false)"
-    >
-      <span>{{ language.t('groceries.inCartUndo', { item: labelOf(line.item) }) }}</span>
-      <button #undoButton type="button" class="link" (click)="undo(undoButton)">
-        {{ language.t('groceries.undo') }}
-      </button>
-    </div>
-  }
+  </form>
+  <!-- Screen readers announce changes inside a live region already on the page, not a region
+       added along with its text, so this one stays, empty until the first entry -->
+  <p class="status" role="status">{{ feedbackText() }}</p>
+</div>
+@if (!plan().accepted) {
+  <p class="note">
+    {{ language.t('groceries.planLater') }}
+    <a routerLink="/plan">{{ language.t('groceries.goToPlan') }}</a>
+  </p>
+}
+@if (view().sections.length > 0) {
+  <div class="sections">
+    @for (group of view().sections; track group.section) {
+      <section>
+        <h2>{{ language.section(group.section) }}</h2>
+        <ul class="items">
+          @for (item of group.items; track key(item)) {
+            <li animate.leave="leaving">
+              <label>
+                <input
+                  #checkbox
+                  type="checkbox"
+                  [attr.data-key]="key(item)"
+                  (change)="toggle(item, checkbox)"
+                />
+                {{ labelOf(item) }}
+              </label>
+              @if ('added' in item) {
+                <button
+                  #removeButton
+                  type="button"
+                  class="link"
+                  [attr.aria-label]="language.t('groceries.removeItem', { item: item.name })"
+                  (click)="remove(item, removeButton)"
+                >
+                  {{ language.t('groceries.remove') }}
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+  </div>
+}
+@if (view().inCart.length > 0) {
+  <details class="cart">
+    <summary>{{ language.t('groceries.inCart', { count: view().inCart.length }) }}</summary>
+    <ul class="items">
+      @for (item of view().inCart; track key(item)) {
+        <li animate.leave="leaving">
+          <label>
+            <input
+              #checkbox
+              type="checkbox"
+              checked
+              [attr.data-key]="key(item)"
+              (change)="toggle(item, checkbox)"
+            />
+            {{ labelOf(item) }}
+          </label>
+          @if ('added' in item) {
+            <button
+              #removeButton
+              type="button"
+              class="link"
+              [attr.aria-label]="language.t('groceries.removeItem', { item: item.name })"
+              (click)="remove(item, removeButton)"
+            >
+              {{ language.t('groceries.remove') }}
+            </button>
+          }
+        </li>
+      }
+    </ul>
+  </details>
+}
+@if (undoBar(); as line) {
+  <div
+    #undoBarElement
+    class="undo-bar"
+    (pointerenter)="undoHovered.set(true)"
+    (pointerleave)="undoHovered.set(false)"
+    (pointerdown)="startPress($event)"
+    (click)="undoPress.set(null)"
+    (contextmenu)="undoPress.set(null)"
+    (pointercancel)="endPress($event)"
+    (document:pointerup)="endPressOutside($event, undoBarElement)"
+    (focusin)="undoFocused.set(true)"
+    (focusout)="undoFocused.set(false)"
+  >
+    <span>{{ language.t('groceries.inCartUndo', { item: labelOf(line.item) }) }}</span>
+    <button #undoButton type="button" class="link" (click)="undo(undoButton)">
+      {{ language.t('groceries.undo') }}
+    </button>
+  </div>
 }

@@ -6,8 +6,10 @@ import { addedKey, DEFAULT_SETTINGS } from '../../plan/plan';
 import {
   acceptOneDayPlan,
   day,
+  DINNER,
   eatingOut,
   loadStores,
+  LUNCH,
   picked,
   planOf,
   seededRandom,
@@ -39,17 +41,6 @@ describe('GroceryList', () => {
     for (const restore of restores.splice(0)) {
       restore();
     }
-  });
-
-  it('says to accept a plan first, links to the plan and lists nothing when the plan is not accepted', async () => {
-    await open();
-    expect(textOf(element.querySelector('h1'))).toBe('Grocery list');
-    const message = element.querySelector('p.empty');
-    expect(message, 'no message').not.toBeNull();
-    expect(textOf(message)).toMatch(/accept/i);
-    expect(message!.querySelector('a')?.getAttribute('href')).toBe('/plan');
-    expect(element.querySelector('ul.items')).toBeNull();
-    expect(element.querySelectorAll('li')).toHaveLength(0);
   });
 
   it('lists every item of the accepted plan with its amount, unit and name under its section heading, none ticked', async () => {
@@ -428,19 +419,7 @@ describe('GroceryList', () => {
     }
   });
 
-  it('shows no div.add and no field to add items while the plan is not accepted, and both once it is', async () => {
-    await open();
-    expect(element.querySelector('p.empty'), 'no message').not.toBeNull();
-    expect(element.querySelector('.add')).toBeNull();
-    expect(element.querySelector('input')).toBeNull();
-
-    acceptOneDayPlan(store);
-    await fixture.whenStable();
-    shownBlock();
-    field();
-  });
-
-  it('shows the "Add an item" form and the status line in div.add, no section and no "Accept a plan to see what to buy." for an accepted plan whose both meals are eating out', async () => {
+  it('shows the "Add an item" form and the status line in div.add, no section and no note for an accepted plan whose both meals are eating out (changed by #52)', async () => {
     const saved = planOf(
       [
         day(
@@ -468,8 +447,7 @@ describe('GroceryList', () => {
       statusElement(),
     ]);
     expect(element.querySelectorAll('section')).toHaveLength(0);
-    expect(element.querySelector('p.empty')).toBeNull();
-    expect(textOf(element)).not.toContain('Accept a plan to see what to buy.');
+    expect(note()).toBeNull();
   });
 
   it('shows only the label "Add an item" and the field with enterkeyhint="done" in the form, and no "Add" or submit button on the page', async () => {
@@ -967,16 +945,6 @@ describe('GroceryList', () => {
         const key = localStorage.key(i)!;
         expect(localStorage.getItem(key), `storage "${key}"`).not.toContain('Added');
       }
-    });
-
-    it('shows no status element while the plan is not accepted, and an empty one once it is', async () => {
-      await open();
-      expect(element.querySelector('p.empty'), 'no message').not.toBeNull();
-      expect(element.querySelectorAll('[role="status"]')).toHaveLength(0);
-
-      acceptOneDayPlan(store);
-      await fixture.whenStable();
-      expect(statusText()).toBe('');
     });
   });
 
@@ -1567,17 +1535,6 @@ describe('GroceryList', () => {
       expect(bar(), 'shown at 5000 ms').toBeNull();
     });
 
-    it('shows no bar while the plan is not accepted, also after toggleTicked on the store', async () => {
-      await open();
-      expect(element.querySelector('p.empty'), 'no message').not.toBeNull();
-      expect(bar()).toBeNull();
-
-      store.toggleTicked(itemKey({ name: 'onion', unit: 'pc' }));
-      await stable();
-      expect(store.plan().ticked, 'ticked without an accepted plan').toEqual([]);
-      expect(bar()).toBeNull();
-    });
-
     it('says „1 Stk. Zwiebel“ ist im Wagen. with a "Rückgängig" button in German, and „1 EL Sojasauce“ ist im Wagen. for the 15 ml soy sauce, which "Rückgängig" moves back', async () => {
       storeOwnRecipes(ONION_STIR_FRY, PLAIN_RICE);
       localStorage.setItem(LANGUAGE_KEY, 'de');
@@ -1673,7 +1630,7 @@ describe('GroceryList', () => {
   });
 
   describe('in German (#35)', () => {
-    it('heads the list "Einkaufsliste" with the field "Eintrag hinzufügen" and no button "Hinzufügen", names the sections in German, as "Obst & Gemüse" for onion, shows "1 Stk. Zwiebel", says „Klopapier“ zu Sonstiges hinzugefügt. after adding "Klopapier", heads the cart "Im Wagen (1)" after a tick, and says "Nimm einen Plan an, um zu sehen, was einzukaufen ist." with the link "Zum Plan" without an accepted plan', async () => {
+    it('heads the list "Einkaufsliste" with the field "Eintrag hinzufügen" and no button "Hinzufügen", names the sections in German, as "Obst & Gemüse" for onion, shows "1 Stk. Zwiebel", says „Klopapier“ zu Sonstiges hinzugefügt. after adding "Klopapier" and heads the cart "Im Wagen (1)" after a tick (changed by #52)', async () => {
       storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
       localStorage.setItem(LANGUAGE_KEY, 'de');
       await openAccepted('Quick Dal', 'Plain Rice');
@@ -1703,19 +1660,6 @@ describe('GroceryList', () => {
       await click(checkboxOf(listed().find((item) => labelOf(item) === '1 Stk. Zwiebel')!));
       expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('Im Wagen (1)');
       expect(inCart().map(labelOf)).toEqual(['1 Stk. Zwiebel']);
-
-      localStorage.removeItem('fooplan.plan');
-      TestBed.resetTestingModule();
-      configure();
-      store = await loadStores();
-      await open();
-      const message = element.querySelector('p.empty');
-      expect(textOf(message)).toBe(
-        'Nimm einen Plan an, um zu sehen, was einzukaufen ist. Zum Plan',
-      );
-      const link = message?.querySelector('a');
-      expect(textOf(link ?? null)).toBe('Zum Plan');
-      expect(link?.getAttribute('href')).toBe('/plan');
     });
 
     describe('edge cases', () => {
@@ -2199,14 +2143,14 @@ describe('GroceryList', () => {
       expect(options().map(textOf)).toEqual(['Toilet Paper', 'Crème fraîche']);
     });
 
-    it('takes the list away with a new plan started through the store, and shows none on the next accepted plan', async () => {
+    it('takes the list away and empties the field with a new plan started through the store, and shows none on the next accepted plan (changed by #52)', async () => {
       await openRemembering('toilet paper', 'coffee', 'tea');
       await focusAndType('t');
       expect(options().map(textOf), 'not shown').toEqual(['toilet paper', 'tea']);
 
       store.newPlan({ ...DEFAULT_SETTINGS, days: 1 });
       await stable();
-      expect(textOf(element)).toContain('Accept a plan to see what to buy.');
+      expect(field().value).toBe('');
       expect(listbox()).toBeNull();
 
       acceptOneDayPlan(store);
@@ -2380,6 +2324,231 @@ describe('GroceryList', () => {
       expect(labels, `aria-label ${when}`).not.toContain(name);
       expect(textOf(element), `text ${when}`).not.toContain(name);
     }
+  });
+
+  describe('before the plan is accepted (#52)', () => {
+    const NOTE = "The plan's ingredients are added once it's accepted.";
+
+    it('shows the heading, div.add with the form "Add an item", the field and an empty status, then the note "The plan\'s ingredients are added once it\'s accepted." with the link "Go to the plan" to /plan, and no section, cart or "Accept a plan to see what to buy."; in German "Die Zutaten des Plans kommen dazu, sobald er angenommen ist." with "Zum Plan" (#52 4)', async () => {
+      await open();
+      expect(store.plan().accepted, 'plan accepted').toBe(false);
+      expect(textOf(element.querySelector('h1'))).toBe('Grocery list');
+      const block = shownBlock();
+      expect(element.querySelector('h1')?.nextElementSibling).toBe(block);
+      expect(Array.from(block.children)).toEqual([
+        element.querySelector('form.field'),
+        statusElement(),
+      ]);
+      expect(textOf(element.querySelector('form label'))).toBe('Add an item');
+      expect(field().value).toBe('');
+      expect(statusText()).toBe('');
+
+      expect(block.nextElementSibling).toBe(shownNote());
+      expect(textOf(shownNote())).toBe(`${NOTE} Go to the plan`);
+      const link = shownNote().querySelector('a');
+      expect(textOf(link)).toBe('Go to the plan');
+      expect(link?.getAttribute('href')).toBe('/plan');
+      expect(sections()).toHaveLength(0);
+      expect(cart()).toBeNull();
+      expect(element.querySelector('p.empty')).toBeNull();
+      expect(textOf(element)).not.toContain('Accept a plan to see what to buy.');
+
+      TestBed.inject(LanguageStore).set('de');
+      await stable();
+      expect(textOf(shownNote())).toBe(
+        'Die Zutaten des Plans kommen dazu, sobald er angenommen ist. Zum Plan',
+      );
+      expect(textOf(shownNote().querySelector('a'))).toBe('Zum Plan');
+    });
+
+    // jsdom computes the rem against its 16px root font size
+    it('gives the host no class "accepted", and the room for the undo bar, padding-bottom 4.5rem, without an accepted plan as with one (#52 4a)', async () => {
+      await open();
+      expect(fixture.nativeElement.classList.contains('accepted'), 'not accepted').toBe(false);
+      expect(getComputedStyle(fixture.nativeElement).paddingBottom, 'not accepted').toBe('72px');
+
+      acceptOneDayPlan(store);
+      await stable();
+      expect(fixture.nativeElement.classList.contains('accepted'), 'accepted').toBe(false);
+      expect(getComputedStyle(fixture.nativeElement).paddingBottom, 'accepted').toBe('72px');
+    });
+
+    it('keeps the note right after div.add, before the sections and then before the cart once every added item is ticked (#52 4b)', async () => {
+      store.addItem('coffee');
+      store.addItem('tea');
+      await open();
+      const block = shownBlock();
+      expect(block.nextElementSibling).toBe(shownNote());
+      expect(
+        shownNote().nextElementSibling?.matches('div.sections'),
+        'sections after the note',
+      ).toBe(true);
+
+      store.toggleTicked(addedKey('coffee'));
+      store.toggleTicked(addedKey('tea'));
+      await stable();
+      expect(element.querySelector('.sections'), 'sections left').toBeNull();
+      expect(block.nextElementSibling).toBe(shownNote());
+      expect(shownNote().nextElementSibling).toBe(cart());
+    });
+
+    it('adds "toilet paper" with Enter, saying Added "toilet paper" to Other., lists it under "Other" with "Remove" after the note, empties the field and keeps the focus in it; ticks it into "In the cart (1)" with the undo bar, and "Remove" there takes it away and forgets it (#52 5)', async () => {
+      await open();
+      await add('toilet paper');
+      expect(statusText()).toBe('Added "toilet paper" to Other.');
+      expect(sections().map((section) => textOf(section.querySelector('h2')))).toEqual(['Other']);
+      expect(labelsIn(sectionHeaded('Other'))).toEqual(['toilet paper']);
+      removeButtonOf(line('toilet paper'));
+      expect(shownBlock().nextElementSibling).toBe(shownNote());
+      expect(
+        shownNote().nextElementSibling?.matches('div.sections'),
+        'sections after the note',
+      ).toBe(true);
+      expect(field().value).toBe('');
+      expect(document.activeElement).toBe(field());
+      expect(storedRecent(), 'not remembered').toEqual(['toilet paper']);
+
+      await tick('toilet paper');
+      expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('In the cart (1)');
+      expect(inCart().map(labelOf)).toEqual(['toilet paper']);
+      expect(textOf(element.querySelector('div.undo-bar span'))).toBe(
+        '"toilet paper" is in the cart.',
+      );
+
+      await click(removeButtonOf(cartLine('toilet paper')));
+      expect(cart()).toBeNull();
+      expect(sections()).toHaveLength(0);
+      expect(store.plan().added).toEqual([]);
+      expect(storedRecent()).toEqual([]);
+    });
+
+    it('keeps the text typed in the field and its suggestions while an item is added, ticked and removed through the store (#52 5a)', async () => {
+      localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(['toilet paper', 'coffee', 'tea']));
+      await reload();
+      await focusAndType('t');
+      expect(options().map(textOf), 'not shown').toEqual(['toilet paper', 'tea']);
+
+      const changes: [string, () => void][] = [
+        ['adding', () => store.addItem('milk')],
+        ['ticking', () => store.toggleTicked(addedKey('milk'))],
+        ['removing', () => store.removeItem('milk')],
+      ];
+      for (const [when, change] of changes) {
+        change();
+        await stable();
+        expect(field().value, `text after ${when}`).toBe('t');
+        expect(document.activeElement, `focus after ${when}`).toBe(field());
+        expect(listbox(), `list after ${when}`).not.toBeNull();
+        expect(options().map(textOf), `suggestions after ${when}`).toEqual(['toilet paper', 'tea']);
+      }
+      expect(store.plan().added, '"milk" left').toEqual([]);
+    });
+
+    it('takes the note away and lists the plan\'s lines in their sections on acceptance through the store, with "toilet paper" unticked under "Other", "coffee" in "In the cart (1)" and the status unchanged (#52 6)', async () => {
+      store.newPlan({ ...DEFAULT_SETTINGS, days: 1 });
+      await open();
+      await add('toilet paper');
+      await add('coffee');
+      await tick('coffee');
+      expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
+
+      for (const meal of [LUNCH, DINNER]) {
+        store.pick(meal, store.plan().days[0][meal.kind].suggestions[0]);
+      }
+      store.accept();
+      await stable();
+      expect(store.plan().accepted, 'plan not accepted').toBe(true);
+      expect(note()).toBeNull();
+      const expected = bySection(groceryList(store.plan(), RECIPES));
+      expect(expected, 'empty grocery list').not.toEqual([]);
+      for (const group of expected) {
+        expect(labelsIn(sectionHeaded(group.section)), group.section).toEqual(
+          expect.arrayContaining(group.items.map(lineOf)),
+        );
+      }
+      expect(checkboxOf(line('toilet paper')).checked).toBe(false);
+      expect(listedIn(sectionHeaded('Other')).includes(line('toilet paper'))).toBe(true);
+      expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('In the cart (1)');
+      expect(inCart().map(labelOf)).toEqual(['coffee']);
+      expect(statusText()).toBe('Added "coffee" to Other.');
+    });
+
+    it('lists the plan\'s "2 pc lemon" and then the added "lemon" as separate lines under "Fruit & vegetables" once the plan is accepted (#52 7)', async () => {
+      const saved = planOf([
+        day(
+          '2026-10-24',
+          picked('Hummus plate with bread and vegetables'),
+          picked('Tuna and white bean salad with bread'),
+        ),
+      ]);
+      localStorage.setItem('fooplan.plan', JSON.stringify(saved));
+      await reload();
+      expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+      await add('lemon');
+
+      store.accept();
+      await stable();
+      expect(store.plan().accepted, 'plan not accepted').toBe(true);
+      const labels = labelsIn(sectionHeaded('Fruit & vegetables'));
+      expect(labels.filter((label) => label.includes('lemon'))).toEqual(['2 pc lemon', 'lemon']);
+      expect(labels.indexOf('lemon')).toBe(labels.indexOf('2 pc lemon') + 1);
+    });
+
+    it('shows div.add with an empty field, the note and no section after a new plan started through the store from an accepted plan with "toilet paper" added, and saves the plan with no added item or tick (#52 8)', async () => {
+      acceptOneDayPlan(store);
+      await open();
+      await add('toilet paper');
+      await tick(lineOf(groceryList(store.plan(), RECIPES)[0]));
+      await type('te');
+      expect(store.plan().ticked, 'nothing ticked').toHaveLength(1);
+      expect(note(), 'note on an accepted plan').toBeNull();
+
+      store.newPlan({ ...DEFAULT_SETTINGS, days: 1 });
+      await stable();
+      shownBlock();
+      expect(field().value).toBe('');
+      shownNote();
+      expect(sections()).toHaveLength(0);
+      expect(cart()).toBeNull();
+      const stored = JSON.parse(localStorage.getItem('fooplan.plan') ?? 'null');
+      expect(stored?.added).toEqual([]);
+      expect(stored?.ticked).toEqual([]);
+    });
+
+    it('empties the field and takes its suggestions away on a new plan started through the store while the field has the focus, leaving the focus in the field, which suggests again when typed in (#52 8b)', async () => {
+      localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(['toilet paper', 'coffee', 'tea']));
+      await reload();
+      await focusAndType('t');
+      expect(options().map(textOf), 'not shown').toEqual(['toilet paper', 'tea']);
+
+      store.newPlan({ ...DEFAULT_SETTINGS, days: 1 });
+      await stable();
+      expect(field().value).toBe('');
+      expect(listbox()).toBeNull();
+      expect(document.activeElement).toBe(field());
+
+      await type('t');
+      expect(options().map(textOf)).toEqual(['toilet paper', 'tea']);
+    });
+
+    it('empties the status line and takes the undo bar away on a new plan started through the store after "toilet paper" was added and ticked (#52 8d)', async () => {
+      await open();
+      await add('toilet paper');
+      await tick('toilet paper');
+      expect(statusText(), 'text not shown').toBe('Added "toilet paper" to Other.');
+      expect(element.querySelector('div.undo-bar'), 'no undo bar').not.toBeNull();
+
+      store.newPlan({ ...DEFAULT_SETTINGS, days: 1 });
+      await stable();
+      expect(statusText()).toBe('');
+      expect(element.querySelector('div.undo-bar')).toBeNull();
+
+      // Back in the cart within the bar's 5 seconds, so only a reset undo line keeps the bar away
+      store.addItem('toilet paper');
+      store.toggleTicked(addedKey('toilet paper'));
+      await stable();
+      expect(element.querySelector('div.undo-bar'), 'bar of the plan before').toBeNull();
+    });
   });
 
   function configure() {
@@ -2569,6 +2738,16 @@ describe('GroceryList', () => {
   // Trimmed only, unlike textOf: the inner spaces of an entry are part of the text
   function statusText(): string {
     return (statusElement().textContent ?? '').trim();
+  }
+
+  function shownNote(): HTMLElement {
+    const found = element.querySelectorAll<HTMLElement>('p.note');
+    expect(found, 'p.note elements').toHaveLength(1);
+    return found[0];
+  }
+
+  function note(): HTMLElement | null {
+    return element.querySelector('p.note');
   }
 
   function shownBlock(): HTMLElement {

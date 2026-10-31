@@ -170,9 +170,16 @@ describe('groceries', () => {
       expect(cartCount(ticked, RECIPES)).toEqual({ inCart: 2, total: 5 });
     });
 
-    it('counts nothing for a plan that is not accepted yet', () => {
-      const plan = planFor(2, day('2026-10-24', picked('Spaghetti'), picked('Chili')));
-      expect(cartCount(plan, RECIPES)).toEqual({ inCart: 0, total: 0 });
+    it('counts only the added items for a plan that is not accepted yet, the ticked "coffee" in the cart of 2 with "tea" (#52 3c)', () => {
+      const plan = {
+        ...withAdded(
+          planFor(2, day('2026-10-24', picked('Spaghetti'), picked('Chili'))),
+          'coffee',
+          'tea',
+        ),
+        ticked: [addedKey('coffee')],
+      };
+      expect(cartCount(plan, RECIPES)).toEqual({ inCart: 1, total: 2 });
     });
 
     it('leaves out a tick whose item is not on the list', () => {
@@ -321,18 +328,6 @@ describe('groceries', () => {
   });
 
   describe('addedItems', () => {
-    it('lists nothing for a plan that is not accepted, even one with added items', () => {
-      const plan = withAdded(
-        planFor(2, day('2026-10-24', picked('Rice'), picked('Salad'))),
-        'coffee',
-      );
-      expect(addedItems({ ...plan, accepted: true }), 'accepted plan').toEqual([
-        added('coffee', 'Other'),
-      ]);
-
-      expect(addedItems(plan)).toEqual([]);
-    });
-
     it('puts an added item matching an ingredient name under that ingredient\'s section, sorted by name among the plan\'s items, and olive oil, salt and other text under "Other"', () => {
       const plan = withAdded(
         acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice'))),
@@ -403,7 +398,7 @@ describe('groceries', () => {
     const plan = acceptedPlanFor(2, day('2026-10-24', picked('Chili'), picked('Rice')));
     const onion = item('onion', 1, 'pc');
 
-    it('says an entry is added under its section, already on the list or already in the cart, and nothing for a blank entry or a plan that is not accepted', () => {
+    it('says an entry is added under its section, already on the list or already in the cart, and nothing for a blank entry (changed by #52)', () => {
       expect(addFeedback(plan, 'tea')).toEqual({
         id: 'groceries.added',
         params: { item: 'tea', section: 'Other' },
@@ -429,9 +424,6 @@ describe('groceries', () => {
         id: 'groceries.added',
         params: { item: 'cafe', section: 'Other' },
       });
-
-      const notAccepted = planFor(2, day('2026-10-24', picked('Chili'), picked('Rice')));
-      expect(addFeedback(notAccepted, 'tea')).toBeNull();
     });
 
     it('says "Added" for an entry named like a plan line, which is not an added item', () => {
@@ -491,6 +483,54 @@ describe('groceries', () => {
       expect(addFeedback(plan, '')).toBeNull();
       expect(addFeedback(withCoffee, '')).toBeNull();
       expect(addFeedback(withCoffee, '   ')).toBeNull();
+    });
+  });
+
+  describe('before acceptance (#52)', () => {
+    const notAccepted = planFor(2, day('2026-10-24', picked('Spaghetti'), picked('Chili')));
+
+    it('lists only the added "toilet paper" under Other and "Lemon" under Fruit & vegetables for a plan that is not accepted, and says "toilet paper" is already on the list and "tea" is added to Other (#52 3)', () => {
+      const plan = withAdded(notAccepted, 'toilet paper', 'Lemon');
+      expect(listItems(plan, RECIPES)).toEqual([
+        added('toilet paper', 'Other'),
+        added('Lemon', 'Fruit & vegetables'),
+      ]);
+      expect(addFeedback(plan, 'toilet paper')).toEqual({
+        id: 'groceries.alreadyOnList',
+        params: { item: 'toilet paper' },
+      });
+      expect(addFeedback(plan, 'tea')).toEqual({
+        id: 'groceries.added',
+        params: { item: 'tea', section: 'Other' },
+      });
+    });
+
+    it('lists no plan line and puts no ticked plan line in the cart for a complete plan that is not accepted with an added item, and lists the added item (#52 3a)', () => {
+      const plan = {
+        ...withAdded(notAccepted, 'coffee'),
+        ticked: [itemKey(item('onion', 1, 'pc'))],
+      };
+      expect(groceryList(acceptPlan(plan), RECIPES), 'accepted plan').toContainEqual(
+        item('onion', 1, 'pc'),
+      );
+      expect(groceryList(plan, RECIPES)).toEqual([]);
+      expect(shoppingView(listItems(plan, RECIPES), plan.ticked).inCart).toEqual([]);
+
+      expect(listItems(plan, RECIPES)).toEqual([added('coffee', 'Other')]);
+    });
+
+    it('returns no message for a blank entry on a plan that is not accepted, says the ticked "Coffee" is already in the cart by its stored text, and "Zitrone" is added to Fruit & vegetables in German (#52 3b)', () => {
+      const plan = { ...withAdded(notAccepted, 'Coffee'), ticked: [addedKey('Coffee')] };
+      expect(addFeedback(plan, '   ')).toBeNull();
+
+      expect(addFeedback(plan, ' coffee ')).toEqual({
+        id: 'groceries.alreadyInCart',
+        params: { item: 'Coffee' },
+      });
+      expect(addFeedback(notAccepted, 'Zitrone', 'de')).toEqual({
+        id: 'groceries.added',
+        params: { item: 'Zitrone', section: 'Fruit & vegetables' },
+      });
     });
   });
 

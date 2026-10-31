@@ -41,7 +41,6 @@ interface UndoLine {
   selector: 'app-grocery-list',
   styleUrl: './grocery-list.css',
   templateUrl: './grocery-list.html',
-  host: { '[class.accepted]': 'plan().accepted' },
 })
 export class GroceryList {
   private readonly store = inject(PlanStore);
@@ -103,12 +102,13 @@ export class GroceryList {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.undoTimer));
-    // A new plan takes the field away without a blur, and the next accepted plan brings an empty one
+    // The focus stays, so the field suggests again once typed in
     effect(() => {
-      if (!this.plan().accepted) {
-        this.typed.set('');
-        this.fieldFocused.set(false);
-      }
+      this.store.started();
+      this.clearField();
+      this.feedback.set(null);
+      this.undoLine.set(null);
+      clearTimeout(this.undoTimer);
     });
   }
 
@@ -116,7 +116,7 @@ export class GroceryList {
   // technology can submit it from elsewhere, so the focus goes back to the field for the next item
   protected add(event: SubmitEvent, input: HTMLInputElement): void {
     event.preventDefault();
-    this.addFromField(input.value, input);
+    this.addFromField(input.value);
   }
 
   protected typeInField(input: HTMLInputElement): void {
@@ -134,7 +134,7 @@ export class GroceryList {
   }
 
   // Arrow keys would move the caret to the start or end of the text
-  protected keyInField(event: KeyboardEvent, input: HTMLInputElement): void {
+  protected keyInField(event: KeyboardEvent): void {
     const count = this.suggested().length;
     // During an IME composition, Enter and the arrows pick from the IME's own candidates
     if (event.isComposing || count === 0) {
@@ -150,7 +150,7 @@ export class GroceryList {
     } else if (event.key === 'Enter' && highlighted !== null) {
       // Else the form would submit the typed text as well
       event.preventDefault();
-      this.addFromField(highlighted, input);
+      this.addFromField(highlighted);
     } else if (event.key === 'Escape') {
       this.dismissed.set(true);
     }
@@ -245,11 +245,10 @@ export class GroceryList {
     }
   }
 
-  protected addFromField(text: string, input: HTMLInputElement): void {
+  protected addFromField(text: string): void {
     this.addItem(text);
-    input.value = '';
-    this.typed.set('');
-    input.focus();
+    this.clearField();
+    this.addField()?.focus();
   }
 
   private addItem(text: string): void {
@@ -259,6 +258,14 @@ export class GroceryList {
     if (feedback?.id === 'groceries.added') {
       this.recentItems.remember(text);
     }
+  }
+
+  private clearField(): void {
+    const field = this.addField();
+    if (field !== null) {
+      field.value = '';
+    }
+    this.typed.set('');
   }
 
   private offerUndo(item: ListItem): void {

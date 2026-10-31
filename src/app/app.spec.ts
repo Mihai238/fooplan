@@ -876,13 +876,13 @@ describe('App', () => {
         expect(cards.filter((card) => textOf(card).includes('Your recipe'))).toEqual([]);
       });
 
-      it('shows "Loading…", then the Plan page with the browser\'s plan at /plan, replacing the URL, when "Sign out" is clicked on the Grocery list page of an accepted plan; and the same with the account\'s plan when another tab signs in (#45 5)', async () => {
+      it('shows "Loading…", then the Plan page with the browser\'s plan at /plan, replacing the URL, when "Sign out" is clicked on the Grocery list page of an accepted plan; and the same with the account\'s plan when another tab signs in (#45 5, changed by #52)', async () => {
         localStorage.setItem('fooplan.plan', JSON.stringify(browserPlan));
         fake.saveRow('fooplan.plan', accountPlan);
         fake.load(sessionFor('ana@example.com'));
         await open('/groceries');
         expect(compiled.querySelector('main h1')?.textContent?.trim()).toBe('Grocery list');
-        expect(compiled.querySelector('main')?.textContent).not.toContain('Accept a plan');
+        expect(compiled.querySelector('main p.note')).toBeNull();
         const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
 
         const signOut = await signOutItem();

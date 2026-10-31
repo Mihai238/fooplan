@@ -85,6 +85,10 @@ export class PlanStore {
   private readonly score = computed(() => scoreWith(this.recipes.all()));
   private readonly state = signal<Plan>(NO_PLAN);
   readonly plan = this.state.asReadonly();
+  // Counts the plans started with newPlan, not those loaded: by its content, a new plan can look
+  // like a plan only changed
+  private readonly startedState = signal(0);
+  readonly started = this.startedState.asReadonly();
   private readonly readyState = signal(false);
   readonly ready = this.readyState.asReadonly();
   private loading: Promise<void> | undefined;
@@ -201,6 +205,7 @@ export class PlanStore {
     }
     const candidates = this.candidatesOf(settings.kidFriendly);
     this.update(() => createPlan(this.today(), settings, candidates, this.random, this.score()));
+    this.startedState.update((count) => count + 1);
     return true;
   }
 

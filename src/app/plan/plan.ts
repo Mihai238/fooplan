@@ -275,9 +275,6 @@ export function acceptPlan(plan: Plan): Plan {
 }
 
 export function toggleTicked(plan: Plan, key: string): Plan {
-  if (!plan.accepted) {
-    return plan;
-  }
   const ticked = plan.ticked.includes(key)
     ? plan.ticked.filter((other) => other !== key)
     : [...plan.ticked, key];
@@ -286,7 +283,7 @@ export function toggleTicked(plan: Plan, key: string): Plan {
 
 export function addItem(plan: Plan, text: string): Plan {
   const item = text.trim();
-  if (!plan.accepted || item === '' || plan.added.some((other) => sameItem(other, item))) {
+  if (item === '' || plan.added.some((other) => sameItem(other, item))) {
     return plan;
   }
   // A re-added item starts unticked even if a stale tick of it lingers, e.g. one edited into the
@@ -300,7 +297,7 @@ export function addItem(plan: Plan, text: string): Plan {
 }
 
 export function removeItem(plan: Plan, text: string): Plan {
-  if (!plan.accepted || !plan.added.includes(text)) {
+  if (!plan.added.includes(text)) {
     return plan;
   }
   const key = addedKey(text);
@@ -368,8 +365,7 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
     hasConsecutiveDates(plan) &&
     usesRecipesOnce(plan) &&
     hasValidLeftovers(plan) &&
-    (!accepted || isComplete(plan)) &&
-    (accepted || (ticked.length === 0 && added.length === 0));
+    (!accepted || isComplete(plan));
   return valid ? plan : null;
 }
 
