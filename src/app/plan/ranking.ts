@@ -13,10 +13,14 @@ export const PASTA: readonly string[] = [
   'gnocchi',
   'egg noodle',
   'rice noodle',
+  'tagliatelle',
+  'tortellini',
+  'fusilli',
+  'spätzle',
 ];
 export const RICE: readonly string[] = ['rice'];
 export const POTATO: readonly string[] = ['potato', 'sweet potato'];
-export const BREAD: readonly string[] = ['bread', 'burger bun', 'tortilla'];
+export const BREAD: readonly string[] = ['bread', 'burger bun', 'tortilla', 'bagel', 'pita bread'];
 export const CHICKEN: readonly string[] = ['chicken breast', 'chicken thigh'];
 export const MEAT: readonly string[] = [
   'ground beef',
@@ -24,8 +28,23 @@ export const MEAT: readonly string[] = [
   'bratwurst',
   'frankfurter',
   'guanciale',
+  'pork tenderloin',
+  'pork chop',
+  'italian sausage',
+  'ham',
+  'bacon',
+  'ground lamb',
+  'chorizo',
 ];
-export const FISH: readonly string[] = ['salmon', 'cod', 'prawn', 'canned tuna', 'anchovy'];
+export const FISH: readonly string[] = [
+  'salmon',
+  'cod',
+  'prawn',
+  'canned tuna',
+  'anchovy',
+  'smoked salmon',
+  'trout',
+];
 
 // In order: a recipe of two kinds is of the first one listed
 const BASES: readonly [Base, readonly string[]][] = [

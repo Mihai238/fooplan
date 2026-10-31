@@ -1,7 +1,10 @@
 {
   "ingredients": {
     "anchovy": "Sardelle",
+    "apple": "Apfel",
     "avocado": "Avocado",
+    "bacon": "Speck",
+    "bagel": "Bagel",
     "basil": "Basilikum",
     "bay leaf": "Lorbeerblatt",
     "bean sprout": "Sojasprosse",
@@ -21,8 +24,10 @@
     "canned tomatoes": "Dosentomaten",
     "canned tuna": "Thunfisch",
     "canned white beans": "weiße Bohnen",
+    "caper": "Kapern",
     "caraway": "Kümmel",
     "carrot": "Karotte",
+    "cauliflower": "Blumenkohl",
     "cheddar": "Cheddar",
     "cherry tomato": "Kirschtomate",
     "chicken breast": "Hähnchenbrust",
@@ -30,11 +35,13 @@
     "chili flakes": "Chiliflocken",
     "chili powder": "Chilipulver",
     "chive": "Schnittlauch",
+    "chorizo": "Chorizo",
     "coconut milk": "Kokosmilch",
     "cod": "Kabeljau",
     "coriander": "Koriander",
     "couscous": "Couscous",
     "cream": "Sahne",
+    "cream cheese": "Frischkäse",
     "cucumber": "Gurke",
     "cumin": "Kreuzkümmel",
     "curry powder": "Currypulver",
@@ -42,19 +49,24 @@
     "egg": "Ei",
     "egg noodle": "Eiernudeln",
     "eggplant": "Aubergine",
+    "emmental": "Emmentaler",
     "feta": "Feta",
     "fish sauce": "Fischsauce",
     "flour": "Mehl",
     "frankfurter": "Frankfurter Würstchen",
+    "fusilli": "Fusilli",
     "garlic clove": "Knoblauchzehe",
     "ginger": "Ingwer",
     "gnocchi": "Gnocchi",
     "green bean": "grüne Bohnen",
     "green curry paste": "grüne Currypaste",
     "ground beef": "Rinderhackfleisch",
+    "ground lamb": "Lammhackfleisch",
     "guanciale": "Guanciale",
     "halloumi": "Halloumi",
+    "ham": "Kochschinken",
     "hummus": "Hummus",
+    "italian sausage": "Salsiccia",
     "ketchup": "Ketchup",
     "lemon": "Zitrone",
     "lettuce": "Kopfsalat",
@@ -62,6 +74,7 @@
     "macaroni": "Makkaroni",
     "makrut lime leaf": "Kaffir-Limettenblätter",
     "marjoram": "Majoran",
+    "mayonnaise": "Mayonnaise",
     "milk": "Milch",
     "mint": "Minze",
     "mirin": "Mirin",
@@ -78,39 +91,51 @@
     "parsley": "Petersilie",
     "pea": "Erbse",
     "peanut": "Erdnüsse",
+    "peanut butter": "Erdnussbutter",
     "pecorino": "Pecorino",
     "penne": "Penne",
     "pesto": "Pesto",
     "pine nut": "Pinienkern",
+    "pita bread": "Pitabrot",
+    "pork chop": "Schweinekotelett",
+    "pork tenderloin": "Schweinefilet",
     "potato": "Kartoffel",
     "prawn": "Garnele",
     "red cabbage": "Rotkohl",
     "red onion": "rote Zwiebel",
     "rice": "Reis",
     "rice noodle": "Reisnudeln",
+    "rocket": "Rucola",
     "romaine lettuce": "Römersalat",
+    "rosemary": "Rosmarin",
     "sake": "Sake",
     "salmon": "Lachs",
     "sauerkraut": "Sauerkraut",
     "sesame oil": "Sesamöl",
     "sesame seed": "Sesam",
+    "smoked salmon": "Räucherlachs",
     "snow pea": "Zuckerschote",
     "sour cream": "Sauerrahm",
     "soy sauce": "Sojasauce",
     "spaghetti": "Spaghetti",
     "spinach": "Spinat",
     "spring onion": "Frühlingszwiebel",
+    "spätzle": "Spätzle",
     "sugar": "Zucker",
     "sweet potato": "Süßkartoffel",
+    "tagliatelle": "Tagliatelle",
     "tamarind paste": "Tamarindenpaste",
     "thai basil": "Thai-Basilikum",
     "tomato": "Tomate",
     "tomato paste": "Tomatenmark",
+    "tortellini": "Tortellini",
     "tortilla": "Tortilla",
+    "trout": "Forelle",
     "vegetable oil": "Pflanzenöl",
     "vegetable stock": "Gemüsebrühe",
     "white wine vinegar": "Weißweinessig",
     "worcestershire sauce": "Worcestershiresauce",
+    "yogurt": "Joghurt",
     "zucchini": "Zucchini"
   },
   "recipes": {
@@ -626,6 +651,465 @@
         "Währenddessen die Knoblauchzehen in Scheiben schneiden und im Olivenöl und der Butter in einer großen Pfanne bei niedriger Hitze 2 Minuten erwärmen, ohne sie braun werden zu lassen.",
         "Eine Tasse Nudelwasser abschöpfen, die Penne und den Brokkoli abgießen und mit dem geriebenen Parmesan und einem Schuss Nudelwasser in der Pfanne schwenken, bis es cremig ist.",
         "Mit Salz und Pfeffer würzen und servieren."
+      ]
+    },
+    "Chicken fried rice": {
+      "name": "Gebratener Reis mit Hähnchen",
+      "steps": [
+        "Den Reis waschen und in der 1,5-fachen Menge Wasser zum Kochen bringen.",
+        "Zudecken, bei niedriger Hitze 12 Minuten köcheln lassen und dann auf einem Blech ausbreiten, damit er abkühlt und abtrocknet.",
+        "Die Hähnchenbrust in kleine Würfel schneiden, die Karotte würfeln, die Frühlingszwiebeln in Ringe schneiden und die Knoblauchzehen fein hacken.",
+        "Die Hälfte des Pflanzenöls in einem Wok oder einer großen Pfanne bei starker Hitze erhitzen und das Hähnchen 5 Minuten unter Rühren braten, bis es gar ist, dann herausnehmen.",
+        "Die Eier verquirlen, in die heiße Pfanne gießen, unter Rühren 1 Minute stocken lassen und zum Hähnchen geben.",
+        "Das restliche Pflanzenöl erhitzen und die Karotte, die Erbsen und den Knoblauch 3 Minuten unter Rühren braten.",
+        "Den Reis zugeben und 3 bis 4 Minuten braten, dabei immer wieder an die Pfanne drücken, bis er leicht knusprig wird.",
+        "Hähnchen und Eier zurück in die Pfanne geben, die Sojasauce, das Sesamöl und die Frühlingszwiebeln zugeben, 1 Minute schwenken und servieren."
+      ]
+    },
+    "Beef and broccoli stir-fry with rice": {
+      "name": "Rindfleisch-Brokkoli-Pfanne mit Reis",
+      "steps": [
+        "Den Reis waschen und in der 1,5-fachen Menge Wasser zum Kochen bringen.",
+        "Zudecken, bei niedriger Hitze 15 Minuten köcheln lassen und dann 5 Minuten vom Herd ziehen lassen.",
+        "Das Rinderfilet quer zur Faser in dünne Streifen schneiden und den Brokkoli in kleine Röschen teilen.",
+        "Die Knoblauchzehen fein hacken, den Ingwer reiben und beides mit der Sojasauce, dem Zucker, dem Sesamöl und 4 EL Wasser zur Sauce verrühren.",
+        "Die Hälfte des Pflanzenöls in einem Wok oder einer großen Pfanne bei starker Hitze erhitzen und das Rindfleisch 2 Minuten scharf anbraten, dann herausnehmen.",
+        "Das restliche Pflanzenöl und den Brokkoli mit einem Schuss Wasser zugeben und 4 Minuten unter Rühren braten, bis er leuchtend grün und gerade gar ist.",
+        "Das Rindfleisch zurück in die Pfanne geben, die Sauce zugießen und 1 bis 2 Minuten schwenken, bis sie glänzt, dann auf dem Reis servieren."
+      ]
+    },
+    "Pork and bell pepper stir-fry with rice": {
+      "name": "Schweinefilet-Paprika-Pfanne mit Reis",
+      "steps": [
+        "Den Reis waschen und in der 1,5-fachen Menge Wasser zum Kochen bringen.",
+        "Zudecken, bei niedriger Hitze 15 Minuten köcheln lassen und dann 5 Minuten vom Herd ziehen lassen.",
+        "Das Schweinefilet in dünne Streifen schneiden und die Paprikaschoten und die Zwiebel in gleich große Streifen schneiden.",
+        "Die Knoblauchzehen fein hacken und den Ingwer reiben.",
+        "Die Hälfte des Pflanzenöls in einem Wok oder einer großen Pfanne bei starker Hitze erhitzen und das Fleisch 3 Minuten unter Rühren anbraten, bis es gebräunt ist, dann herausnehmen.",
+        "Das restliche Pflanzenöl zugeben und die Paprikastreifen und die Zwiebel 4 Minuten unter Rühren braten, bis sie gerade gar sind, in der letzten Minute Knoblauch und Ingwer mitbraten.",
+        "Das Fleisch zurück in die Pfanne geben, die Sojasauce mit 3 EL Wasser zugießen, 1 Minute schwenken und auf dem Reis servieren."
+      ]
+    },
+    "Salmon teriyaki with rice and broccoli": {
+      "name": "Teriyaki-Lachs mit Reis und Brokkoli",
+      "steps": [
+        "Den Reis waschen und in der 1,5-fachen Menge Wasser zum Kochen bringen.",
+        "Zudecken, bei niedriger Hitze 15 Minuten köcheln lassen und dann 5 Minuten vom Herd ziehen lassen.",
+        "Den Ingwer reiben und mit der Sojasauce, dem Mirin und dem Zucker verrühren, bis sich der Zucker auflöst.",
+        "Den Brokkoli in Röschen teilen, 4 Minuten in kochendem Salzwasser garen und abgießen.",
+        "Den Lachs trocken tupfen, das Pflanzenöl in einer Pfanne bei mittlerer bis starker Hitze erhitzen und den Lachs 4 Minuten braten, dann wenden und weitere 2 Minuten braten.",
+        "Die Sauce zugießen und 1 bis 2 Minuten aufkochen lassen, dabei über den Lachs löffeln, bis sie dick und glänzend ist.",
+        "Den Lachs mit dem Brokkoli auf dem Reis anrichten und mit dem Sesam bestreuen."
+      ]
+    },
+    "Garlic prawns with rice": {
+      "name": "Knoblauchgarnelen mit Reis",
+      "steps": [
+        "Den Reis waschen und in der 1,5-fachen Menge Wasser zum Kochen bringen.",
+        "Zudecken, bei niedriger Hitze 15 Minuten köcheln lassen und dann 5 Minuten vom Herd ziehen lassen.",
+        "Die Garnelen trocken tupfen, die Knoblauchzehen in dünne Scheiben schneiden und die Petersilie hacken.",
+        "Das Olivenöl und die Butter in einer großen Pfanne bei mittlerer Hitze erhitzen und den Knoblauch 1 Minute anbraten, bis er duftet.",
+        "Die Hitze erhöhen, die Garnelen zugeben und pro Seite 2 Minuten braten, bis sie rosa sind.",
+        "Den Saft der Zitrone darüberpressen, die Petersilie unterrühren, mit Salz und Pfeffer würzen und auf dem Reis servieren."
+      ]
+    },
+    "Chicken satay with rice": {
+      "name": "Hähnchen-Satay mit Reis",
+      "steps": [
+        "Die Hähnchenschenkel in dünne Streifen schneiden, die Knoblauchzehen fein hacken und den Ingwer reiben.",
+        "Das Hähnchen mit der Hälfte von Knoblauch und Ingwer, 1 EL der Sojasauce und dem Pflanzenöl mischen und 10 Minuten marinieren lassen.",
+        "Währenddessen den Reis waschen und in der 1,5-fachen Menge Wasser zum Kochen bringen.",
+        "Zudecken, bei niedriger Hitze 15 Minuten köcheln lassen und dann 5 Minuten vom Herd ziehen lassen.",
+        "Das Hähnchen auf Spieße stecken und in einer Grillpfanne bei starker Hitze pro Seite 3 bis 4 Minuten braten, bis es gebräunt und gar ist.",
+        "Für die Sauce die Erdnussbutter, die Kokosmilch, den Zucker und den restlichen Knoblauch, Ingwer und die restliche Sojasauce in einem kleinen Topf bei niedriger Hitze 3 Minuten unter Rühren glatt erwärmen.",
+        "Den Saft der Limette in die Sauce rühren und die Spieße mit der Sauce auf dem Reis servieren."
+      ]
+    },
+    "Spinach rice with feta": {
+      "name": "Spinatreis mit Feta",
+      "steps": [
+        "Die Zwiebel und die Knoblauchzehen fein hacken und den Spinat und den Dill grob hacken.",
+        "Das Olivenöl in einer weiten Pfanne bei mittlerer Hitze erhitzen und die Zwiebel 5 Minuten weich braten, in der letzten Minute den Knoblauch mitbraten.",
+        "Den Reis unterrühren und 1 Minute anrösten, dann die Gemüsebrühe zugießen und aufkochen.",
+        "Zudecken und bei niedriger Hitze 15 Minuten köcheln lassen.",
+        "Den Spinat portionsweise unterrühren, bis er zusammenfällt, dann zudecken und weitere 5 Minuten garen, bis der Reis weich ist.",
+        "Den Dill und den Saft der Zitrone unterrühren, mit Salz und Pfeffer würzen und mit dem darüber gebröselten Feta servieren."
+      ]
+    },
+    "Coconut prawn curry with rice": {
+      "name": "Kokos-Garnelen-Curry mit Reis",
+      "steps": [
+        "Den Reis waschen und in der 1,5-fachen Menge Wasser zum Kochen bringen.",
+        "Zudecken, bei niedriger Hitze 15 Minuten köcheln lassen und dann 5 Minuten vom Herd ziehen lassen.",
+        "Die Zwiebel und die Knoblauchzehen fein hacken und den Ingwer reiben.",
+        "Das Pflanzenöl in einer großen Pfanne bei mittlerer Hitze erhitzen und die Zwiebel 5 Minuten weich braten.",
+        "Knoblauch, Ingwer und das Currypulver zugeben und 1 Minute anbraten, bis es duftet.",
+        "Die Dosentomaten und die Kokosmilch zugießen, mit Salz würzen und 10 Minuten köcheln lassen, bis die Sauce etwas eindickt.",
+        "Die Garnelen zugeben und 3 bis 4 Minuten köcheln lassen, bis sie rosa und gar sind.",
+        "Den Saft der Limette hineinpressen, den gehackten Koriander darüberstreuen und mit dem Reis servieren."
+      ]
+    },
+    "Potato and cauliflower curry with rice": {
+      "name": "Kartoffel-Blumenkohl-Curry mit Reis",
+      "steps": [
+        "Den Reis waschen und in der 1,5-fachen Menge Salzwasser zum Kochen bringen.",
+        "Zudecken, bei niedriger Hitze 15 Minuten köcheln lassen und dann 5 Minuten vom Herd ziehen lassen.",
+        "Die Kartoffeln schälen und in 2 cm große Würfel schneiden und den Blumenkohl in kleine Röschen teilen.",
+        "Die Zwiebel und die Knoblauchzehen fein hacken und den Ingwer reiben.",
+        "Das Pflanzenöl in einem großen Topf bei mittlerer Hitze erhitzen und die Zwiebel 5 Minuten weich braten.",
+        "Knoblauch, Ingwer, das Currypulver und den Kreuzkümmel zugeben und 1 Minute anbraten, bis es duftet.",
+        "Die Kartoffeln, den Blumenkohl, die Dosentomaten und 300 ml Wasser zugeben, mit Salz würzen, zudecken und 20 Minuten köcheln lassen, bis die Kartoffeln weich sind.",
+        "Die Erbsen unterrühren und 3 Minuten mitgaren, dann den gehackten Koriander darüberstreuen und das Curry mit dem Reis servieren."
+      ]
+    },
+    "Tagliatelle alfredo with chicken": {
+      "name": "Tagliatelle Alfredo mit Hähnchen",
+      "steps": [
+        "Einen großen Topf Salzwasser für die Tagliatelle zum Kochen bringen.",
+        "Die Hähnchenbrust in dünne Streifen schneiden und mit Salz und Pfeffer würzen.",
+        "Das Olivenöl in einer großen Pfanne bei mittlerer bis starker Hitze erhitzen und das Hähnchen 5 bis 6 Minuten goldbraun und gar braten, dann herausnehmen.",
+        "Die Hitze reduzieren, die Butter in der Pfanne schmelzen und die fein gehackten Knoblauchzehen 1 Minute darin anbraten.",
+        "Die Sahne zugießen, aufkochen lassen und den geriebenen Parmesan einrühren, bis die Sauce glatt ist.",
+        "Währenddessen die Tagliatelle etwa 5 Minuten al dente kochen und vor dem Abgießen eine Tasse Nudelwasser aufheben.",
+        "Die Tagliatelle und das Hähnchen in der Sauce schwenken, bei Bedarf einen Schuss Nudelwasser zugeben, und mit der gehackten Petersilie bestreut servieren."
+      ]
+    },
+    "Chicken chow mein": {
+      "name": "Chow Mein mit Hähnchen",
+      "steps": [
+        "Die Eiernudeln 3 bis 4 Minuten in kochendem Wasser garen, abgießen, kalt abspülen und mit dem Sesamöl vermischen.",
+        "Die Hähnchenbrust in dünne Streifen schneiden, die Karotte in feine Stifte schneiden, die Frühlingszwiebeln in Ringe schneiden und die Knoblauchzehen fein hacken.",
+        "Das Pflanzenöl in einem Wok oder einer großen Pfanne bei starker Hitze erhitzen und das Hähnchen 4 Minuten unter Rühren braten, bis es gar ist.",
+        "Die Karotte und den Knoblauch zugeben und 2 Minuten unter Rühren braten.",
+        "Die Nudeln, die Sojasprossen, die Frühlingszwiebeln und die Sojasauce zugeben und bei starker Hitze 2 bis 3 Minuten schwenken, bis die Nudeln heiß und leicht knusprig sind, dann servieren."
+      ]
+    },
+    "Chicken paprikash with egg noodles": {
+      "name": "Paprikahähnchen mit Eiernudeln",
+      "steps": [
+        "Die Hähnchenschenkel in große Stücke schneiden und mit Salz und Pfeffer würzen.",
+        "Die Zwiebeln und die Knoblauchzehen fein hacken.",
+        "Das Pflanzenöl in einem großen Topf bei mittlerer bis starker Hitze erhitzen und das Hähnchen 5 Minuten anbraten, dann herausnehmen.",
+        "Die Zwiebeln im selben Topf bei mittlerer Hitze 8 Minuten weich und goldgelb braten, in der letzten Minute den Knoblauch mitbraten.",
+        "Den Topf vom Herd nehmen, das Paprikapulver und das Tomatenmark einrühren, dann die Gemüsebrühe zugießen und das Hähnchen zurück in den Topf geben.",
+        "Zudecken und bei niedriger Hitze 20 Minuten köcheln lassen, bis das Hähnchen zart ist.",
+        "Währenddessen die Eiernudeln in kochendem Salzwasser etwa 8 Minuten weich garen und abgießen.",
+        "Das Mehl mit dem Sauerrahm verrühren, unter die Sauce ziehen und 2 Minuten köcheln lassen, bis sie bindet, dann auf den Nudeln servieren."
+      ]
+    },
+    "Chicken parmigiana with spaghetti": {
+      "name": "Hähnchen-Parmigiana mit Spaghetti",
+      "steps": [
+        "Den Ofen auf 220 °C vorheizen.",
+        "Die Knoblauchzehe fein hacken und in 1 EL des Olivenöls in einem kleinen Topf bei niedriger Hitze 1 Minute anbraten.",
+        "Die Dosentomaten zugeben, mit Salz würzen und 15 Minuten köcheln lassen.",
+        "Währenddessen die Hähnchenbrust waagerecht halbieren und jede Hälfte etwa 1 cm dünn klopfen.",
+        "Das Hähnchen mit Salz und Pfeffer würzen und nacheinander im Mehl, im verquirlten Ei und in den Semmelbröseln wenden.",
+        "Das restliche Olivenöl in einer großen Pfanne bei mittlerer bis starker Hitze erhitzen und das Hähnchen pro Seite 3 Minuten goldbraun braten.",
+        "Das Hähnchen in eine Auflaufform legen, die Hälfte der Sauce darüber verteilen, mit dem in Scheiben geschnittenen Mozzarella und dem geriebenen Parmesan belegen und 10 Minuten backen, bis es blubbert.",
+        "Währenddessen die Spaghetti in kochendem Salzwasser etwa 9 Minuten al dente kochen, abgießen und mit der restlichen Sauce mischen.",
+        "Das Hähnchen auf den Spaghetti anrichten und das Basilikum darüber zupfen."
+      ]
+    },
+    "Penne with Italian sausage and tomato sauce": {
+      "name": "Penne mit Salsiccia und Tomatensauce",
+      "steps": [
+        "Das Brät der Salsiccia aus der Haut drücken und die Zwiebel und die Knoblauchzehen fein hacken.",
+        "Das Olivenöl in einer großen Pfanne bei mittlerer bis starker Hitze erhitzen und das Brät 5 Minuten braun anbraten, dabei zerkleinern.",
+        "Zwiebel und Knoblauch zugeben und 4 Minuten weich braten.",
+        "Die Dosentomaten zugeben, mit Salz und Pfeffer würzen und 15 Minuten köcheln lassen.",
+        "Währenddessen die Penne in kochendem Salzwasser etwa 11 Minuten al dente kochen und abgießen.",
+        "Die Penne in der Sauce schwenken und mit dem darüber gezupften Basilikum und dem geriebenen Parmesan servieren."
+      ]
+    },
+    "Tortellini with ham and peas": {
+      "name": "Tortellini mit Schinken und Erbsen",
+      "steps": [
+        "Einen großen Topf Salzwasser für die Tortellini zum Kochen bringen.",
+        "Die Zwiebel fein hacken und den Kochschinken in feine Streifen schneiden.",
+        "Die Butter in einer großen Pfanne bei mittlerer Hitze schmelzen und die Zwiebel 4 Minuten weich braten.",
+        "Den Kochschinken und die Erbsen zugeben und 2 Minuten braten, dann die Sahne zugießen und 3 Minuten köcheln lassen.",
+        "Währenddessen die Tortellini etwa 4 Minuten gar kochen und abgießen.",
+        "Die Tortellini mit dem geriebenen Parmesan in der Sauce schwenken und servieren."
+      ]
+    },
+    "Spaghetti puttanesca": {
+      "name": "Spaghetti alla Puttanesca",
+      "steps": [
+        "Einen großen Topf Salzwasser für die Spaghetti zum Kochen bringen.",
+        "Die Knoblauchzehen in dünne Scheiben schneiden, die Sardellen hacken, die Oliven halbieren und die Petersilie hacken.",
+        "Das Olivenöl in einer weiten Pfanne bei niedriger Hitze erwärmen und den Knoblauch, die Sardellen und die Chiliflocken 2 Minuten anbraten, bis die Sardellen zerfallen.",
+        "Die Dosentomaten, die Oliven und die Kapern zugeben und 10 Minuten köcheln lassen, bis die Sauce dick wird.",
+        "Währenddessen die Spaghetti etwa 9 Minuten al dente kochen und abgießen.",
+        "Die Spaghetti bei mittlerer Hitze 1 Minute in der Sauce schwenken und mit der Petersilie bestreut servieren."
+      ]
+    },
+    "Tagliatelle with smoked salmon and dill": {
+      "name": "Tagliatelle mit Räucherlachs und Dill",
+      "steps": [
+        "Einen großen Topf Salzwasser für die Tagliatelle zum Kochen bringen.",
+        "Die Zwiebel fein hacken, den Räucherlachs in Streifen schneiden und den Dill hacken.",
+        "Die Butter in einer großen Pfanne bei mittlerer Hitze schmelzen und die Zwiebel 4 Minuten weich braten.",
+        "Die Sahne und den Saft der halben Zitrone zugießen und 3 Minuten köcheln lassen.",
+        "Währenddessen die Tagliatelle etwa 5 Minuten al dente kochen und abgießen.",
+        "Die Tagliatelle in der Sauce schwenken, den Räucherlachs und den Dill vom Herd genommen unterheben, mit Pfeffer würzen und servieren."
+      ]
+    },
+    "Pasta alla norma": {
+      "name": "Pasta alla Norma",
+      "steps": [
+        "Die Aubergine in 2 cm große Würfel schneiden und mit etwas Salz mischen.",
+        "4 EL des Olivenöls in einer großen Pfanne bei mittlerer bis starker Hitze erhitzen und die Aubergine 10 Minuten unter Wenden goldbraun und weich braten, dann herausnehmen.",
+        "Die Hitze reduzieren, das restliche Olivenöl zugeben und die in Scheiben geschnittenen Knoblauchzehen 1 Minute anbraten.",
+        "Die Dosentomaten zugeben, mit Salz würzen und 10 Minuten köcheln lassen.",
+        "Währenddessen die Penne in kochendem Salzwasser etwa 11 Minuten al dente kochen und abgießen.",
+        "Die Aubergine und das gezupfte Basilikum unter die Sauce rühren, mit der Penne mischen und mit dem geriebenen Parmesan servieren."
+      ]
+    },
+    "Pasta salad with mozzarella and cherry tomatoes": {
+      "name": "Nudelsalat mit Mozzarella und Kirschtomaten",
+      "steps": [
+        "Die Fusilli in kochendem Salzwasser etwa 10 Minuten al dente kochen, dann abgießen und kalt abspülen.",
+        "Währenddessen die Kirschtomaten halbieren, den Mozzarella in kleine Stücke zupfen, die Oliven halbieren und die rote Zwiebel in dünne Ringe schneiden.",
+        "Das Olivenöl mit dem Weißweinessig, Salz und Pfeffer zum Dressing verrühren.",
+        "Die Fusilli mit den Kirschtomaten, dem Mozzarella, den Oliven, der roten Zwiebel und dem Dressing mischen, das Basilikum darüber zupfen und servieren."
+      ]
+    },
+    "Spätzle with creamy mushroom sauce": {
+      "name": "Spätzle mit Champignon-Rahmsauce",
+      "steps": [
+        "Die Champignons in Scheiben schneiden und die Zwiebel und die Petersilie fein hacken.",
+        "Die Hälfte der Butter in einer großen Pfanne bei mittlerer bis starker Hitze schmelzen und die Champignons 6 bis 8 Minuten braun braten.",
+        "Die Zwiebel zugeben und 3 Minuten weich braten.",
+        "Die Gemüsebrühe und die Sahne zugießen, mit Salz und Pfeffer würzen und 5 Minuten cremig köcheln lassen.",
+        "Währenddessen die restliche Butter in einer zweiten Pfanne schmelzen und die Spätzle bei mittlerer Hitze 5 Minuten leicht goldbraun braten.",
+        "Die Spätzle mit der Champignonsauce anrichten und mit der Petersilie bestreuen."
+      ]
+    },
+    "Pork chops with mashed potatoes and apple sauce": {
+      "name": "Schweinekoteletts mit Kartoffelpüree und Apfelmus",
+      "steps": [
+        "Die Kartoffeln schälen, in gleich große Stücke schneiden und in Salzwasser 20 Minuten weich kochen.",
+        "Währenddessen jeden Apfel schälen, entkernen und klein schneiden und mit dem Zucker und 3 EL Wasser zugedeckt bei niedriger Hitze 10 bis 15 Minuten weich köcheln lassen.",
+        "Die Äpfel mit einer Gabel zu einem stückigen Apfelmus zerdrücken und abkühlen lassen.",
+        "Die Schweinekoteletts mit Salz und Pfeffer würzen, das Pflanzenöl in einer Pfanne bei mittlerer bis starker Hitze erhitzen und die Koteletts 4 bis 5 Minuten pro Seite durchbraten.",
+        "Die Milch mit der Butter in einem kleinen Topf erwärmen, bis die Butter geschmolzen ist.",
+        "Die Kartoffeln abgießen, zerstampfen und die heiße Milch unterschlagen, bis das Püree glatt ist, dann mit Salz würzen.",
+        "Die Schweinekoteletts mit dem Kartoffelpüree und dem Apfelmus servieren."
+      ]
+    },
+    "Fish cakes with peas": {
+      "name": "Fischfrikadellen mit Erbsen",
+      "steps": [
+        "Die Kartoffeln schälen, in Stücke schneiden und in Salzwasser 15 Minuten weich kochen.",
+        "Währenddessen den Kabeljau in eine Pfanne legen, knapp mit Wasser bedecken und bei niedriger Hitze 8 Minuten gar ziehen lassen, dann abtropfen lassen und zerpflücken.",
+        "Die Frühlingszwiebeln und die Petersilie fein hacken und die Schale der Zitrone abreiben.",
+        "Die Kartoffeln abgießen, zerstampfen und mit dem Fisch, den Frühlingszwiebeln, der Petersilie, der Zitronenschale, Salz und Pfeffer vermengen.",
+        "Die Masse zu 6 flachen Frikadellen formen.",
+        "Die Frikadellen im Mehl wenden, durch das verquirlte Ei ziehen und in den Semmelbröseln wälzen.",
+        "Das Pflanzenöl in einer großen Pfanne bei mittlerer Hitze erhitzen und die Frikadellen 4 Minuten pro Seite goldbraun und knusprig braten.",
+        "Währenddessen die Erbsen 3 Minuten in kochendem Salzwasser garen und abgießen.",
+        "Die Zitrone in Spalten schneiden und mit den Frikadellen und den Erbsen servieren."
+      ]
+    },
+    "Frankfurters with potato salad": {
+      "name": "Frankfurter Würstchen mit Kartoffelsalat",
+      "steps": [
+        "Die Kartoffeln mit Schale in Salzwasser 20 bis 25 Minuten garen, bis sie gerade weich sind.",
+        "Währenddessen die Zwiebel fein würfeln und 3 Minuten in der Gemüsebrühe köcheln lassen, dann den Weißweinessig, den Senf, Salz und Pfeffer unterrühren.",
+        "Die Kartoffeln abgießen, noch warm pellen und in dünne Scheiben schneiden.",
+        "Das warme Dressing über die Kartoffeln gießen, das Pflanzenöl zugeben, vorsichtig mischen und den Salat 10 Minuten durchziehen lassen.",
+        "Währenddessen die Frankfurter Würstchen 5 Minuten in heißem, aber nicht kochendem Wasser erwärmen.",
+        "Den Schnittlauch über den Kartoffelsalat schneiden und den Salat mit den Würstchen servieren."
+      ]
+    },
+    "Fried potatoes with bacon and fried eggs": {
+      "name": "Bratkartoffeln mit Speck und Spiegelei",
+      "steps": [
+        "Die Kartoffeln mit Schale in Salzwasser 15 Minuten fast weich kochen.",
+        "Währenddessen die Zwiebel würfeln und den Speck in Streifen schneiden.",
+        "Die Kartoffeln abgießen, pellen und in Scheiben schneiden.",
+        "Das Pflanzenöl in einer großen Pfanne bei mittlerer bis starker Hitze erhitzen und die Kartoffelscheiben 10 Minuten goldbraun braten, dabei ab und zu wenden.",
+        "Den Speck und die Zwiebel zugeben und weitere 5 Minuten braten, bis der Speck knusprig ist, dann mit Salz und Pfeffer würzen.",
+        "Die Butter in einer zweiten Pfanne bei mittlerer Hitze schmelzen und die Eier 3 bis 4 Minuten braten, bis das Eiweiß gestockt ist.",
+        "Den Schnittlauch über die Bratkartoffeln schneiden und mit den Spiegeleiern servieren."
+      ]
+    },
+    "Pan-fried cod with potatoes and spinach": {
+      "name": "Gebratener Kabeljau mit Kartoffeln und Spinat",
+      "steps": [
+        "Die Kartoffeln schälen, in Stücke schneiden und in Salzwasser 20 Minuten weich kochen.",
+        "Währenddessen den Kabeljau in 2 Portionen teilen, trocken tupfen, mit Salz und Pfeffer würzen und im Mehl wenden.",
+        "Das Olivenöl in einer Pfanne bei mittlerer bis starker Hitze erhitzen und den Kabeljau 3 bis 4 Minuten pro Seite goldbraun braten, in der letzten Minute die Hälfte der Butter zugeben.",
+        "Währenddessen die Knoblauchzehe in Scheiben schneiden und in der restlichen Butter in einer zweiten Pfanne bei mittlerer Hitze 1 Minute anbraten.",
+        "Den Spinat zugeben und 2 Minuten unter Rühren zusammenfallen lassen, dann mit Salz und Pfeffer würzen.",
+        "Die Kartoffeln abgießen und mit dem Kabeljau, dem Spinat und der in Spalten geschnittenen Zitrone servieren."
+      ]
+    },
+    "Chicken thighs with roast potatoes and rosemary": {
+      "name": "Hähnchenschenkel mit Rosmarinkartoffeln",
+      "steps": [
+        "Den Ofen auf 220 °C vorheizen.",
+        "Die Kartoffeln in 3 cm große Stücke schneiden, die Knoblauchzehen in der Schale leicht andrücken und die Nadeln vom Rosmarin zupfen.",
+        "Die Kartoffeln, die Hähnchenschenkel, den Knoblauch und den Rosmarin auf einem großen Backblech mit dem Olivenöl, Salz und Pfeffer mischen und das Hähnchen mit der Hautseite nach oben legen.",
+        "Die Zitrone in Spalten schneiden und zwischen die Kartoffeln stecken.",
+        "35 Minuten rösten und die Kartoffeln nach der Hälfte wenden, bis das Hähnchen durchgegart ist und die Kartoffeln goldbraun und knusprig sind.",
+        "Die Hähnchenschenkel mit den Kartoffeln servieren und die geröstete Zitrone darüber auspressen."
+      ]
+    },
+    "Currywurst with fries": {
+      "name": "Currywurst mit Pommes",
+      "steps": [
+        "Den Ofen auf 220 °C vorheizen und ein Backblech mit Backpapier auslegen.",
+        "Die Kartoffeln in 1 cm dicke Pommes schneiden, mit zwei Dritteln des Pflanzenöls und Salz mischen und auf dem Blech verteilen.",
+        "Die Pommes 30 bis 35 Minuten backen und nach der Hälfte wenden, bis sie goldbraun und knusprig sind.",
+        "Währenddessen die Zwiebel fein würfeln und in der Hälfte des restlichen Pflanzenöls in einem kleinen Topf bei mittlerer Hitze 5 Minuten weich braten.",
+        "Das Currypulver und das Paprikapulver 30 Sekunden unterrühren, dann den Ketchup, den Zucker und 4 EL Wasser zugeben und 5 Minuten köcheln lassen.",
+        "Die Bratwürste im restlichen Pflanzenöl in einer Pfanne bei mittlerer Hitze 10 bis 12 Minuten unter Wenden rundum braun braten.",
+        "Die Bratwürste in dicke Scheiben schneiden, mit der Currysauce übergießen und mit den Pommes servieren."
+      ]
+    },
+    "Trout with potatoes and parsley butter": {
+      "name": "Forelle Müllerin mit Kartoffeln",
+      "steps": [
+        "Die Kartoffeln schälen, halbieren und in Salzwasser 20 Minuten weich kochen.",
+        "Währenddessen die Forellen waschen, innen und außen trocken tupfen, mit Salz und Pfeffer würzen und im Mehl wenden.",
+        "Das Pflanzenöl in einer großen Pfanne bei mittlerer Hitze erhitzen und die Forellen 5 bis 6 Minuten pro Seite goldbraun und gar braten.",
+        "Währenddessen die Petersilie hacken und die Zitrone auspressen.",
+        "Die Forellen auf vorgewärmte Teller legen und die Pfanne auswischen.",
+        "Die Butter in der Pfanne bei mittlerer Hitze aufschäumen und hellbraun werden lassen, dann die Petersilie und den Zitronensaft unterrühren.",
+        "Die Kartoffeln abgießen, die braune Butter über die Forellen gießen und mit den Kartoffeln servieren."
+      ]
+    },
+    "Tuna melts": {
+      "name": "Thunfisch-Toasts mit Käse",
+      "steps": [
+        "Den Backofengrill auf höchster Stufe vorheizen.",
+        "Den Thunfisch abtropfen lassen und mit der Mayonnaise, den fein geschnittenen Frühlingszwiebeln, dem Saft der Zitrone, Salz und Pfeffer mischen.",
+        "Das Brot unter dem Grill von beiden Seiten leicht rösten.",
+        "Die Thunfischmasse auf das Brot streichen und mit Scheiben der Tomate und dem geriebenen Cheddar belegen.",
+        "3 bis 4 Minuten grillen, bis der Käse geschmolzen ist und Blasen wirft, dann sofort servieren."
+      ]
+    },
+    "Smoked salmon bagels": {
+      "name": "Bagels mit Räucherlachs",
+      "steps": [
+        "Die rote Zwiebel in dünne Ringe und die Gurke in dünne Scheiben schneiden.",
+        "Die Bagels halbieren und leicht toasten.",
+        "Den Frischkäse auf die Schnittflächen der Bagels streichen.",
+        "Den Räucherlachs darauflegen, die Zitrone darüber auspressen und mit Pfeffer würzen.",
+        "Mit der Gurke, der roten Zwiebel und dem geschnittenen Schnittlauch belegen, die Bagels zuklappen und servieren."
+      ]
+    },
+    "Steak sandwiches with caramelised onions": {
+      "name": "Steak-Sandwiches mit karamellisierten Zwiebeln",
+      "steps": [
+        "Die Zwiebeln in dünne Halbringe schneiden.",
+        "Die Butter in einer Pfanne bei mittlerer bis niedriger Hitze schmelzen und die Zwiebeln unter häufigem Rühren 15 bis 20 Minuten weich und karamellisiert garen, dann salzen.",
+        "Währenddessen das Rinderfilet mit dem Olivenöl, Salz und Pfeffer einreiben.",
+        "Das Steak in einer sehr heißen Pfanne 2 bis 3 Minuten pro Seite braten, dann 5 Minuten ruhen lassen und in dünne Scheiben schneiden.",
+        "Das Brot rösten und mit dem Senf bestreichen.",
+        "Die Sandwiches mit dem Rucola, dem geschnittenen Steak und den karamellisierten Zwiebeln belegen und servieren."
+      ]
+    },
+    "Croque monsieur": {
+      "name": "Croque Monsieur",
+      "steps": [
+        "Den Ofen auf 220 °C vorheizen und ein Backblech mit Backpapier auslegen.",
+        "Die Butter in einem kleinen Topf bei mittlerer Hitze schmelzen, das Mehl einrühren und 1 Minute anschwitzen.",
+        "Nach und nach die Milch einrühren und unter Rühren 3 bis 4 Minuten köcheln lassen, bis die Sauce eindickt, dann mit der Muskatnuss, Salz und Pfeffer würzen.",
+        "Das Brot in Scheiben auf dem Blech auslegen, die Hälfte davon mit dem Senf bestreichen und mit dem Kochschinken, der Hälfte des geriebenen Emmentalers und den übrigen Scheiben belegen.",
+        "Die Sauce auf den Sandwiches verstreichen, den restlichen Emmentaler darüberstreuen und 8 bis 10 Minuten goldbraun backen, bis es blubbert."
+      ]
+    },
+    "Chicken gyros with pita and tzatziki": {
+      "name": "Hähnchen-Gyros mit Pita und Tzatziki",
+      "steps": [
+        "Die Hähnchenschenkel in dünne Streifen schneiden.",
+        "Das Hähnchen mit 2 EL des Olivenöls, 2 zerdrückten Knoblauchzehen, dem Oregano, dem Paprikapulver, dem Saft einer halben Zitrone, Salz und Pfeffer mischen und 15 Minuten marinieren.",
+        "Währenddessen für das Tzatziki die Gurke raspeln, ausdrücken und mit dem Joghurt, der dritten zerdrückten Knoblauchzehe, dem restlichen Olivenöl und Salz verrühren.",
+        "Die Tomaten und die rote Zwiebel in Scheiben schneiden und den Rest der Zitrone in Spalten schneiden.",
+        "Eine große Pfanne bei starker Hitze erhitzen und das Hähnchen 6 bis 8 Minuten unter gelegentlichem Rühren braun und gar braten.",
+        "Die Pitabrote in einer trockenen Pfanne 1 Minute pro Seite erwärmen.",
+        "Die Pitabrote mit dem Hähnchen, den Tomaten, der roten Zwiebel und dem Tzatziki füllen und mit den Zitronenspalten servieren."
+      ]
+    },
+    "BLT sandwiches": {
+      "name": "BLT-Sandwiches",
+      "steps": [
+        "Den Speck in einer trockenen Pfanne bei mittlerer Hitze 5 bis 6 Minuten knusprig braten, dabei einmal wenden, und auf Küchenpapier abtropfen lassen.",
+        "Währenddessen die Tomaten in Scheiben schneiden und den Kopfsalat in Blätter zerteilen und waschen.",
+        "Das Brot goldbraun toasten.",
+        "Die Mayonnaise auf das Brot streichen und die Sandwiches mit Kopfsalat, Tomate und Speck belegen.",
+        "Die Sandwiches diagonal halbieren und servieren."
+      ]
+    },
+    "Lamb koftas with pita and tzatziki": {
+      "name": "Lamm-Köfte mit Pita und Tzatziki",
+      "steps": [
+        "Für das Tzatziki die Gurke raspeln, ausdrücken und mit dem Joghurt, einer zerdrückten Knoblauchzehe, der gehackten Minze und Salz verrühren, dann kalt stellen.",
+        "Die Zwiebel reiben, die Petersilie fein hacken und die übrigen Knoblauchzehen zerdrücken.",
+        "Das Lammhackfleisch mit der Zwiebel, der Petersilie, dem Knoblauch, dem Kreuzkümmel, dem Paprikapulver, Salz und Pfeffer vermengen und zu 8 länglichen Köfte formen.",
+        "Das Olivenöl in einer großen Pfanne bei mittlerer bis starker Hitze erhitzen und die Köfte 8 bis 10 Minuten unter Wenden braun und gar braten.",
+        "Die Pitabrote in einer trockenen Pfanne 1 Minute pro Seite erwärmen.",
+        "Die Köfte in den Pitabroten mit dem Tzatziki und der in Spalten geschnittenen Zitrone servieren."
+      ]
+    },
+    "Beef tacos": {
+      "name": "Rindfleisch-Tacos",
+      "steps": [
+        "Die Zwiebel und die Knoblauchzehen fein hacken.",
+        "Das Pflanzenöl in einer Pfanne bei mittlerer Hitze erhitzen und die Zwiebel 5 Minuten weich braten, den Knoblauch die letzte Minute mitbraten.",
+        "Das Rinderhackfleisch zugeben und bei starker Hitze 5 Minuten krümelig braun braten.",
+        "Den Kreuzkümmel, das Chilipulver, das Paprikapulver, das Tomatenmark, einen Schuss Wasser und Salz unterrühren und 5 Minuten köcheln lassen.",
+        "Währenddessen den Kopfsalat in Streifen schneiden, die Tomaten würfeln und den Cheddar reiben.",
+        "Die Tortillas in einer trockenen Pfanne 30 Sekunden pro Seite erwärmen.",
+        "Die Tortillas mit dem Hackfleisch, Kopfsalat, Tomaten und Cheddar füllen und je einen Klecks Sauerrahm daraufgeben."
+      ]
+    },
+    "White bean stew with chorizo and bread": {
+      "name": "Weiße-Bohnen-Eintopf mit Chorizo und Brot",
+      "steps": [
+        "Die Zwiebel hacken, die Knoblauchzehen in Scheiben schneiden und die Chorizo in dünne Scheiben schneiden.",
+        "Das Olivenöl in einem großen Topf bei mittlerer Hitze erhitzen und die Chorizo 3 Minuten braten, bis sie ihr rotes Öl abgibt.",
+        "Die Zwiebel zugeben und 5 Minuten weich braten, dann den Knoblauch und das Paprikapulver 1 Minute mitrösten.",
+        "Die weißen Bohnen abgießen, abspülen und mit den Dosentomaten und der Gemüsebrühe zugeben.",
+        "15 Minuten köcheln lassen, bis der Eintopf eingedickt ist, dann mit Salz und Pfeffer würzen.",
+        "Die gehackte Petersilie über den Eintopf streuen und mit dem Brot servieren."
+      ]
+    },
+    "Baked cod with tomatoes, olives and bread": {
+      "name": "Ofenkabeljau mit Tomaten, Oliven und Brot",
+      "steps": [
+        "Den Ofen auf 200 °C vorheizen.",
+        "Die Knoblauchzehen in Scheiben schneiden und mit den Kirschtomaten, den Oliven, der Hälfte des Olivenöls, Salz und Pfeffer in einer großen Auflaufform mischen.",
+        "10 Minuten im Ofen garen, bis die Kirschtomaten aufplatzen.",
+        "Den Kabeljau in 4 Portionen teilen, mit Salz und Pfeffer würzen und zwischen die Kirschtomaten legen, dann mit dem restlichen Olivenöl und dem Saft der Zitrone beträufeln.",
+        "12 bis 15 Minuten backen, bis sich der Fisch leicht zerpflücken lässt.",
+        "Die gehackte Petersilie darüberstreuen und mit dem Brot zum Auftunken servieren."
+      ]
+    },
+    "Savoury pancakes with ham and cheese": {
+      "name": "Herzhafte Pfannkuchen mit Schinken und Käse",
+      "steps": [
+        "Das Mehl, die Eier, die Milch und eine Prise Salz zu einem glatten Teig verquirlen und 10 Minuten ruhen lassen.",
+        "Währenddessen den Kochschinken in Streifen schneiden, den Emmentaler reiben und den Schnittlauch in Röllchen schneiden.",
+        "Etwas von der Butter in einer Pfanne bei mittlerer Hitze schmelzen, ein Viertel des Teigs hineingießen und durch Schwenken verteilen.",
+        "2 Minuten backen, bis die Unterseite goldbraun ist, dann den Pfannkuchen wenden.",
+        "Ein Viertel des Kochschinkens und des Emmentalers auf einer Hälfte verteilen, 1 bis 2 Minuten backen, bis der Käse schmilzt, dann den Pfannkuchen zusammenklappen.",
+        "Mit der restlichen Butter, dem restlichen Teig, Kochschinken und Emmentaler 3 weitere Pfannkuchen ebenso backen und mit dem Schnittlauch bestreut servieren."
+      ]
+    },
+    "Salmon with couscous and roasted vegetables": {
+      "name": "Lachs mit Couscous und Ofengemüse",
+      "steps": [
+        "Den Ofen auf 220 °C vorheizen.",
+        "Die Zucchini, die Paprikaschote und die rote Zwiebel in mundgerechte Stücke schneiden und auf einem Backblech mit zwei Dritteln des Olivenöls, Salz und Pfeffer mischen.",
+        "Das Gemüse 15 Minuten im Ofen rösten.",
+        "Den Lachs zwischen das Gemüse legen, mit dem restlichen Olivenöl bestreichen, mit Salz und Pfeffer würzen und weitere 12 bis 15 Minuten garen, bis er gerade durch ist.",
+        "Währenddessen die Gemüsebrühe aufkochen, in einer Schüssel über den Couscous gießen, zudecken und 5 Minuten quellen lassen.",
+        "Den Couscous mit einer Gabel auflockern und die gehackte Petersilie und den Saft einer halben Zitrone unterrühren.",
+        "Den Lachs mit dem Ofengemüse auf dem Couscous servieren und den Rest der Zitrone in Spalten dazu reichen."
       ]
     }
   }

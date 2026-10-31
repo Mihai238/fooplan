@@ -1,5 +1,5 @@
 import { RECIPES } from '../recipes/recipes';
-import { INGREDIENTS_BY_SECTION, PANTRY_STAPLES, sectionOf } from './sections';
+import { INGREDIENTS_BY_SECTION, PANTRY_STAPLES, Section, sectionOf } from './sections';
 
 const REMOVED_INGREDIENTS = [
   'arborio rice',
@@ -17,11 +17,9 @@ const REMOVED_INGREDIENTS = [
   'dried chickpeas',
   'dried fenugreek leaf',
   'dry yeast',
-  'emmental',
   'fish stock',
   'flatbread',
   'garam masala',
-  'ground lamb',
   'gruyère',
   'lasagne sheet',
   'mussel',
@@ -38,7 +36,35 @@ const REMOVED_INGREDIENTS = [
   'squid',
   'thyme',
   'white wine',
-  'yogurt',
+];
+
+// #58's new ingredients and their sections
+const ADDED_SECTIONS: [string, Section][] = [
+  ['apple', 'Fruit & vegetables'],
+  ['bacon', 'Meat & fish'],
+  ['bagel', 'Bread & bakery'],
+  ['caper', 'Cans & jars'],
+  ['cauliflower', 'Fruit & vegetables'],
+  ['chorizo', 'Meat & fish'],
+  ['cream cheese', 'Dairy & eggs'],
+  ['emmental', 'Dairy & eggs'],
+  ['fusilli', 'Pasta, rice & grains'],
+  ['ground lamb', 'Meat & fish'],
+  ['ham', 'Meat & fish'],
+  ['italian sausage', 'Meat & fish'],
+  ['mayonnaise', 'Spices & sauces'],
+  ['peanut butter', 'Cans & jars'],
+  ['pita bread', 'Bread & bakery'],
+  ['pork chop', 'Meat & fish'],
+  ['pork tenderloin', 'Meat & fish'],
+  ['rocket', 'Fruit & vegetables'],
+  ['rosemary', 'Fruit & vegetables'],
+  ['smoked salmon', 'Meat & fish'],
+  ['spätzle', 'Pasta, rice & grains'],
+  ['tagliatelle', 'Pasta, rice & grains'],
+  ['tortellini', 'Pasta, rice & grains'],
+  ['trout', 'Meat & fish'],
+  ['yogurt', 'Dairy & eggs'],
 ];
 
 // #24's list without "chive" and "cream", which #32's recipes use again
@@ -72,7 +98,7 @@ describe('sections', () => {
     expect(mapped.filter((name) => !used.has(name))).toEqual([]);
   });
 
-  it('maps none of the 37 ingredients only removed recipes used, and still every ingredient of the recipes except the pantry staples', () => {
+  it('maps none of the 34 ingredients only removed recipes used, and still every ingredient of the recipes except the pantry staples', () => {
     const mapped = Object.values(INGREDIENTS_BY_SECTION).flat();
     expect(mapped.filter((name) => REMOVED_INGREDIENTS.includes(name))).toEqual([]);
 
@@ -142,5 +168,16 @@ describe('sections', () => {
     expect(['sour cream', 'pine nut', 'sesame seed', 'potato', 'red onion'].map(sectionOf)).toEqual(
       ['Dairy & eggs', 'Nuts & seeds', 'Nuts & seeds', 'Fruit & vegetables', 'Fruit & vegetables'],
     );
+  });
+
+  it('puts each of the 25 ingredients of #58 in its section, at its alphabetical position there, none under "Other", and none of them among the ingredients only removed recipes used (#58 5)', () => {
+    expect(ADDED_SECTIONS.map(([name]) => [name, sectionOf(name)])).toEqual(ADDED_SECTIONS);
+    for (const [section, names] of Object.entries(INGREDIENTS_BY_SECTION)) {
+      expect(names, `"${section}" in alphabetical order`).toEqual([...names].sort());
+    }
+    expect(
+      ADDED_SECTIONS.filter(([name]) => REMOVED_INGREDIENTS.includes(name)),
+      'removed',
+    ).toEqual([]);
   });
 });

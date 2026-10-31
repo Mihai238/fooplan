@@ -164,8 +164,8 @@ describe('stepParts', () => {
     expect(shown).toEqual([I('onion', 2, 'pc'), I('oil', 15, 'ml')]);
   });
 
-  it('joins the text parts of every step of the 44 built-in recipes back to the step text, and gives every ingredient of a recipe its amount after a mention in at least one of its steps', () => {
-    expect(RECIPES.length, 'no recipes loaded').toBeGreaterThan(0);
+  it('joins the text parts of every step of the 84 built-in recipes back to the step text, and gives every ingredient of a recipe its amount after a mention in at least one of its steps', () => {
+    expect(RECIPES.length, 'built-in recipes loaded').toBe(84);
     const changed: string[] = [];
     const withoutAmount: string[] = [];
     for (const recipe of RECIPES) {

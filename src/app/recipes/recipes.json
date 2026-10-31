@@ -1106,5 +1106,1005 @@
       "Scoop out a cup of the pasta water, drain the penne and the broccoli and toss them in the pan with the grated parmesan and a splash of the pasta water until creamy.",
       "Season with salt and pepper and serve."
     ]
+  },
+  {
+    "name": "Chicken fried rice",
+    "servings": 2,
+    "minutes": 30,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "rice", "amount": 200, "unit": "g" },
+      { "name": "chicken breast", "amount": 250, "unit": "g" },
+      { "name": "egg", "amount": 2, "unit": "pc" },
+      { "name": "carrot", "amount": 1, "unit": "pc" },
+      { "name": "pea", "amount": 100, "unit": "g" },
+      { "name": "spring onion", "amount": 3, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
+      { "name": "sesame oil", "amount": 1, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" }
+    ],
+    "steps": [
+      "Rinse the rice and bring it to the boil in 1.5 times its volume of water.",
+      "Cover, simmer over low heat for 12 minutes, then spread it out on a tray to cool and dry.",
+      "Cut the chicken breast into small cubes, dice the carrot, slice the spring onions and finely chop the garlic cloves.",
+      "Heat half of the vegetable oil in a wok or large pan over high heat and stir-fry the chicken for 5 minutes until cooked through, then set it aside.",
+      "Beat the eggs, pour them into the hot pan and scramble them for 1 minute, then set them aside with the chicken.",
+      "Heat the rest of the vegetable oil and stir-fry the carrot, peas and garlic for 3 minutes.",
+      "Add the rice and fry it for 3 to 4 minutes, pressing it against the pan until it starts to crisp.",
+      "Return the chicken and eggs, add the soy sauce, sesame oil and spring onions, toss for 1 minute and serve."
+    ]
+  },
+  {
+    "name": "Beef and broccoli stir-fry with rice",
+    "servings": 2,
+    "minutes": 30,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "beef sirloin", "amount": 300, "unit": "g" },
+      { "name": "broccoli", "amount": 300, "unit": "g" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "ginger", "amount": 10, "unit": "g" },
+      { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
+      { "name": "sugar", "amount": 1, "unit": "tbsp" },
+      { "name": "sesame oil", "amount": 1, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "rice", "amount": 200, "unit": "g" }
+    ],
+    "steps": [
+      "Rinse the rice and bring it to the boil in 1.5 times its volume of water.",
+      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
+      "Slice the beef sirloin thinly against the grain and cut the broccoli into small florets.",
+      "Finely chop the garlic cloves, grate the ginger and stir both with the soy sauce, sugar, sesame oil and 4 tbsp water for the sauce.",
+      "Heat half of the vegetable oil in a wok or large pan over high heat and sear the beef for 2 minutes, then set it aside.",
+      "Add the rest of the vegetable oil and the broccoli with a splash of water and stir-fry for 4 minutes until bright green and just tender.",
+      "Return the beef, pour in the sauce and toss for 1 to 2 minutes until glossy, then serve over the rice."
+    ]
+  },
+  {
+    "name": "Pork and bell pepper stir-fry with rice",
+    "servings": 2,
+    "minutes": 30,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "pork tenderloin", "amount": 300, "unit": "g" },
+      { "name": "bell pepper", "amount": 2, "unit": "pc" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "ginger", "amount": 10, "unit": "g" },
+      { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "rice", "amount": 200, "unit": "g" }
+    ],
+    "steps": [
+      "Rinse the rice and bring it to the boil in 1.5 times its volume of water.",
+      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
+      "Cut the pork tenderloin into thin strips and the bell peppers and onion into strips of the same size.",
+      "Finely chop the garlic cloves and grate the ginger.",
+      "Heat half of the vegetable oil in a wok or large pan over high heat and stir-fry the pork for 3 minutes until browned, then set it aside.",
+      "Add the rest of the vegetable oil and stir-fry the bell peppers and onion for 4 minutes until just tender, adding the garlic and ginger for the last minute.",
+      "Return the pork, add the soy sauce with 3 tbsp water and toss for 1 minute, then serve over the rice."
+    ]
+  },
+  {
+    "name": "Salmon teriyaki with rice and broccoli",
+    "servings": 2,
+    "minutes": 30,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "salmon", "amount": 300, "unit": "g" },
+      { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
+      { "name": "mirin", "amount": 2, "unit": "tbsp" },
+      { "name": "sugar", "amount": 1, "unit": "tbsp" },
+      { "name": "ginger", "amount": 10, "unit": "g" },
+      { "name": "broccoli", "amount": 300, "unit": "g" },
+      { "name": "sesame seed", "amount": 10, "unit": "g" },
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
+      { "name": "rice", "amount": 200, "unit": "g" }
+    ],
+    "steps": [
+      "Rinse the rice and bring it to the boil in 1.5 times its volume of water.",
+      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
+      "Grate the ginger and stir it with the soy sauce, mirin and sugar until the sugar dissolves.",
+      "Cut the broccoli into florets, cook them in boiling salted water for 4 minutes and drain them.",
+      "Pat the salmon dry, heat the vegetable oil in a pan over medium-high heat and fry the salmon for 4 minutes, then turn it and fry for 2 minutes more.",
+      "Pour in the sauce and let it bubble for 1 to 2 minutes, spooning it over the salmon until it is thick and glossy.",
+      "Serve the salmon on the rice with the broccoli and sprinkle with the sesame seeds."
+    ]
+  },
+  {
+    "name": "Garlic prawns with rice",
+    "servings": 2,
+    "minutes": 25,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "prawn", "amount": 300, "unit": "g" },
+      { "name": "garlic clove", "amount": 4, "unit": "pc" },
+      { "name": "butter", "amount": 30, "unit": "g" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "parsley", "amount": 10, "unit": "g" },
+      { "name": "rice", "amount": 200, "unit": "g" }
+    ],
+    "steps": [
+      "Rinse the rice and bring it to the boil in 1.5 times its volume of water.",
+      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
+      "Pat the prawns dry, thinly slice the garlic cloves and chop the parsley.",
+      "Heat the olive oil and the butter in a large pan over medium heat and fry the garlic for 1 minute until fragrant.",
+      "Turn the heat to high, add the prawns and fry them for 2 minutes per side until pink.",
+      "Squeeze in the juice of the lemon, stir in the parsley, season with salt and pepper and serve over the rice."
+    ]
+  },
+  {
+    "name": "Chicken satay with rice",
+    "servings": 2,
+    "minutes": 35,
+    "workMinutes": 25,
+    "ingredients": [
+      { "name": "chicken thigh", "amount": 400, "unit": "g" },
+      { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "ginger", "amount": 10, "unit": "g" },
+      { "name": "lime", "amount": 1, "unit": "pc" },
+      { "name": "peanut butter", "amount": 80, "unit": "g" },
+      { "name": "coconut milk", "amount": 200, "unit": "ml" },
+      { "name": "sugar", "amount": 1, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
+      { "name": "rice", "amount": 200, "unit": "g" }
+    ],
+    "steps": [
+      "Cut the chicken thighs into thin strips, finely chop the garlic cloves and grate the ginger.",
+      "Mix the chicken with half of the garlic and ginger, 1 tbsp of the soy sauce and the vegetable oil and leave it to marinate for 10 minutes.",
+      "Meanwhile rinse the rice and bring it to the boil in 1.5 times its volume of water.",
+      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
+      "Thread the chicken onto skewers and cook them in a grill pan over high heat for 3 to 4 minutes per side until charred and cooked through.",
+      "For the sauce, warm the peanut butter, coconut milk, sugar and the rest of the garlic, ginger and soy sauce in a small pan over low heat for 3 minutes, stirring until smooth.",
+      "Stir the juice of the lime into the sauce and serve the skewers on the rice with the sauce."
+    ]
+  },
+  {
+    "name": "Spinach rice with feta",
+    "servings": 2,
+    "minutes": 35,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "rice", "amount": 200, "unit": "g" },
+      { "name": "vegetable stock", "amount": 500, "unit": "ml" },
+      { "name": "spinach", "amount": 300, "unit": "g" },
+      { "name": "dill", "amount": 10, "unit": "g" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "feta", "amount": 100, "unit": "g" }
+    ],
+    "steps": [
+      "Finely chop the onion and garlic cloves and roughly chop the spinach and dill.",
+      "Heat the olive oil in a wide pan over medium heat and fry the onion for 5 minutes until soft, adding the garlic for the last minute.",
+      "Stir in the rice and toast it for 1 minute, then pour in the vegetable stock and bring it to the boil.",
+      "Cover and simmer over low heat for 15 minutes.",
+      "Stir in the spinach a handful at a time until it wilts, then cover and cook for 5 minutes more until the rice is tender.",
+      "Stir in the dill and the juice of the lemon, season with salt and pepper and serve with the feta crumbled over."
+    ]
+  },
+  {
+    "name": "Coconut prawn curry with rice",
+    "servings": 2,
+    "minutes": 30,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "ginger", "amount": 10, "unit": "g" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "curry powder", "amount": 2, "unit": "tsp" },
+      { "name": "canned tomatoes", "amount": 200, "unit": "g" },
+      { "name": "coconut milk", "amount": 400, "unit": "ml" },
+      { "name": "prawn", "amount": 300, "unit": "g" },
+      { "name": "lime", "amount": 1, "unit": "pc" },
+      { "name": "coriander", "amount": 10, "unit": "g" },
+      { "name": "rice", "amount": 200, "unit": "g" }
+    ],
+    "steps": [
+      "Rinse the rice and bring it to the boil in 1.5 times its volume of water.",
+      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
+      "Finely chop the onion and garlic cloves and grate the ginger.",
+      "Heat the vegetable oil in a large pan over medium heat and fry the onion for 5 minutes until soft.",
+      "Add the garlic, ginger and curry powder and fry for 1 minute until fragrant.",
+      "Pour in the canned tomatoes and coconut milk, season with salt and simmer for 10 minutes until slightly thickened.",
+      "Add the prawns and simmer for 3 to 4 minutes until pink and cooked through.",
+      "Squeeze in the juice of the lime, scatter over the chopped coriander and serve with the rice."
+    ]
+  },
+  {
+    "name": "Potato and cauliflower curry with rice",
+    "servings": 4,
+    "minutes": 40,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "potato", "amount": 500, "unit": "g" },
+      { "name": "cauliflower", "amount": 1, "unit": "pc" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "ginger", "amount": 15, "unit": "g" },
+      { "name": "vegetable oil", "amount": 45, "unit": "ml" },
+      { "name": "curry powder", "amount": 3, "unit": "tsp" },
+      { "name": "cumin", "amount": 1, "unit": "tsp" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "pea", "amount": 150, "unit": "g" },
+      { "name": "coriander", "amount": 15, "unit": "g" },
+      { "name": "rice", "amount": 300, "unit": "g" }
+    ],
+    "steps": [
+      "Rinse the rice and bring it to the boil in 1.5 times its volume of salted water.",
+      "Cover, simmer over low heat for 15 minutes, then leave it to stand off the heat for 5 minutes.",
+      "Peel the potatoes and cut them into 2 cm cubes, and cut the cauliflower into small florets.",
+      "Finely chop the onion and garlic cloves and grate the ginger.",
+      "Heat the vegetable oil in a large pot over medium heat and fry the onion for 5 minutes until soft.",
+      "Add the garlic, ginger, curry powder and cumin and fry for 1 minute until fragrant.",
+      "Add the potatoes, cauliflower, canned tomatoes and 300 ml water, season with salt, cover and simmer for 20 minutes until the potatoes are tender.",
+      "Stir in the peas and cook for 3 minutes, then scatter over the chopped coriander and serve the curry with the rice."
+    ]
+  },
+  {
+    "name": "Tagliatelle alfredo with chicken",
+    "servings": 2,
+    "minutes": 25,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "tagliatelle", "amount": 250, "unit": "g" },
+      { "name": "chicken breast", "amount": 300, "unit": "g" },
+      { "name": "olive oil", "amount": 1, "unit": "tbsp" },
+      { "name": "butter", "amount": 30, "unit": "g" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "cream", "amount": 200, "unit": "ml" },
+      { "name": "parmesan", "amount": 60, "unit": "g" },
+      { "name": "parsley", "amount": 10, "unit": "g" }
+    ],
+    "steps": [
+      "Bring a large pot of salted water to the boil for the tagliatelle.",
+      "Cut the chicken breast into thin strips and season it with salt and pepper.",
+      "Heat the olive oil in a large pan over medium-high heat and fry the chicken for 5 to 6 minutes until golden and cooked through, then set it aside.",
+      "Lower the heat, melt the butter in the pan and fry the finely chopped garlic cloves for 1 minute.",
+      "Pour in the cream, bring it to a simmer and stir in the grated parmesan until the sauce is smooth.",
+      "Meanwhile cook the tagliatelle until al dente, about 5 minutes, and keep a cup of the pasta water before draining.",
+      "Toss the tagliatelle and the chicken in the sauce, adding a splash of pasta water if it is too thick, and serve sprinkled with the chopped parsley."
+    ]
+  },
+  {
+    "name": "Chicken chow mein",
+    "servings": 2,
+    "minutes": 25,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "egg noodle", "amount": 200, "unit": "g" },
+      { "name": "chicken breast", "amount": 250, "unit": "g" },
+      { "name": "carrot", "amount": 1, "unit": "pc" },
+      { "name": "bean sprout", "amount": 100, "unit": "g" },
+      { "name": "spring onion", "amount": 3, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "soy sauce", "amount": 3, "unit": "tbsp" },
+      { "name": "sesame oil", "amount": 1, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" }
+    ],
+    "steps": [
+      "Cook the egg noodles in boiling water for 3 to 4 minutes, drain, rinse them under cold water and toss them with the sesame oil.",
+      "Cut the chicken breast into thin strips, cut the carrot into matchsticks, slice the spring onions and finely chop the garlic cloves.",
+      "Heat the vegetable oil in a wok or large pan over high heat and stir-fry the chicken for 4 minutes until cooked through.",
+      "Add the carrot and garlic and stir-fry for 2 minutes.",
+      "Add the noodles, bean sprouts, spring onions and soy sauce and toss over high heat for 2 to 3 minutes until the noodles are hot and lightly crisp, then serve."
+    ]
+  },
+  {
+    "name": "Chicken paprikash with egg noodles",
+    "servings": 4,
+    "minutes": 45,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "chicken thigh", "amount": 600, "unit": "g" },
+      { "name": "onion", "amount": 2, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "paprika", "amount": 4, "unit": "tsp" },
+      { "name": "tomato paste", "amount": 1, "unit": "tbsp" },
+      { "name": "vegetable stock", "amount": 300, "unit": "ml" },
+      { "name": "flour", "amount": 10, "unit": "g" },
+      { "name": "sour cream", "amount": 150, "unit": "g" },
+      { "name": "egg noodle", "amount": 300, "unit": "g" }
+    ],
+    "steps": [
+      "Cut the chicken thighs into large pieces and season them with salt and pepper.",
+      "Finely chop the onions and garlic cloves.",
+      "Heat the vegetable oil in a large pot over medium-high heat and brown the chicken for 5 minutes, then set it aside.",
+      "Fry the onions in the same pot over medium heat for 8 minutes until soft and golden, adding the garlic for the last minute.",
+      "Take the pot off the heat, stir in the paprika and tomato paste, then pour in the vegetable stock and return the chicken.",
+      "Cover and simmer over low heat for 20 minutes until the chicken is tender.",
+      "Meanwhile cook the egg noodles in salted boiling water until tender, about 8 minutes, and drain them.",
+      "Whisk the flour into the sour cream, stir it into the sauce and simmer for 2 minutes until thickened, then serve over the noodles."
+    ]
+  },
+  {
+    "name": "Chicken parmigiana with spaghetti",
+    "servings": 2,
+    "minutes": 45,
+    "workMinutes": 30,
+    "ingredients": [
+      { "name": "chicken breast", "amount": 300, "unit": "g" },
+      { "name": "flour", "amount": 50, "unit": "g" },
+      { "name": "egg", "amount": 1, "unit": "pc" },
+      { "name": "breadcrumbs", "amount": 80, "unit": "g" },
+      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
+      { "name": "garlic clove", "amount": 1, "unit": "pc" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "mozzarella", "amount": 125, "unit": "g" },
+      { "name": "parmesan", "amount": 30, "unit": "g" },
+      { "name": "basil", "amount": 10, "unit": "g" },
+      { "name": "spaghetti", "amount": 200, "unit": "g" }
+    ],
+    "steps": [
+      "Heat the oven to 220 °C.",
+      "Finely chop the garlic clove and fry it in 1 tbsp of the olive oil in a small pan over low heat for 1 minute.",
+      "Add the canned tomatoes, season with salt and simmer for 15 minutes.",
+      "Meanwhile, halve the chicken breast horizontally and flatten each half to about 1 cm.",
+      "Season the chicken with salt and pepper, then coat it in the flour, the beaten egg and the breadcrumbs in turn.",
+      "Heat the rest of the olive oil in a large pan over medium-high heat and fry the chicken for 3 minutes per side until golden.",
+      "Lay the chicken in a baking dish, spoon half of the sauce over it, top with the sliced mozzarella and the grated parmesan and bake for 10 minutes until bubbling.",
+      "Meanwhile cook the spaghetti in salted boiling water until al dente, about 9 minutes, drain it and toss it with the rest of the sauce.",
+      "Serve the chicken on the spaghetti with the basil leaves torn over it."
+    ]
+  },
+  {
+    "name": "Penne with Italian sausage and tomato sauce",
+    "servings": 2,
+    "minutes": 30,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "italian sausage", "amount": 4, "unit": "pc" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "penne", "amount": 200, "unit": "g" },
+      { "name": "parmesan", "amount": 30, "unit": "g" },
+      { "name": "basil", "amount": 10, "unit": "g" }
+    ],
+    "steps": [
+      "Squeeze the meat of the Italian sausages out of their skins and finely chop the onion and garlic cloves.",
+      "Heat the olive oil in a large pan over medium-high heat and fry the sausage meat for 5 minutes, breaking it up, until browned.",
+      "Add the onion and garlic and fry for 4 minutes until soft.",
+      "Add the canned tomatoes, season with salt and pepper and simmer for 15 minutes.",
+      "Meanwhile cook the penne in salted boiling water until al dente, about 11 minutes, and drain it.",
+      "Toss the penne in the sauce and serve with the basil leaves torn over it and the grated parmesan."
+    ]
+  },
+  {
+    "name": "Tortellini with ham and peas",
+    "servings": 2,
+    "minutes": 20,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "tortellini", "amount": 400, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "butter", "amount": 20, "unit": "g" },
+      { "name": "ham", "amount": 150, "unit": "g" },
+      { "name": "pea", "amount": 150, "unit": "g" },
+      { "name": "cream", "amount": 200, "unit": "ml" },
+      { "name": "parmesan", "amount": 40, "unit": "g" }
+    ],
+    "steps": [
+      "Bring a large pot of salted water to the boil for the tortellini.",
+      "Finely chop the onion and cut the ham into small strips.",
+      "Melt the butter in a large pan over medium heat and fry the onion for 4 minutes until soft.",
+      "Add the ham and peas and fry for 2 minutes, then pour in the cream and simmer for 3 minutes.",
+      "Meanwhile cook the tortellini for about 4 minutes until tender, then drain them.",
+      "Toss the tortellini in the sauce with the grated parmesan and serve."
+    ]
+  },
+  {
+    "name": "Spaghetti puttanesca",
+    "servings": 2,
+    "minutes": 25,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "spaghetti", "amount": 200, "unit": "g" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "anchovy", "amount": 4, "unit": "pc" },
+      { "name": "chili flakes", "amount": 0.5, "unit": "tsp" },
+      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "olive", "amount": 60, "unit": "g" },
+      { "name": "caper", "amount": 2, "unit": "tbsp" },
+      { "name": "parsley", "amount": 10, "unit": "g" }
+    ],
+    "steps": [
+      "Bring a large pot of salted water to the boil for the spaghetti.",
+      "Thinly slice the garlic cloves, chop the anchovies, halve the olives and chop the parsley.",
+      "Warm the olive oil in a wide pan over low heat and fry the garlic, anchovies and chili flakes for 2 minutes until the anchovies melt.",
+      "Add the canned tomatoes, olives and capers and simmer for 10 minutes until thickened.",
+      "Meanwhile cook the spaghetti until al dente, about 9 minutes, and drain it.",
+      "Toss the spaghetti in the sauce over medium heat for 1 minute and serve sprinkled with the parsley."
+    ]
+  },
+  {
+    "name": "Tagliatelle with smoked salmon and dill",
+    "servings": 2,
+    "minutes": 20,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "tagliatelle", "amount": 250, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "butter", "amount": 20, "unit": "g" },
+      { "name": "cream", "amount": 200, "unit": "ml" },
+      { "name": "smoked salmon", "amount": 150, "unit": "g" },
+      { "name": "lemon", "amount": 0.5, "unit": "pc" },
+      { "name": "dill", "amount": 10, "unit": "g" }
+    ],
+    "steps": [
+      "Bring a large pot of salted water to the boil for the tagliatelle.",
+      "Finely chop the onion, cut the smoked salmon into strips and chop the dill.",
+      "Melt the butter in a large pan over medium heat and fry the onion for 4 minutes until soft.",
+      "Pour in the cream and the juice of the lemon half and simmer for 3 minutes.",
+      "Meanwhile cook the tagliatelle until al dente, about 5 minutes, and drain them.",
+      "Toss the tagliatelle in the sauce, fold in the smoked salmon and dill off the heat, season with pepper and serve."
+    ]
+  },
+  {
+    "name": "Pasta alla norma",
+    "servings": 2,
+    "minutes": 35,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "eggplant", "amount": 1, "unit": "pc" },
+      { "name": "olive oil", "amount": 5, "unit": "tbsp" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "penne", "amount": 200, "unit": "g" },
+      { "name": "basil", "amount": 10, "unit": "g" },
+      { "name": "parmesan", "amount": 40, "unit": "g" }
+    ],
+    "steps": [
+      "Cut the eggplant into 2 cm cubes and toss them with a little salt.",
+      "Heat 4 tbsp of the olive oil in a large pan over medium-high heat and fry the eggplant for 10 minutes, turning it, until golden and soft, then set it aside.",
+      "Lower the heat, add the rest of the olive oil and fry the sliced garlic cloves for 1 minute.",
+      "Add the canned tomatoes, season with salt and simmer for 10 minutes.",
+      "Meanwhile cook the penne in salted boiling water until al dente, about 11 minutes, and drain it.",
+      "Stir the eggplant and the torn basil leaves into the sauce, toss it with the penne and serve with the grated parmesan."
+    ]
+  },
+  {
+    "name": "Pasta salad with mozzarella and cherry tomatoes",
+    "servings": 2,
+    "minutes": 20,
+    "workMinutes": 10,
+    "ingredients": [
+      { "name": "fusilli", "amount": 250, "unit": "g" },
+      { "name": "cherry tomato", "amount": 200, "unit": "g" },
+      { "name": "mozzarella", "amount": 125, "unit": "g" },
+      { "name": "olive", "amount": 60, "unit": "g" },
+      { "name": "red onion", "amount": 0.5, "unit": "pc" },
+      { "name": "basil", "amount": 10, "unit": "g" },
+      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "white wine vinegar", "amount": 1, "unit": "tbsp" }
+    ],
+    "steps": [
+      "Cook the fusilli in salted boiling water until al dente, about 10 minutes, then drain them and rinse them under cold water.",
+      "Meanwhile halve the cherry tomatoes, tear the mozzarella into small pieces, halve the olives and thinly slice the red onion.",
+      "Whisk the olive oil with the white wine vinegar, salt and pepper for the dressing.",
+      "Toss the fusilli with the cherry tomatoes, mozzarella, olives, red onion and dressing, scatter the torn basil leaves over it and serve."
+    ]
+  },
+  {
+    "name": "Spätzle with creamy mushroom sauce",
+    "servings": 2,
+    "minutes": 25,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "mushroom", "amount": 400, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "butter", "amount": 30, "unit": "g" },
+      { "name": "vegetable stock", "amount": 100, "unit": "ml" },
+      { "name": "cream", "amount": 200, "unit": "ml" },
+      { "name": "spätzle", "amount": 400, "unit": "g" },
+      { "name": "parsley", "amount": 10, "unit": "g" }
+    ],
+    "steps": [
+      "Slice the mushrooms and finely chop the onion and parsley.",
+      "Melt half of the butter in a large pan over medium-high heat and fry the mushrooms for 6 to 8 minutes until browned.",
+      "Add the onion and fry for 3 minutes until soft.",
+      "Pour in the vegetable stock and the cream, season with salt and pepper and simmer for 5 minutes until creamy.",
+      "Meanwhile melt the rest of the butter in a second pan and fry the spätzle over medium heat for 5 minutes until lightly golden.",
+      "Serve the spätzle with the mushroom sauce and sprinkle with the parsley."
+    ]
+  },
+  {
+    "name": "Pork chops with mashed potatoes and apple sauce",
+    "servings": 2,
+    "minutes": 40,
+    "workMinutes": 25,
+    "ingredients": [
+      { "name": "potato", "amount": 600, "unit": "g" },
+      { "name": "apple", "amount": 2, "unit": "pc" },
+      { "name": "sugar", "amount": 1, "unit": "tbsp" },
+      { "name": "pork chop", "amount": 2, "unit": "pc" },
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
+      { "name": "milk", "amount": 100, "unit": "ml" },
+      { "name": "butter", "amount": 40, "unit": "g" }
+    ],
+    "steps": [
+      "Peel the potatoes, cut them into even chunks and boil them in salted water for 20 minutes until soft.",
+      "Meanwhile, peel, core and chop the apples and simmer them with the sugar and 3 tbsp water in a covered pan over low heat for 10 to 15 minutes until soft.",
+      "Mash the apples with a fork into a chunky apple sauce and leave it to cool.",
+      "Season the pork chops with salt and pepper, heat the vegetable oil in a frying pan over medium-high heat and fry them for 4 to 5 minutes per side until cooked through.",
+      "Warm the milk with the butter in a small pan until the butter melts.",
+      "Drain the potatoes, mash them and beat in the hot milk until smooth, then season with salt.",
+      "Serve the pork chops with the mashed potatoes and the apple sauce."
+    ]
+  },
+  {
+    "name": "Fish cakes with peas",
+    "servings": 2,
+    "minutes": 45,
+    "workMinutes": 30,
+    "ingredients": [
+      { "name": "potato", "amount": 400, "unit": "g" },
+      { "name": "cod", "amount": 300, "unit": "g" },
+      { "name": "spring onion", "amount": 2, "unit": "pc" },
+      { "name": "parsley", "amount": 10, "unit": "g" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "flour", "amount": 30, "unit": "g" },
+      { "name": "egg", "amount": 1, "unit": "pc" },
+      { "name": "breadcrumbs", "amount": 80, "unit": "g" },
+      { "name": "vegetable oil", "amount": 60, "unit": "ml" },
+      { "name": "pea", "amount": 200, "unit": "g" }
+    ],
+    "steps": [
+      "Peel the potatoes, cut them into chunks and boil them in salted water for 15 minutes until soft.",
+      "Meanwhile, put the cod in a pan, just cover it with water and poach it over low heat for 8 minutes, then drain it and flake it.",
+      "Finely chop the spring onions and the parsley and grate the zest of the lemon.",
+      "Drain the potatoes, mash them and mix in the fish, spring onions, parsley, lemon zest, salt and pepper.",
+      "Shape the mixture into 6 flat fish cakes.",
+      "Dust them in the flour, dip them in the beaten egg and coat them in the breadcrumbs.",
+      "Heat the vegetable oil in a large pan over medium heat and fry the fish cakes for 4 minutes per side until golden and crisp.",
+      "Meanwhile, cook the peas in boiling salted water for 3 minutes and drain them.",
+      "Cut the lemon into wedges and serve them with the fish cakes and the peas."
+    ]
+  },
+  {
+    "name": "Frankfurters with potato salad",
+    "servings": 2,
+    "minutes": 40,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "potato", "amount": 600, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "vegetable stock", "amount": 100, "unit": "ml" },
+      { "name": "white wine vinegar", "amount": 3, "unit": "tbsp" },
+      { "name": "mustard", "amount": 1, "unit": "tbsp" },
+      { "name": "vegetable oil", "amount": 45, "unit": "ml" },
+      { "name": "chive", "amount": 10, "unit": "g" },
+      { "name": "frankfurter", "amount": 4, "unit": "pc" }
+    ],
+    "steps": [
+      "Boil the potatoes in their skins in salted water for 20 to 25 minutes until just tender.",
+      "Meanwhile, finely dice the onion and simmer it in the vegetable stock for 3 minutes, then stir in the white wine vinegar, the mustard, salt and pepper.",
+      "Drain the potatoes, peel them while still warm and cut them into thin slices.",
+      "Pour the warm dressing over the potatoes, add the vegetable oil, mix gently and leave the salad to soak for 10 minutes.",
+      "Meanwhile, heat the frankfurters in hot but not boiling water for 5 minutes.",
+      "Snip the chives over the potato salad and serve it with the frankfurters."
+    ]
+  },
+  {
+    "name": "Fried potatoes with bacon and fried eggs",
+    "servings": 2,
+    "minutes": 35,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "potato", "amount": 600, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "bacon", "amount": 100, "unit": "g" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "butter", "amount": 20, "unit": "g" },
+      { "name": "egg", "amount": 4, "unit": "pc" },
+      { "name": "chive", "amount": 10, "unit": "g" }
+    ],
+    "steps": [
+      "Boil the potatoes in their skins in salted water for 15 minutes until almost tender.",
+      "Meanwhile, dice the onion and cut the bacon into strips.",
+      "Drain the potatoes, peel them and cut them into slices.",
+      "Heat the vegetable oil in a large pan over medium-high heat and fry the potato slices for 10 minutes, turning them now and then, until golden.",
+      "Add the bacon and onion and fry for 5 more minutes until the bacon is crisp, then season with salt and pepper.",
+      "Melt the butter in a second pan over medium heat and fry the eggs for 3 to 4 minutes until the whites are set.",
+      "Snip the chives over the fried potatoes and serve them with the fried eggs."
+    ]
+  },
+  {
+    "name": "Pan-fried cod with potatoes and spinach",
+    "servings": 2,
+    "minutes": 35,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "potato", "amount": 600, "unit": "g" },
+      { "name": "cod", "amount": 400, "unit": "g" },
+      { "name": "flour", "amount": 20, "unit": "g" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "butter", "amount": 40, "unit": "g" },
+      { "name": "garlic clove", "amount": 1, "unit": "pc" },
+      { "name": "spinach", "amount": 200, "unit": "g" },
+      { "name": "lemon", "amount": 1, "unit": "pc" }
+    ],
+    "steps": [
+      "Peel the potatoes, cut them into chunks and boil them in salted water for 20 minutes until soft.",
+      "Meanwhile, cut the cod into 2 portions, pat it dry, season it with salt and pepper and dust it in the flour.",
+      "Heat the olive oil in a pan over medium-high heat and fry the cod for 3 to 4 minutes per side until golden, adding half of the butter for the last minute.",
+      "Meanwhile, slice the garlic clove and fry it in the rest of the butter in a second pan over medium heat for 1 minute.",
+      "Add the spinach and stir for 2 minutes until wilted, then season with salt and pepper.",
+      "Drain the potatoes and serve them with the cod, the spinach and the lemon cut into wedges."
+    ]
+  },
+  {
+    "name": "Chicken thighs with roast potatoes and rosemary",
+    "servings": 4,
+    "minutes": 45,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "potato", "amount": 1000, "unit": "g" },
+      { "name": "chicken thigh", "amount": 800, "unit": "g" },
+      { "name": "garlic clove", "amount": 4, "unit": "pc" },
+      { "name": "rosemary", "amount": 10, "unit": "g" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "olive oil", "amount": 4, "unit": "tbsp" }
+    ],
+    "steps": [
+      "Heat the oven to 220 °C.",
+      "Cut the potatoes into 3 cm chunks, lightly crush the garlic cloves in their skins and strip the rosemary leaves from the stalks.",
+      "Toss the potatoes, chicken thighs, garlic and rosemary with the olive oil, salt and pepper on a large baking tray and lay the chicken skin side up.",
+      "Cut the lemon into wedges and tuck them between the potatoes.",
+      "Roast for 35 minutes, turning the potatoes halfway, until the chicken is cooked through and the potatoes are golden and crisp.",
+      "Serve the chicken thighs with the potatoes and squeeze the roasted lemon over them."
+    ]
+  },
+  {
+    "name": "Currywurst with fries",
+    "servings": 2,
+    "minutes": 45,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "potato", "amount": 600, "unit": "g" },
+      { "name": "vegetable oil", "amount": 45, "unit": "ml" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "ketchup", "amount": 6, "unit": "tbsp" },
+      { "name": "curry powder", "amount": 2, "unit": "tsp" },
+      { "name": "paprika", "amount": 1, "unit": "tsp" },
+      { "name": "sugar", "amount": 1, "unit": "tbsp" },
+      { "name": "bratwurst", "amount": 4, "unit": "pc" }
+    ],
+    "steps": [
+      "Heat the oven to 220 °C and line a baking tray with baking paper.",
+      "Cut the potatoes into 1 cm thick fries, toss them with two thirds of the vegetable oil and salt and spread them out on the tray.",
+      "Bake the fries for 30 to 35 minutes, turning them halfway, until golden and crisp.",
+      "Meanwhile, finely dice the onion and fry it in half of the remaining vegetable oil in a small pan over medium heat for 5 minutes until soft.",
+      "Stir in the curry powder and paprika for 30 seconds, then add the ketchup, the sugar and 4 tbsp water and simmer for 5 minutes.",
+      "Fry the bratwurst in the rest of the vegetable oil in a frying pan over medium heat for 10 to 12 minutes, turning them until browned on all sides.",
+      "Cut the bratwurst into thick slices, pour the curry sauce over them and serve with the fries."
+    ]
+  },
+  {
+    "name": "Trout with potatoes and parsley butter",
+    "servings": 2,
+    "minutes": 35,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "potato", "amount": 600, "unit": "g" },
+      { "name": "trout", "amount": 2, "unit": "pc" },
+      { "name": "flour", "amount": 30, "unit": "g" },
+      { "name": "vegetable oil", "amount": 30, "unit": "ml" },
+      { "name": "butter", "amount": 60, "unit": "g" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "parsley", "amount": 15, "unit": "g" }
+    ],
+    "steps": [
+      "Peel the potatoes, halve them and boil them in salted water for 20 minutes until soft.",
+      "Meanwhile, rinse the trout, pat them dry inside and out, season them with salt and pepper and dust them in the flour.",
+      "Heat the vegetable oil in a large pan over medium heat and fry the trout for 5 to 6 minutes per side until golden and cooked through.",
+      "Meanwhile, chop the parsley and squeeze the juice of the lemon.",
+      "Put the trout on warm plates and wipe out the pan.",
+      "Melt the butter in the pan over medium heat until it foams and turns light brown, then stir in the parsley and the lemon juice.",
+      "Drain the potatoes, pour the brown butter over the trout and serve with the potatoes."
+    ]
+  },
+  {
+    "name": "Tuna melts",
+    "servings": 2,
+    "minutes": 15,
+    "workMinutes": 10,
+    "ingredients": [
+      { "name": "canned tuna", "amount": 300, "unit": "g" },
+      { "name": "mayonnaise", "amount": 3, "unit": "tbsp" },
+      { "name": "spring onion", "amount": 2, "unit": "pc" },
+      { "name": "lemon", "amount": 0.5, "unit": "pc" },
+      { "name": "bread", "amount": 200, "unit": "g" },
+      { "name": "tomato", "amount": 1, "unit": "pc" },
+      { "name": "cheddar", "amount": 100, "unit": "g" }
+    ],
+    "steps": [
+      "Heat the oven grill to high.",
+      "Drain the canned tuna and mix it with the mayonnaise, the finely sliced spring onions, the juice of the lemon, salt and pepper.",
+      "Toast the bread slices lightly on both sides under the grill.",
+      "Spread the tuna mixture on the toast and top it with slices of the tomato and the grated cheddar.",
+      "Grill for 3 to 4 minutes until the cheese is melted and bubbling, then serve straight away."
+    ]
+  },
+  {
+    "name": "Smoked salmon bagels",
+    "servings": 2,
+    "minutes": 10,
+    "workMinutes": 10,
+    "ingredients": [
+      { "name": "bagel", "amount": 2, "unit": "pc" },
+      { "name": "cream cheese", "amount": 100, "unit": "g" },
+      { "name": "smoked salmon", "amount": 150, "unit": "g" },
+      { "name": "red onion", "amount": 0.5, "unit": "pc" },
+      { "name": "cucumber", "amount": 0.5, "unit": "pc" },
+      { "name": "lemon", "amount": 0.5, "unit": "pc" },
+      { "name": "chive", "amount": 10, "unit": "g" }
+    ],
+    "steps": [
+      "Slice the red onion into thin rings and the cucumber into thin slices.",
+      "Halve the bagels and toast them lightly.",
+      "Spread the cream cheese on the cut sides of the bagels.",
+      "Lay the smoked salmon on top, squeeze the lemon over it and season with pepper.",
+      "Top with the cucumber, the red onion and the snipped chives, close the bagels and serve."
+    ]
+  },
+  {
+    "name": "Steak sandwiches with caramelised onions",
+    "servings": 2,
+    "minutes": 30,
+    "workMinutes": 25,
+    "ingredients": [
+      { "name": "onion", "amount": 2, "unit": "pc" },
+      { "name": "butter", "amount": 20, "unit": "g" },
+      { "name": "beef sirloin", "amount": 300, "unit": "g" },
+      { "name": "olive oil", "amount": 1, "unit": "tbsp" },
+      { "name": "bread", "amount": 200, "unit": "g" },
+      { "name": "mustard", "amount": 1, "unit": "tbsp" },
+      { "name": "rocket", "amount": 40, "unit": "g" }
+    ],
+    "steps": [
+      "Slice the onions into thin half rings.",
+      "Melt the butter in a pan over medium-low heat and cook the onions for 15 to 20 minutes, stirring often, until soft and caramelised, then season with salt.",
+      "Meanwhile, rub the beef sirloin with the olive oil, salt and pepper.",
+      "Fry the steak in a very hot pan for 2 to 3 minutes per side, then leave it to rest for 5 minutes and cut it into thin slices.",
+      "Toast the bread and spread it with the mustard.",
+      "Fill the sandwiches with the rocket, the sliced steak and the caramelised onions and serve."
+    ]
+  },
+  {
+    "name": "Croque monsieur",
+    "servings": 2,
+    "minutes": 25,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "butter", "amount": 30, "unit": "g" },
+      { "name": "flour", "amount": 20, "unit": "g" },
+      { "name": "milk", "amount": 200, "unit": "ml" },
+      { "name": "nutmeg", "amount": 0.5, "unit": "tsp" },
+      { "name": "bread", "amount": 200, "unit": "g" },
+      { "name": "mustard", "amount": 1, "unit": "tbsp" },
+      { "name": "ham", "amount": 150, "unit": "g" },
+      { "name": "emmental", "amount": 150, "unit": "g" }
+    ],
+    "steps": [
+      "Heat the oven to 220 °C and line a baking tray with baking paper.",
+      "Melt the butter in a small pan over medium heat, stir in the flour and cook for 1 minute.",
+      "Gradually whisk in the milk and simmer for 3 to 4 minutes, stirring, until the sauce thickens, then season it with the nutmeg, salt and pepper.",
+      "Lay out the bread slices on the tray, spread half of them with the mustard and top those with the ham, half of the grated emmental and the other slices.",
+      "Spread the sauce over the sandwiches, scatter the rest of the emmental over them and bake for 8 to 10 minutes until golden and bubbling."
+    ]
+  },
+  {
+    "name": "Chicken gyros with pita and tzatziki",
+    "servings": 2,
+    "minutes": 35,
+    "workMinutes": 25,
+    "ingredients": [
+      { "name": "chicken thigh", "amount": 400, "unit": "g" },
+      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
+      { "name": "oregano", "amount": 2, "unit": "tsp" },
+      { "name": "paprika", "amount": 1, "unit": "tsp" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "cucumber", "amount": 0.5, "unit": "pc" },
+      { "name": "yogurt", "amount": 200, "unit": "g" },
+      { "name": "tomato", "amount": 2, "unit": "pc" },
+      { "name": "red onion", "amount": 1, "unit": "pc" },
+      { "name": "pita bread", "amount": 4, "unit": "pc" }
+    ],
+    "steps": [
+      "Cut the chicken thighs into thin strips.",
+      "Mix them with 2 tbsp of the olive oil, 2 of the garlic cloves, crushed, the oregano, the paprika, the juice of half of the lemon, salt and pepper and leave them to marinate for 15 minutes.",
+      "Meanwhile, for the tzatziki, grate the cucumber, squeeze out its water and mix it with the yogurt, the third garlic clove, crushed, the rest of the olive oil and salt.",
+      "Slice the tomatoes and the red onion and cut the rest of the lemon into wedges.",
+      "Heat a large pan over high heat and fry the chicken for 6 to 8 minutes, stirring now and then, until browned and cooked through.",
+      "Warm the pita breads in a dry pan for 1 minute per side.",
+      "Fill the pita breads with the chicken, tomatoes, red onion and tzatziki and serve with the lemon wedges."
+    ]
+  },
+  {
+    "name": "BLT sandwiches",
+    "servings": 2,
+    "minutes": 15,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "bacon", "amount": 150, "unit": "g" },
+      { "name": "bread", "amount": 200, "unit": "g" },
+      { "name": "mayonnaise", "amount": 2, "unit": "tbsp" },
+      { "name": "lettuce", "amount": 0.5, "unit": "pc" },
+      { "name": "tomato", "amount": 2, "unit": "pc" }
+    ],
+    "steps": [
+      "Fry the bacon in a dry pan over medium heat for 5 to 6 minutes, turning it once, until crisp, then drain it on kitchen paper.",
+      "Meanwhile, slice the tomatoes and separate and wash the lettuce leaves.",
+      "Toast the bread slices until golden.",
+      "Spread the mayonnaise on the toast and build the sandwiches with lettuce, tomato and bacon.",
+      "Cut the sandwiches in half diagonally and serve."
+    ]
+  },
+  {
+    "name": "Lamb koftas with pita and tzatziki",
+    "servings": 2,
+    "minutes": 30,
+    "workMinutes": 25,
+    "ingredients": [
+      { "name": "cucumber", "amount": 0.5, "unit": "pc" },
+      { "name": "yogurt", "amount": 200, "unit": "g" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
+      { "name": "mint", "amount": 10, "unit": "g" },
+      { "name": "ground lamb", "amount": 400, "unit": "g" },
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "parsley", "amount": 10, "unit": "g" },
+      { "name": "cumin", "amount": 1, "unit": "tsp" },
+      { "name": "paprika", "amount": 1, "unit": "tsp" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "pita bread", "amount": 4, "unit": "pc" },
+      { "name": "lemon", "amount": 1, "unit": "pc" }
+    ],
+    "steps": [
+      "For the tzatziki, grate the cucumber, squeeze out its water and mix it with the yogurt, one of the garlic cloves, crushed, the chopped mint and salt, then chill it.",
+      "Grate the onion, finely chop the parsley and crush the other garlic cloves.",
+      "Mix the ground lamb with the onion, parsley, garlic, cumin, paprika, salt and pepper and shape it into 8 long koftas.",
+      "Heat the olive oil in a large pan over medium-high heat and fry the koftas for 8 to 10 minutes, turning them, until browned and cooked through.",
+      "Warm the pita breads in a dry pan for 1 minute per side.",
+      "Serve the koftas in the pita breads with the tzatziki and the lemon cut into wedges."
+    ]
+  },
+  {
+    "name": "Beef tacos",
+    "servings": 2,
+    "minutes": 25,
+    "workMinutes": 20,
+    "ingredients": [
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 2, "unit": "pc" },
+      { "name": "vegetable oil", "amount": 15, "unit": "ml" },
+      { "name": "ground beef", "amount": 400, "unit": "g" },
+      { "name": "cumin", "amount": 1, "unit": "tsp" },
+      { "name": "chili powder", "amount": 1, "unit": "tsp" },
+      { "name": "paprika", "amount": 1, "unit": "tsp" },
+      { "name": "tomato paste", "amount": 1, "unit": "tbsp" },
+      { "name": "tortilla", "amount": 6, "unit": "pc" },
+      { "name": "lettuce", "amount": 0.5, "unit": "pc" },
+      { "name": "tomato", "amount": 2, "unit": "pc" },
+      { "name": "cheddar", "amount": 100, "unit": "g" },
+      { "name": "sour cream", "amount": 100, "unit": "g" }
+    ],
+    "steps": [
+      "Finely chop the onion and garlic cloves.",
+      "Heat the vegetable oil in a pan over medium heat and fry the onion for 5 minutes until soft, adding the garlic for the last minute.",
+      "Add the ground beef and fry it over high heat for 5 minutes, breaking it up, until browned.",
+      "Stir in the cumin, chili powder, paprika, tomato paste, a splash of water and salt and simmer for 5 minutes.",
+      "Meanwhile, shred the lettuce, dice the tomatoes and grate the cheddar.",
+      "Warm the tortillas in a dry pan for 30 seconds per side.",
+      "Fill the tortillas with the beef, lettuce, tomatoes and cheddar and top them with the sour cream."
+    ]
+  },
+  {
+    "name": "White bean stew with chorizo and bread",
+    "servings": 4,
+    "minutes": 35,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "onion", "amount": 1, "unit": "pc" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
+      { "name": "chorizo", "amount": 200, "unit": "g" },
+      { "name": "olive oil", "amount": 2, "unit": "tbsp" },
+      { "name": "paprika", "amount": 2, "unit": "tsp" },
+      { "name": "canned tomatoes", "amount": 400, "unit": "g" },
+      { "name": "canned white beans", "amount": 800, "unit": "g" },
+      { "name": "vegetable stock", "amount": 200, "unit": "ml" },
+      { "name": "parsley", "amount": 10, "unit": "g" },
+      { "name": "bread", "amount": 300, "unit": "g" }
+    ],
+    "steps": [
+      "Chop the onion, slice the garlic cloves and cut the chorizo into thin slices.",
+      "Heat the olive oil in a large pot over medium heat and fry the chorizo for 3 minutes until it releases its red oil.",
+      "Add the onion and fry for 5 minutes until soft, then stir in the garlic and paprika for 1 minute.",
+      "Drain and rinse the canned white beans and add them with the canned tomatoes and the vegetable stock.",
+      "Simmer for 15 minutes until the stew has thickened, then season with salt and pepper.",
+      "Scatter the chopped parsley over the stew and serve it with the bread."
+    ]
+  },
+  {
+    "name": "Baked cod with tomatoes, olives and bread",
+    "servings": 4,
+    "minutes": 35,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "cherry tomato", "amount": 500, "unit": "g" },
+      { "name": "olive", "amount": 100, "unit": "g" },
+      { "name": "garlic clove", "amount": 3, "unit": "pc" },
+      { "name": "olive oil", "amount": 4, "unit": "tbsp" },
+      { "name": "cod", "amount": 800, "unit": "g" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "parsley", "amount": 15, "unit": "g" },
+      { "name": "bread", "amount": 300, "unit": "g" }
+    ],
+    "steps": [
+      "Heat the oven to 200 °C.",
+      "Slice the garlic cloves and toss them with the cherry tomatoes, the olives, half of the olive oil, salt and pepper in a large baking dish.",
+      "Roast for 10 minutes until the cherry tomatoes start to burst.",
+      "Cut the cod into 4 portions, season them with salt and pepper and nestle them between the cherry tomatoes, then drizzle them with the rest of the olive oil and the juice of the lemon.",
+      "Bake for 12 to 15 minutes until the fish flakes easily.",
+      "Scatter the chopped parsley over the dish and serve it with the bread to mop up the juices."
+    ]
+  },
+  {
+    "name": "Savoury pancakes with ham and cheese",
+    "servings": 2,
+    "minutes": 30,
+    "workMinutes": 25,
+    "ingredients": [
+      { "name": "flour", "amount": 150, "unit": "g" },
+      { "name": "egg", "amount": 2, "unit": "pc" },
+      { "name": "milk", "amount": 300, "unit": "ml" },
+      { "name": "butter", "amount": 30, "unit": "g" },
+      { "name": "ham", "amount": 150, "unit": "g" },
+      { "name": "emmental", "amount": 150, "unit": "g" },
+      { "name": "chive", "amount": 10, "unit": "g" }
+    ],
+    "steps": [
+      "Whisk the flour, eggs, milk and a pinch of salt into a smooth batter and leave it to rest for 10 minutes.",
+      "Meanwhile, cut the ham into strips, grate the emmental and snip the chives.",
+      "Melt a little of the butter in a pan over medium heat, pour in a quarter of the batter and swirl it to cover the base.",
+      "Cook for 2 minutes until the underside is golden, then flip the pancake.",
+      "Scatter a quarter of the ham and emmental over one half, cook for 1 to 2 minutes until the cheese melts, then fold the pancake over.",
+      "Make 3 more pancakes the same way with the rest of the butter, batter, ham and emmental and serve them with the chives sprinkled over."
+    ]
+  },
+  {
+    "name": "Salmon with couscous and roasted vegetables",
+    "servings": 2,
+    "minutes": 35,
+    "workMinutes": 15,
+    "ingredients": [
+      { "name": "zucchini", "amount": 1, "unit": "pc" },
+      { "name": "bell pepper", "amount": 1, "unit": "pc" },
+      { "name": "red onion", "amount": 1, "unit": "pc" },
+      { "name": "olive oil", "amount": 3, "unit": "tbsp" },
+      { "name": "salmon", "amount": 300, "unit": "g" },
+      { "name": "couscous", "amount": 150, "unit": "g" },
+      { "name": "vegetable stock", "amount": 200, "unit": "ml" },
+      { "name": "lemon", "amount": 1, "unit": "pc" },
+      { "name": "parsley", "amount": 10, "unit": "g" }
+    ],
+    "steps": [
+      "Heat the oven to 220 °C.",
+      "Cut the zucchini, bell pepper and red onion into bite-sized pieces and toss them on a baking tray with two thirds of the olive oil, salt and pepper.",
+      "Roast the vegetables for 15 minutes.",
+      "Lay the salmon between the vegetables, brush it with the rest of the olive oil, season it with salt and pepper and roast for 12 to 15 minutes more until just cooked.",
+      "Meanwhile, bring the vegetable stock to the boil, pour it over the couscous in a bowl, cover it and leave it for 5 minutes.",
+      "Fluff up the couscous with a fork and stir in the chopped parsley and the juice of half of the lemon.",
+      "Serve the salmon on the couscous with the roasted vegetables and the rest of the lemon cut into wedges."
+    ]
   }
 ]

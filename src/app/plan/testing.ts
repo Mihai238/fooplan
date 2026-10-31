@@ -22,6 +22,8 @@ export const NOT_KID_FRIENDLY = [
   'Sweet potato and black bean chili',
   'Niçoise salad',
   'Avocado toast with fried egg',
+  'Spaghetti puttanesca',
+  'Beef tacos',
 ];
 
 export const KID_FRIENDLY = RECIPES.map((recipe) => recipe.name).filter(

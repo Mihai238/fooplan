@@ -1,7 +1,18 @@
 import { Recipe } from '../recipes/recipe';
 import { RECIPES } from '../recipes/recipes';
 import { Cooked, Meal, MealRef, Plan, Score } from './plan';
-import { baseOf, proteinOf, scoreWith } from './ranking';
+import {
+  BREAD,
+  baseOf,
+  CHICKEN,
+  FISH,
+  MEAT,
+  PASTA,
+  POTATO,
+  proteinOf,
+  RICE,
+  scoreWith,
+} from './ranking';
 import { covered, day, DINNER, LUNCH, open, picked, planOf, R } from './testing';
 
 const TUESDAY = '2026-10-27';
@@ -36,7 +47,92 @@ describe('ranking', () => {
       expect(classes['Couscous salad with halloumi']).toBe('other/other');
     });
 
+    it('classify the recipes of #58 by their new ingredients: "Tagliatelle alfredo with chicken" pasta/chicken, "Spätzle with creamy mushroom sauce" pasta/other, the chicken thighs, pork chops and trout with potatoes potato/chicken, meat and fish, the bagels, gyros and croque monsieur bread/fish, chicken and meat, the beef stir-fry rice/meat, and the pancakes with ham and the salmon with couscous other/meat and other/fish (#58 6)', () => {
+      expect(classesOf(RECIPES.slice(44, 84))).toMatchObject({
+        'Tagliatelle alfredo with chicken': 'pasta/chicken',
+        'Spätzle with creamy mushroom sauce': 'pasta/other',
+        'Chicken thighs with roast potatoes and rosemary': 'potato/chicken',
+        'Pork chops with mashed potatoes and apple sauce': 'potato/meat',
+        'Trout with potatoes and parsley butter': 'potato/fish',
+        'Smoked salmon bagels': 'bread/fish',
+        'Chicken gyros with pita and tzatziki': 'bread/chicken',
+        'Croque monsieur': 'bread/meat',
+        'Beef and broccoli stir-fry with rice': 'rice/meat',
+        'Savoury pancakes with ham and cheese': 'other/meat',
+        'Salmon with couscous and roasted vegetables': 'other/fish',
+      });
+    });
+
     describe('edge cases', () => {
+      it('list the new ingredients of #58 after the others in PASTA, BREAD, MEAT and FISH, and leave RICE, POTATO and CHICKEN as they were (#58 6a)', () => {
+        expect(PASTA).toEqual([
+          'spaghetti',
+          'penne',
+          'macaroni',
+          'gnocchi',
+          'egg noodle',
+          'rice noodle',
+          'tagliatelle',
+          'tortellini',
+          'fusilli',
+          'spätzle',
+        ]);
+        expect(RICE).toEqual(['rice']);
+        expect(POTATO).toEqual(['potato', 'sweet potato']);
+        expect(BREAD).toEqual(['bread', 'burger bun', 'tortilla', 'bagel', 'pita bread']);
+        expect(CHICKEN).toEqual(['chicken breast', 'chicken thigh']);
+        expect(MEAT).toEqual([
+          'ground beef',
+          'beef sirloin',
+          'bratwurst',
+          'frankfurter',
+          'guanciale',
+          'pork tenderloin',
+          'pork chop',
+          'italian sausage',
+          'ham',
+          'bacon',
+          'ground lamb',
+          'chorizo',
+        ]);
+        expect(FISH).toEqual([
+          'salmon',
+          'cod',
+          'prawn',
+          'canned tuna',
+          'anchovy',
+          'smoked salmon',
+          'trout',
+        ]);
+      });
+
+      it('count the 40 recipes of #58 as 9 rice (2 chicken, 2 meat, 3 fish, 2 other), 11 pasta (4 chicken, 2 meat, 2 fish, 3 other), 8 potato (1 chicken, 4 meat, 3 fish), 10 bread (1 chicken, 6 meat, 3 fish) and 2 of no base (1 meat, 1 fish) (#58 6b)', () => {
+        const added = Object.values(classesOf(RECIPES.slice(44, 84)));
+        expect(added, 'recipes of #58').toHaveLength(40);
+        const counts: Record<string, number> = {};
+        for (const kind of added) {
+          counts[kind] = (counts[kind] ?? 0) + 1;
+        }
+        expect(counts).toEqual({
+          'rice/chicken': 2,
+          'rice/meat': 2,
+          'rice/fish': 3,
+          'rice/other': 2,
+          'pasta/chicken': 4,
+          'pasta/meat': 2,
+          'pasta/fish': 2,
+          'pasta/other': 3,
+          'potato/chicken': 1,
+          'potato/meat': 4,
+          'potato/fish': 3,
+          'bread/chicken': 1,
+          'bread/meat': 6,
+          'bread/fish': 3,
+          'other/meat': 1,
+          'other/fish': 1,
+        });
+      });
+
       it('classify an own recipe by its ingredient names like a built-in one', () => {
         const own: Recipe = { ...R('Own pasta', ['spaghetti', 'onion']), own: true };
         expect([baseOf(own), proteinOf(own)]).toEqual(['pasta', 'other']);
@@ -304,4 +400,10 @@ function oneDay(date: string, lunch: Meal, dinner: Meal): Plan {
 // Nothing cooked, so the recently-cooked term is 0 whatever the day
 function scoreUncooked(recipes: readonly Recipe[]): Score {
   return scoreWith(recipes, {}, '2026-10-24');
+}
+
+function classesOf(recipes: readonly Recipe[]): Record<string, string> {
+  return Object.fromEntries(
+    recipes.map((recipe) => [recipe.name, `${baseOf(recipe)}/${proteinOf(recipe)}`]),
+  );
 }

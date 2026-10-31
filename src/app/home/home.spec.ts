@@ -137,7 +137,7 @@ describe('Home', () => {
       expect(cards()).toEqual([
         ['Plan', 'No meals picked yet', '/plan'],
         ['Grocery list', 'Ready once the plan is accepted', '/groceries'],
-        ['Recipes', '44 recipes', '/recipes'],
+        ['Recipes', '84 recipes', '/recipes'],
       ]);
     });
 
@@ -167,20 +167,26 @@ describe('Home', () => {
       expect(cards().map(([, fact]) => fact)).toEqual([
         '1 day for 3 people, kid-friendly',
         `1 of ${lines.length} in the cart`,
-        '44 recipes',
+        '84 recipes',
       ]);
     });
 
     it('counts the own recipes on the Recipes card, "1 of your own" for one', async () => {
       storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
       await openHome();
-      expect(cards()[2][1]).toBe('46 recipes, 2 of your own');
+      expect(cards()[2][1]).toBe('86 recipes, 2 of your own');
 
       TestBed.resetTestingModule();
       localStorage.clear();
       storeOwnRecipes(QUICK_DAL);
       await openHome();
-      expect(cards()[2][1]).toBe('45 recipes, 1 of your own');
+      expect(cards()[2][1]).toBe('85 recipes, 1 of your own');
+    });
+
+    it('says "84 Rezepte" on the Recipes card in German without own recipes (#58 8)', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await openHome();
+      expect(cards()[2].slice(0, 2)).toEqual(['Rezepte', '84 Rezepte']);
     });
   });
 
@@ -206,7 +212,7 @@ describe('Home', () => {
     expect(cards().map(([title, fact]) => [title, fact])).toEqual([
       ['Plan', '1 Tag für 1 Person'],
       ['Einkaufsliste', expect.stringMatching(/^0 von \d+ im Wagen$/)],
-      ['Rezepte', '46 Rezepte, davon 2 eigene'],
+      ['Rezepte', '86 Rezepte, davon 2 eigene'],
     ]);
     expect(textOf(element.querySelector('.how h2'))).toBe('So geht’s');
     expect(textOf(element.querySelector('.how-intro'))).toBe(

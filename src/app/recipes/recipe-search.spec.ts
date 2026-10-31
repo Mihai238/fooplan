@@ -16,6 +16,8 @@ describe('searchRecipes', () => {
       'Spaghetti aglio e olio',
       'Spaghetti with zucchini and parmesan',
       'Spaghetti with meatballs',
+      'Chicken parmigiana with spaghetti',
+      'Spaghetti puttanesca',
     ];
     expect(namesFor('spaghetti')).toEqual(spaghetti);
     expect(namesFor('  SPAGHETTI ')).toEqual(spaghetti);
@@ -52,6 +54,7 @@ describe('searchRecipes', () => {
       'Shakshuka with bread',
       'Greek salad with feta and bread',
       'Spinach and feta omelette',
+      'Spinach rice with feta',
     ]);
   });
 
@@ -79,7 +82,15 @@ describe('searchRecipes', () => {
       'Couscous salad with halloumi',
       'Hummus plate with bread and vegetables',
       'Pizza toast',
+      'Pasta salad with mozzarella and cherry tomatoes',
+      'Baked cod with tomatoes, olives and bread',
     ]);
+  });
+
+  it('finds "Spätzle with creamy mushroom sauce" by "spatzle", "spätzle" and "SPÄTZLE", as the only recipe with spätzle (#58 7b)', () => {
+    for (const query of ['spatzle', 'spätzle', 'SPÄTZLE']) {
+      expect(namesFor(query), query).toEqual(['Spätzle with creamy mushroom sauce']);
+    }
   });
 
   it('lists a recipe that matches by its name and by several ingredients once', () => {
@@ -134,7 +145,7 @@ describe('searchRecipes', () => {
       expect(namesIn('kirschtomaten')).toEqual([]);
     });
 
-    it('ignores accents in German: "kummel" finds the recipes with Kümmel and Kreuzkümmel, while "kuemmel" and "kase" find nothing', () => {
+    it('ignores accents in German: "kummel" finds the recipes with Kümmel and Kreuzkümmel, "kase" the three recipes of #58 with Käse in their name or Frischkäse, while "kuemmel" and "kaese" find nothing (changed by #58)', () => {
       const kummel = RECIPES.filter(
         (recipe) => uses(recipe, 'caraway') || uses(recipe, 'cumin'),
       ).map((recipe) => recipe.name);
@@ -144,7 +155,12 @@ describe('searchRecipes', () => {
       expect(namesIn('kummel')).toEqual(kummel);
       expect(namesIn('KÜMMEL')).toEqual(kummel);
       expect(namesIn('kuemmel')).toEqual([]);
-      expect(namesIn('kase')).toEqual([]);
+      expect(namesIn('kase')).toEqual([
+        'Tuna melts',
+        'Smoked salmon bagels',
+        'Savoury pancakes with ham and cheese',
+      ]);
+      expect(namesIn('kaese')).toEqual([]);
     });
 
     it('matches the ingredients of an own recipe as typed in German, "onion" and not "zwiebel", and its name as typed', async () => {

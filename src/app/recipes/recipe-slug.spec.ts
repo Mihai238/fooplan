@@ -46,4 +46,19 @@ describe('recipeSlug', () => {
     const shared = slugs.filter((slug, i) => slugs.indexOf(slug) !== i);
     expect(shared).toEqual([]);
   });
+
+  describe('edge cases', () => {
+    it('gives the 84 built-in recipes 84 different slugs, "spatzle-with-creamy-mushroom-sauce", "baked-cod-with-tomatoes-olives-and-bread", "chicken-fried-rice" and "croque-monsieur" among them (#58 9b)', () => {
+      const slugs = RECIPES.map((recipe) => recipeSlug(recipe.name));
+      expect(new Set(slugs).size).toBe(84);
+      expect(slugs).toEqual(
+        expect.arrayContaining([
+          'spatzle-with-creamy-mushroom-sauce',
+          'baked-cod-with-tomatoes-olives-and-bread',
+          'chicken-fried-rice',
+          'croque-monsieur',
+        ]),
+      );
+    });
+  });
 });

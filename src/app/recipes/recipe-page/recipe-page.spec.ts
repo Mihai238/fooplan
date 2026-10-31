@@ -262,6 +262,33 @@ describe('RecipePage', () => {
     }
   });
 
+  it('shows "Smoked salmon bagels", "2 servings", its 7 ingredient lines and "Step 1 of N" for its N steps at /recipes/smoked-salmon-bagels, and "Spätzle with creamy mushroom sauce" at /recipes/spatzle-with-creamy-mushroom-sauce (#58 9)', async () => {
+    harness = await createHarness('/recipes/smoked-salmon-bagels');
+    expect(router().url).toBe('/recipes/smoked-salmon-bagels');
+    expect(headings().map(textOf)).toEqual(['Smoked salmon bagels']);
+    expect(textOf(page())).toContain('2 servings');
+    expect(ingredientLines()).toEqual([
+      '2 pc bagel',
+      '100 g cream cheese',
+      '150 g smoked salmon',
+      '0.5 pc red onion',
+      '0.5 pc cucumber',
+      '0.5 pc lemon',
+      '10 g chive',
+    ]);
+    expect(stepCounters()).toEqual([`Step 1 of ${stepsOf('Smoked salmon bagels').length}`]);
+
+    await harness.navigateByUrl('/recipes/spatzle-with-creamy-mushroom-sauce');
+    expect(router().url).toBe('/recipes/spatzle-with-creamy-mushroom-sauce');
+    expect(headings().map(textOf)).toEqual(['Spätzle with creamy mushroom sauce']);
+  });
+
+  it('leads /recipes/spätzle-with-creamy-mushroom-sauce, with the umlaut no slug has, to the Recipes page, as any slug no recipe has (#58 9a)', async () => {
+    harness = await createHarness('/recipes/spätzle-with-creamy-mushroom-sauce');
+    expect(router().url).toBe('/recipes');
+    expect(headings().map(textOf)).not.toContain('Spätzle with creamy mushroom sauce');
+  });
+
   it('shows only the current step, never the others, on every step', async () => {
     harness = await createHarness('/recipes/spaghetti-carbonara');
     const steps = stepsOf('Spaghetti carbonara');
@@ -1683,6 +1710,30 @@ describe('RecipePage', () => {
         await harness.navigateByUrl('/recipes/pesto-pasta-mit-kirschtomaten');
         expect(router().url).toBe('/recipes');
       });
+    });
+
+    it('heads /recipes/croque-monsieur "Croque Monsieur" in German and shows each ingredient\'s amount after its German name in the steps: "Butter (30 g)", "Mehl (20 g)", "Milch (200 ml)", "Muskatnuss (0,5 TL)", "Brot (200 g)", "Senf (1 EL)", "Kochschinken (150 g)" and "Emmentaler (150 g)" (#58 4)', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      harness = await createHarness('/recipes/croque-monsieur');
+      expect(headings().map(textOf)).toEqual(['Croque Monsieur']);
+      await click(button('Alle Schritte'));
+      const steps = Array.from(page().querySelectorAll<HTMLElement>('ol.all > li'));
+      expect(steps.length, 'German steps').toBeGreaterThanOrEqual(3);
+      const text = steps.map(textOf).join('\n');
+      for (const [name, amount] of [
+        ['Butter', '30 g'],
+        ['Mehl', '20 g'],
+        ['Milch', '200 ml'],
+        ['Muskatnuss', '0,5 TL'],
+        ['Brot', '200 g'],
+        ['Senf', '1 EL'],
+        ['Kochschinken', '150 g'],
+        ['Emmentaler', '150 g'],
+      ]) {
+        expect(text, name).toMatch(
+          new RegExp(`(?<![\\p{L}])${name}(?:n|en|e|er|ern|s)? \\(${amount}\\)`, 'iu'),
+        );
+      }
     });
 
     function textWithoutAmounts(element: HTMLElement): string {

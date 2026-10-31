@@ -851,7 +851,7 @@ describe('App', () => {
         TestBed.overrideProvider(TODAY, { useValue: () => TODAY_DATE });
       });
 
-      it('shows a new 5-day plan for 2 people starting today, saved in the row fooplan.plan, and the 44 built-in recipes, none "Not suggested" and no "Your recipe", for an account with no rows (#45 4)', async () => {
+      it('shows a new 5-day plan for 2 people starting today, saved in the row fooplan.plan, and the 84 built-in recipes, none "Not suggested" and no "Your recipe", for an account with no rows (#45 4)', async () => {
         fake.load(sessionFor('ana@example.com'));
         await open('/plan');
 
@@ -870,7 +870,7 @@ describe('App', () => {
         await TestBed.inject(Router).navigateByUrl('/recipes');
         await stable();
         const cards = Array.from(compiled.querySelectorAll('main article'));
-        expect(cards.length).toBe(44);
+        expect(cards.length).toBe(84);
         expect(cards.filter((card) => textOf(card).includes('Not suggested'))).toEqual([]);
         expect(cards.filter((card) => textOf(card).includes('Your recipe'))).toEqual([]);
       });

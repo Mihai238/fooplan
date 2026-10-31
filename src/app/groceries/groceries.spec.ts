@@ -350,6 +350,57 @@ describe('groceries', () => {
         ]),
       );
     });
+
+    it('lists "Croque monsieur" and "Chicken fried rice" of a 1-day plan for 2 under their sections: ham and chicken breast under Meat & fish, emmental, egg, butter and milk under Dairy & eggs, bread under Bread & bakery, rice and flour under Pasta, rice & grains, soy sauce, mustard and the 0.5 tsp nutmeg rounded up to 1 tsp under Spices & sauces, nothing under Other and no oil (#58 10)', () => {
+      const plan = acceptedPlanFor(
+        2,
+        day('2026-10-24', picked('Croque monsieur'), picked('Chicken fried rice')),
+      );
+      const list = groceryList(plan, BUILT_IN_RECIPES);
+      expect(
+        bySection(list).map(({ section, items }) => [
+          section,
+          items.map(({ amount, unit, name }) => `${amount} ${unit} ${name}`),
+        ]),
+      ).toEqual([
+        [
+          'Fruit & vegetables',
+          ['1 pc carrot', '2 pc garlic clove', '100 g pea', '3 pc spring onion'],
+        ],
+        ['Meat & fish', ['250 g chicken breast', '150 g ham']],
+        ['Dairy & eggs', ['30 g butter', '2 pc egg', '150 g emmental', '200 ml milk']],
+        ['Bread & bakery', ['200 g bread']],
+        ['Pasta, rice & grains', ['20 g flour', '200 g rice']],
+        ['Spices & sauces', ['1 tbsp mustard', '1 tsp nutmeg', '3 tbsp soy sauce']],
+      ]);
+      expect(
+        list.filter((line) => /oil/.test(line.name)),
+        'oils',
+      ).toEqual([]);
+    });
+
+    describe('edge cases', () => {
+      it('adds up the ham, emmental, milk, butter and flour of "Croque monsieur" and "Savoury pancakes with ham and cheese" in a 1-day plan for 2 into one line each: 300 g ham, 300 g emmental, 500 ml milk, 60 g butter and 170 g flour (#58 10a)', () => {
+        const plan = acceptedPlanFor(
+          2,
+          day(
+            '2026-10-24',
+            picked('Croque monsieur'),
+            picked('Savoury pancakes with ham and cheese'),
+          ),
+        );
+        const list = groceryList(plan, BUILT_IN_RECIPES);
+        expect(
+          ['ham', 'emmental', 'milk', 'butter', 'flour'].flatMap((name) => linesOf(list, name)),
+        ).toEqual([
+          item('ham', 300, 'g', 'Meat & fish'),
+          item('emmental', 300, 'g', 'Dairy & eggs'),
+          item('milk', 500, 'ml', 'Dairy & eggs'),
+          item('butter', 60, 'g', 'Dairy & eggs'),
+          item('flour', 170, 'g', 'Pasta, rice & grains'),
+        ]);
+      });
+    });
   });
 
   describe('addedItems', () => {

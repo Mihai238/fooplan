@@ -49,6 +49,46 @@ const SPEC_NAMES = [
   'Creamy salmon pasta with spinach',
   'Chicken and vegetable skewers with rice',
   'Pasta with broccoli and parmesan',
+  'Chicken fried rice',
+  'Beef and broccoli stir-fry with rice',
+  'Pork and bell pepper stir-fry with rice',
+  'Salmon teriyaki with rice and broccoli',
+  'Garlic prawns with rice',
+  'Chicken satay with rice',
+  'Spinach rice with feta',
+  'Coconut prawn curry with rice',
+  'Potato and cauliflower curry with rice',
+  'Tagliatelle alfredo with chicken',
+  'Chicken chow mein',
+  'Chicken paprikash with egg noodles',
+  'Chicken parmigiana with spaghetti',
+  'Penne with Italian sausage and tomato sauce',
+  'Tortellini with ham and peas',
+  'Spaghetti puttanesca',
+  'Tagliatelle with smoked salmon and dill',
+  'Pasta alla norma',
+  'Pasta salad with mozzarella and cherry tomatoes',
+  'Spätzle with creamy mushroom sauce',
+  'Pork chops with mashed potatoes and apple sauce',
+  'Fish cakes with peas',
+  'Frankfurters with potato salad',
+  'Fried potatoes with bacon and fried eggs',
+  'Pan-fried cod with potatoes and spinach',
+  'Chicken thighs with roast potatoes and rosemary',
+  'Currywurst with fries',
+  'Trout with potatoes and parsley butter',
+  'Tuna melts',
+  'Smoked salmon bagels',
+  'Steak sandwiches with caramelised onions',
+  'Croque monsieur',
+  'Chicken gyros with pita and tzatziki',
+  'BLT sandwiches',
+  'Lamb koftas with pita and tzatziki',
+  'Beef tacos',
+  'White bean stew with chorizo and bread',
+  'Baked cod with tomatoes, olives and bread',
+  'Savoury pancakes with ham and cheese',
+  'Salmon with couscous and roasted vegetables',
 ];
 
 const SPEC_TIMES: Record<string, { minutes: number; workMinutes: number }> = {
@@ -96,6 +136,46 @@ const SPEC_TIMES: Record<string, { minutes: number; workMinutes: number }> = {
   'Creamy salmon pasta with spinach': { minutes: 25, workMinutes: 20 },
   'Chicken and vegetable skewers with rice': { minutes: 35, workMinutes: 25 },
   'Pasta with broccoli and parmesan': { minutes: 20, workMinutes: 15 },
+  'Chicken fried rice': { minutes: 30, workMinutes: 20 },
+  'Beef and broccoli stir-fry with rice': { minutes: 30, workMinutes: 20 },
+  'Pork and bell pepper stir-fry with rice': { minutes: 30, workMinutes: 20 },
+  'Salmon teriyaki with rice and broccoli': { minutes: 30, workMinutes: 15 },
+  'Garlic prawns with rice': { minutes: 25, workMinutes: 15 },
+  'Chicken satay with rice': { minutes: 35, workMinutes: 25 },
+  'Spinach rice with feta': { minutes: 35, workMinutes: 15 },
+  'Coconut prawn curry with rice': { minutes: 30, workMinutes: 20 },
+  'Potato and cauliflower curry with rice': { minutes: 40, workMinutes: 20 },
+  'Tagliatelle alfredo with chicken': { minutes: 25, workMinutes: 20 },
+  'Chicken chow mein': { minutes: 25, workMinutes: 20 },
+  'Chicken paprikash with egg noodles': { minutes: 45, workMinutes: 20 },
+  'Chicken parmigiana with spaghetti': { minutes: 45, workMinutes: 30 },
+  'Penne with Italian sausage and tomato sauce': { minutes: 30, workMinutes: 15 },
+  'Tortellini with ham and peas': { minutes: 20, workMinutes: 15 },
+  'Spaghetti puttanesca': { minutes: 25, workMinutes: 15 },
+  'Tagliatelle with smoked salmon and dill': { minutes: 20, workMinutes: 15 },
+  'Pasta alla norma': { minutes: 35, workMinutes: 20 },
+  'Pasta salad with mozzarella and cherry tomatoes': { minutes: 20, workMinutes: 10 },
+  'Spätzle with creamy mushroom sauce': { minutes: 25, workMinutes: 20 },
+  'Pork chops with mashed potatoes and apple sauce': { minutes: 40, workMinutes: 25 },
+  'Fish cakes with peas': { minutes: 45, workMinutes: 30 },
+  'Frankfurters with potato salad': { minutes: 40, workMinutes: 20 },
+  'Fried potatoes with bacon and fried eggs': { minutes: 35, workMinutes: 20 },
+  'Pan-fried cod with potatoes and spinach': { minutes: 35, workMinutes: 20 },
+  'Chicken thighs with roast potatoes and rosemary': { minutes: 45, workMinutes: 15 },
+  'Currywurst with fries': { minutes: 45, workMinutes: 15 },
+  'Trout with potatoes and parsley butter': { minutes: 35, workMinutes: 20 },
+  'Tuna melts': { minutes: 15, workMinutes: 10 },
+  'Smoked salmon bagels': { minutes: 10, workMinutes: 10 },
+  'Steak sandwiches with caramelised onions': { minutes: 30, workMinutes: 25 },
+  'Croque monsieur': { minutes: 25, workMinutes: 15 },
+  'Chicken gyros with pita and tzatziki': { minutes: 35, workMinutes: 25 },
+  'BLT sandwiches': { minutes: 15, workMinutes: 15 },
+  'Lamb koftas with pita and tzatziki': { minutes: 30, workMinutes: 25 },
+  'Beef tacos': { minutes: 25, workMinutes: 20 },
+  'White bean stew with chorizo and bread': { minutes: 35, workMinutes: 15 },
+  'Baked cod with tomatoes, olives and bread': { minutes: 35, workMinutes: 15 },
+  'Savoury pancakes with ham and cheese': { minutes: 30, workMinutes: 25 },
+  'Salmon with couscous and roasted vegetables': { minutes: 35, workMinutes: 15 },
 };
 
 // #29's data, so a changed amount or a typo in a step fails, not just a broken rule
@@ -434,8 +514,675 @@ const FAMILY_RECIPES: Recipe[] = [
   },
 ];
 
-const FAMILY_START = SPEC_NAMES.length - FAMILY_RECIPES.length;
+// #58's data without the steps, which #58 doesn't pin, so a changed amount fails, not just a broken rule
+const ADDED_RECIPES: Omit<Recipe, 'steps'>[] = [
+  {
+    name: 'Chicken fried rice',
+    servings: 2,
+    minutes: 30,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'rice', amount: 200, unit: 'g' },
+      { name: 'chicken breast', amount: 250, unit: 'g' },
+      { name: 'egg', amount: 2, unit: 'pc' },
+      { name: 'carrot', amount: 1, unit: 'pc' },
+      { name: 'pea', amount: 100, unit: 'g' },
+      { name: 'spring onion', amount: 3, unit: 'pc' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'soy sauce', amount: 3, unit: 'tbsp' },
+      { name: 'sesame oil', amount: 1, unit: 'tbsp' },
+      { name: 'vegetable oil', amount: 30, unit: 'ml' },
+    ],
+  },
+  {
+    name: 'Beef and broccoli stir-fry with rice',
+    servings: 2,
+    minutes: 30,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'beef sirloin', amount: 300, unit: 'g' },
+      { name: 'broccoli', amount: 300, unit: 'g' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'ginger', amount: 10, unit: 'g' },
+      { name: 'soy sauce', amount: 3, unit: 'tbsp' },
+      { name: 'sugar', amount: 1, unit: 'tbsp' },
+      { name: 'sesame oil', amount: 1, unit: 'tbsp' },
+      { name: 'vegetable oil', amount: 30, unit: 'ml' },
+      { name: 'rice', amount: 200, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Pork and bell pepper stir-fry with rice',
+    servings: 2,
+    minutes: 30,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'pork tenderloin', amount: 300, unit: 'g' },
+      { name: 'bell pepper', amount: 2, unit: 'pc' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'ginger', amount: 10, unit: 'g' },
+      { name: 'soy sauce', amount: 3, unit: 'tbsp' },
+      { name: 'vegetable oil', amount: 30, unit: 'ml' },
+      { name: 'rice', amount: 200, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Salmon teriyaki with rice and broccoli',
+    servings: 2,
+    minutes: 30,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'salmon', amount: 300, unit: 'g' },
+      { name: 'soy sauce', amount: 3, unit: 'tbsp' },
+      { name: 'mirin', amount: 2, unit: 'tbsp' },
+      { name: 'sugar', amount: 1, unit: 'tbsp' },
+      { name: 'ginger', amount: 10, unit: 'g' },
+      { name: 'broccoli', amount: 300, unit: 'g' },
+      { name: 'sesame seed', amount: 10, unit: 'g' },
+      { name: 'vegetable oil', amount: 15, unit: 'ml' },
+      { name: 'rice', amount: 200, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Garlic prawns with rice',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'prawn', amount: 300, unit: 'g' },
+      { name: 'garlic clove', amount: 4, unit: 'pc' },
+      { name: 'butter', amount: 30, unit: 'g' },
+      { name: 'olive oil', amount: 2, unit: 'tbsp' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'parsley', amount: 10, unit: 'g' },
+      { name: 'rice', amount: 200, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Chicken satay with rice',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'chicken thigh', amount: 400, unit: 'g' },
+      { name: 'soy sauce', amount: 3, unit: 'tbsp' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'ginger', amount: 10, unit: 'g' },
+      { name: 'lime', amount: 1, unit: 'pc' },
+      { name: 'peanut butter', amount: 80, unit: 'g' },
+      { name: 'coconut milk', amount: 200, unit: 'ml' },
+      { name: 'sugar', amount: 1, unit: 'tbsp' },
+      { name: 'vegetable oil', amount: 15, unit: 'ml' },
+      { name: 'rice', amount: 200, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Spinach rice with feta',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'olive oil', amount: 3, unit: 'tbsp' },
+      { name: 'rice', amount: 200, unit: 'g' },
+      { name: 'vegetable stock', amount: 500, unit: 'ml' },
+      { name: 'spinach', amount: 300, unit: 'g' },
+      { name: 'dill', amount: 10, unit: 'g' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'feta', amount: 100, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Coconut prawn curry with rice',
+    servings: 2,
+    minutes: 30,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'ginger', amount: 10, unit: 'g' },
+      { name: 'vegetable oil', amount: 30, unit: 'ml' },
+      { name: 'curry powder', amount: 2, unit: 'tsp' },
+      { name: 'canned tomatoes', amount: 200, unit: 'g' },
+      { name: 'coconut milk', amount: 400, unit: 'ml' },
+      { name: 'prawn', amount: 300, unit: 'g' },
+      { name: 'lime', amount: 1, unit: 'pc' },
+      { name: 'coriander', amount: 10, unit: 'g' },
+      { name: 'rice', amount: 200, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Potato and cauliflower curry with rice',
+    servings: 4,
+    minutes: 40,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'potato', amount: 500, unit: 'g' },
+      { name: 'cauliflower', amount: 1, unit: 'pc' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'ginger', amount: 15, unit: 'g' },
+      { name: 'vegetable oil', amount: 45, unit: 'ml' },
+      { name: 'curry powder', amount: 3, unit: 'tsp' },
+      { name: 'cumin', amount: 1, unit: 'tsp' },
+      { name: 'canned tomatoes', amount: 400, unit: 'g' },
+      { name: 'pea', amount: 150, unit: 'g' },
+      { name: 'coriander', amount: 15, unit: 'g' },
+      { name: 'rice', amount: 300, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Tagliatelle alfredo with chicken',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'tagliatelle', amount: 250, unit: 'g' },
+      { name: 'chicken breast', amount: 300, unit: 'g' },
+      { name: 'olive oil', amount: 1, unit: 'tbsp' },
+      { name: 'butter', amount: 30, unit: 'g' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'cream', amount: 200, unit: 'ml' },
+      { name: 'parmesan', amount: 60, unit: 'g' },
+      { name: 'parsley', amount: 10, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Chicken chow mein',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'egg noodle', amount: 200, unit: 'g' },
+      { name: 'chicken breast', amount: 250, unit: 'g' },
+      { name: 'carrot', amount: 1, unit: 'pc' },
+      { name: 'bean sprout', amount: 100, unit: 'g' },
+      { name: 'spring onion', amount: 3, unit: 'pc' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'soy sauce', amount: 3, unit: 'tbsp' },
+      { name: 'sesame oil', amount: 1, unit: 'tbsp' },
+      { name: 'vegetable oil', amount: 30, unit: 'ml' },
+    ],
+  },
+  {
+    name: 'Chicken paprikash with egg noodles',
+    servings: 4,
+    minutes: 45,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'chicken thigh', amount: 600, unit: 'g' },
+      { name: 'onion', amount: 2, unit: 'pc' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'vegetable oil', amount: 30, unit: 'ml' },
+      { name: 'paprika', amount: 4, unit: 'tsp' },
+      { name: 'tomato paste', amount: 1, unit: 'tbsp' },
+      { name: 'vegetable stock', amount: 300, unit: 'ml' },
+      { name: 'flour', amount: 10, unit: 'g' },
+      { name: 'sour cream', amount: 150, unit: 'g' },
+      { name: 'egg noodle', amount: 300, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Chicken parmigiana with spaghetti',
+    servings: 2,
+    minutes: 45,
+    workMinutes: 30,
+    ingredients: [
+      { name: 'chicken breast', amount: 300, unit: 'g' },
+      { name: 'flour', amount: 50, unit: 'g' },
+      { name: 'egg', amount: 1, unit: 'pc' },
+      { name: 'breadcrumbs', amount: 80, unit: 'g' },
+      { name: 'olive oil', amount: 4, unit: 'tbsp' },
+      { name: 'garlic clove', amount: 1, unit: 'pc' },
+      { name: 'canned tomatoes', amount: 400, unit: 'g' },
+      { name: 'mozzarella', amount: 125, unit: 'g' },
+      { name: 'parmesan', amount: 30, unit: 'g' },
+      { name: 'basil', amount: 10, unit: 'g' },
+      { name: 'spaghetti', amount: 200, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Penne with Italian sausage and tomato sauce',
+    servings: 2,
+    minutes: 30,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'italian sausage', amount: 4, unit: 'pc' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'olive oil', amount: 2, unit: 'tbsp' },
+      { name: 'canned tomatoes', amount: 400, unit: 'g' },
+      { name: 'penne', amount: 200, unit: 'g' },
+      { name: 'parmesan', amount: 30, unit: 'g' },
+      { name: 'basil', amount: 10, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Tortellini with ham and peas',
+    servings: 2,
+    minutes: 20,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'tortellini', amount: 400, unit: 'g' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'butter', amount: 20, unit: 'g' },
+      { name: 'ham', amount: 150, unit: 'g' },
+      { name: 'pea', amount: 150, unit: 'g' },
+      { name: 'cream', amount: 200, unit: 'ml' },
+      { name: 'parmesan', amount: 40, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Spaghetti puttanesca',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'spaghetti', amount: 200, unit: 'g' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'anchovy', amount: 4, unit: 'pc' },
+      { name: 'chili flakes', amount: 0.5, unit: 'tsp' },
+      { name: 'olive oil', amount: 3, unit: 'tbsp' },
+      { name: 'canned tomatoes', amount: 400, unit: 'g' },
+      { name: 'olive', amount: 60, unit: 'g' },
+      { name: 'caper', amount: 2, unit: 'tbsp' },
+      { name: 'parsley', amount: 10, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Tagliatelle with smoked salmon and dill',
+    servings: 2,
+    minutes: 20,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'tagliatelle', amount: 250, unit: 'g' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'butter', amount: 20, unit: 'g' },
+      { name: 'cream', amount: 200, unit: 'ml' },
+      { name: 'smoked salmon', amount: 150, unit: 'g' },
+      { name: 'lemon', amount: 0.5, unit: 'pc' },
+      { name: 'dill', amount: 10, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Pasta alla norma',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'eggplant', amount: 1, unit: 'pc' },
+      { name: 'olive oil', amount: 5, unit: 'tbsp' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'canned tomatoes', amount: 400, unit: 'g' },
+      { name: 'penne', amount: 200, unit: 'g' },
+      { name: 'basil', amount: 10, unit: 'g' },
+      { name: 'parmesan', amount: 40, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Pasta salad with mozzarella and cherry tomatoes',
+    servings: 2,
+    minutes: 20,
+    workMinutes: 10,
+    ingredients: [
+      { name: 'fusilli', amount: 250, unit: 'g' },
+      { name: 'cherry tomato', amount: 200, unit: 'g' },
+      { name: 'mozzarella', amount: 125, unit: 'g' },
+      { name: 'olive', amount: 60, unit: 'g' },
+      { name: 'red onion', amount: 0.5, unit: 'pc' },
+      { name: 'basil', amount: 10, unit: 'g' },
+      { name: 'olive oil', amount: 3, unit: 'tbsp' },
+      { name: 'white wine vinegar', amount: 1, unit: 'tbsp' },
+    ],
+  },
+  {
+    name: 'Spätzle with creamy mushroom sauce',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'mushroom', amount: 400, unit: 'g' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'butter', amount: 30, unit: 'g' },
+      { name: 'vegetable stock', amount: 100, unit: 'ml' },
+      { name: 'cream', amount: 200, unit: 'ml' },
+      { name: 'spätzle', amount: 400, unit: 'g' },
+      { name: 'parsley', amount: 10, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Pork chops with mashed potatoes and apple sauce',
+    servings: 2,
+    minutes: 40,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'potato', amount: 600, unit: 'g' },
+      { name: 'apple', amount: 2, unit: 'pc' },
+      { name: 'sugar', amount: 1, unit: 'tbsp' },
+      { name: 'pork chop', amount: 2, unit: 'pc' },
+      { name: 'vegetable oil', amount: 15, unit: 'ml' },
+      { name: 'milk', amount: 100, unit: 'ml' },
+      { name: 'butter', amount: 40, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Fish cakes with peas',
+    servings: 2,
+    minutes: 45,
+    workMinutes: 30,
+    ingredients: [
+      { name: 'potato', amount: 400, unit: 'g' },
+      { name: 'cod', amount: 300, unit: 'g' },
+      { name: 'spring onion', amount: 2, unit: 'pc' },
+      { name: 'parsley', amount: 10, unit: 'g' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'flour', amount: 30, unit: 'g' },
+      { name: 'egg', amount: 1, unit: 'pc' },
+      { name: 'breadcrumbs', amount: 80, unit: 'g' },
+      { name: 'vegetable oil', amount: 60, unit: 'ml' },
+      { name: 'pea', amount: 200, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Frankfurters with potato salad',
+    servings: 2,
+    minutes: 40,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'potato', amount: 600, unit: 'g' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'vegetable stock', amount: 100, unit: 'ml' },
+      { name: 'white wine vinegar', amount: 3, unit: 'tbsp' },
+      { name: 'mustard', amount: 1, unit: 'tbsp' },
+      { name: 'vegetable oil', amount: 45, unit: 'ml' },
+      { name: 'chive', amount: 10, unit: 'g' },
+      { name: 'frankfurter', amount: 4, unit: 'pc' },
+    ],
+  },
+  {
+    name: 'Fried potatoes with bacon and fried eggs',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'potato', amount: 600, unit: 'g' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'bacon', amount: 100, unit: 'g' },
+      { name: 'vegetable oil', amount: 30, unit: 'ml' },
+      { name: 'butter', amount: 20, unit: 'g' },
+      { name: 'egg', amount: 4, unit: 'pc' },
+      { name: 'chive', amount: 10, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Pan-fried cod with potatoes and spinach',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'potato', amount: 600, unit: 'g' },
+      { name: 'cod', amount: 400, unit: 'g' },
+      { name: 'flour', amount: 20, unit: 'g' },
+      { name: 'olive oil', amount: 2, unit: 'tbsp' },
+      { name: 'butter', amount: 40, unit: 'g' },
+      { name: 'garlic clove', amount: 1, unit: 'pc' },
+      { name: 'spinach', amount: 200, unit: 'g' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+    ],
+  },
+  {
+    name: 'Chicken thighs with roast potatoes and rosemary',
+    servings: 4,
+    minutes: 45,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'potato', amount: 1000, unit: 'g' },
+      { name: 'chicken thigh', amount: 800, unit: 'g' },
+      { name: 'garlic clove', amount: 4, unit: 'pc' },
+      { name: 'rosemary', amount: 10, unit: 'g' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'olive oil', amount: 4, unit: 'tbsp' },
+    ],
+  },
+  {
+    name: 'Currywurst with fries',
+    servings: 2,
+    minutes: 45,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'potato', amount: 600, unit: 'g' },
+      { name: 'vegetable oil', amount: 45, unit: 'ml' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'ketchup', amount: 6, unit: 'tbsp' },
+      { name: 'curry powder', amount: 2, unit: 'tsp' },
+      { name: 'paprika', amount: 1, unit: 'tsp' },
+      { name: 'sugar', amount: 1, unit: 'tbsp' },
+      { name: 'bratwurst', amount: 4, unit: 'pc' },
+    ],
+  },
+  {
+    name: 'Trout with potatoes and parsley butter',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'potato', amount: 600, unit: 'g' },
+      { name: 'trout', amount: 2, unit: 'pc' },
+      { name: 'flour', amount: 30, unit: 'g' },
+      { name: 'vegetable oil', amount: 30, unit: 'ml' },
+      { name: 'butter', amount: 60, unit: 'g' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'parsley', amount: 15, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Tuna melts',
+    servings: 2,
+    minutes: 15,
+    workMinutes: 10,
+    ingredients: [
+      { name: 'canned tuna', amount: 300, unit: 'g' },
+      { name: 'mayonnaise', amount: 3, unit: 'tbsp' },
+      { name: 'spring onion', amount: 2, unit: 'pc' },
+      { name: 'lemon', amount: 0.5, unit: 'pc' },
+      { name: 'bread', amount: 200, unit: 'g' },
+      { name: 'tomato', amount: 1, unit: 'pc' },
+      { name: 'cheddar', amount: 100, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Smoked salmon bagels',
+    servings: 2,
+    minutes: 10,
+    workMinutes: 10,
+    ingredients: [
+      { name: 'bagel', amount: 2, unit: 'pc' },
+      { name: 'cream cheese', amount: 100, unit: 'g' },
+      { name: 'smoked salmon', amount: 150, unit: 'g' },
+      { name: 'red onion', amount: 0.5, unit: 'pc' },
+      { name: 'cucumber', amount: 0.5, unit: 'pc' },
+      { name: 'lemon', amount: 0.5, unit: 'pc' },
+      { name: 'chive', amount: 10, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Steak sandwiches with caramelised onions',
+    servings: 2,
+    minutes: 30,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'onion', amount: 2, unit: 'pc' },
+      { name: 'butter', amount: 20, unit: 'g' },
+      { name: 'beef sirloin', amount: 300, unit: 'g' },
+      { name: 'olive oil', amount: 1, unit: 'tbsp' },
+      { name: 'bread', amount: 200, unit: 'g' },
+      { name: 'mustard', amount: 1, unit: 'tbsp' },
+      { name: 'rocket', amount: 40, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Croque monsieur',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'butter', amount: 30, unit: 'g' },
+      { name: 'flour', amount: 20, unit: 'g' },
+      { name: 'milk', amount: 200, unit: 'ml' },
+      { name: 'nutmeg', amount: 0.5, unit: 'tsp' },
+      { name: 'bread', amount: 200, unit: 'g' },
+      { name: 'mustard', amount: 1, unit: 'tbsp' },
+      { name: 'ham', amount: 150, unit: 'g' },
+      { name: 'emmental', amount: 150, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Chicken gyros with pita and tzatziki',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'chicken thigh', amount: 400, unit: 'g' },
+      { name: 'olive oil', amount: 3, unit: 'tbsp' },
+      { name: 'garlic clove', amount: 3, unit: 'pc' },
+      { name: 'oregano', amount: 2, unit: 'tsp' },
+      { name: 'paprika', amount: 1, unit: 'tsp' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'cucumber', amount: 0.5, unit: 'pc' },
+      { name: 'yogurt', amount: 200, unit: 'g' },
+      { name: 'tomato', amount: 2, unit: 'pc' },
+      { name: 'red onion', amount: 1, unit: 'pc' },
+      { name: 'pita bread', amount: 4, unit: 'pc' },
+    ],
+  },
+  {
+    name: 'BLT sandwiches',
+    servings: 2,
+    minutes: 15,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'bacon', amount: 150, unit: 'g' },
+      { name: 'bread', amount: 200, unit: 'g' },
+      { name: 'mayonnaise', amount: 2, unit: 'tbsp' },
+      { name: 'lettuce', amount: 0.5, unit: 'pc' },
+      { name: 'tomato', amount: 2, unit: 'pc' },
+    ],
+  },
+  {
+    name: 'Lamb koftas with pita and tzatziki',
+    servings: 2,
+    minutes: 30,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'cucumber', amount: 0.5, unit: 'pc' },
+      { name: 'yogurt', amount: 200, unit: 'g' },
+      { name: 'garlic clove', amount: 3, unit: 'pc' },
+      { name: 'mint', amount: 10, unit: 'g' },
+      { name: 'ground lamb', amount: 400, unit: 'g' },
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'parsley', amount: 10, unit: 'g' },
+      { name: 'cumin', amount: 1, unit: 'tsp' },
+      { name: 'paprika', amount: 1, unit: 'tsp' },
+      { name: 'olive oil', amount: 2, unit: 'tbsp' },
+      { name: 'pita bread', amount: 4, unit: 'pc' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+    ],
+  },
+  {
+    name: 'Beef tacos',
+    servings: 2,
+    minutes: 25,
+    workMinutes: 20,
+    ingredients: [
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'garlic clove', amount: 2, unit: 'pc' },
+      { name: 'vegetable oil', amount: 15, unit: 'ml' },
+      { name: 'ground beef', amount: 400, unit: 'g' },
+      { name: 'cumin', amount: 1, unit: 'tsp' },
+      { name: 'chili powder', amount: 1, unit: 'tsp' },
+      { name: 'paprika', amount: 1, unit: 'tsp' },
+      { name: 'tomato paste', amount: 1, unit: 'tbsp' },
+      { name: 'tortilla', amount: 6, unit: 'pc' },
+      { name: 'lettuce', amount: 0.5, unit: 'pc' },
+      { name: 'tomato', amount: 2, unit: 'pc' },
+      { name: 'cheddar', amount: 100, unit: 'g' },
+      { name: 'sour cream', amount: 100, unit: 'g' },
+    ],
+  },
+  {
+    name: 'White bean stew with chorizo and bread',
+    servings: 4,
+    minutes: 35,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'onion', amount: 1, unit: 'pc' },
+      { name: 'garlic clove', amount: 3, unit: 'pc' },
+      { name: 'chorizo', amount: 200, unit: 'g' },
+      { name: 'olive oil', amount: 2, unit: 'tbsp' },
+      { name: 'paprika', amount: 2, unit: 'tsp' },
+      { name: 'canned tomatoes', amount: 400, unit: 'g' },
+      { name: 'canned white beans', amount: 800, unit: 'g' },
+      { name: 'vegetable stock', amount: 200, unit: 'ml' },
+      { name: 'parsley', amount: 10, unit: 'g' },
+      { name: 'bread', amount: 300, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Baked cod with tomatoes, olives and bread',
+    servings: 4,
+    minutes: 35,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'cherry tomato', amount: 500, unit: 'g' },
+      { name: 'olive', amount: 100, unit: 'g' },
+      { name: 'garlic clove', amount: 3, unit: 'pc' },
+      { name: 'olive oil', amount: 4, unit: 'tbsp' },
+      { name: 'cod', amount: 800, unit: 'g' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'parsley', amount: 15, unit: 'g' },
+      { name: 'bread', amount: 300, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Savoury pancakes with ham and cheese',
+    servings: 2,
+    minutes: 30,
+    workMinutes: 25,
+    ingredients: [
+      { name: 'flour', amount: 150, unit: 'g' },
+      { name: 'egg', amount: 2, unit: 'pc' },
+      { name: 'milk', amount: 300, unit: 'ml' },
+      { name: 'butter', amount: 30, unit: 'g' },
+      { name: 'ham', amount: 150, unit: 'g' },
+      { name: 'emmental', amount: 150, unit: 'g' },
+      { name: 'chive', amount: 10, unit: 'g' },
+    ],
+  },
+  {
+    name: 'Salmon with couscous and roasted vegetables',
+    servings: 2,
+    minutes: 35,
+    workMinutes: 15,
+    ingredients: [
+      { name: 'zucchini', amount: 1, unit: 'pc' },
+      { name: 'bell pepper', amount: 1, unit: 'pc' },
+      { name: 'red onion', amount: 1, unit: 'pc' },
+      { name: 'olive oil', amount: 3, unit: 'tbsp' },
+      { name: 'salmon', amount: 300, unit: 'g' },
+      { name: 'couscous', amount: 150, unit: 'g' },
+      { name: 'vegetable stock', amount: 200, unit: 'ml' },
+      { name: 'lemon', amount: 1, unit: 'pc' },
+      { name: 'parsley', amount: 10, unit: 'g' },
+    ],
+  },
+];
+
+const FAMILY_START = SPEC_NAMES.indexOf(FAMILY_RECIPES[0].name);
 const EASY_START = FAMILY_START - EASY_RECIPES.length;
+const ADDED_START = FAMILY_START + FAMILY_RECIPES.length;
+const ADDED_END = ADDED_START + ADDED_RECIPES.length;
 
 const REMOVED_NAMES = [
   'Lasagne',
@@ -467,7 +1214,7 @@ const REMOVED_NAMES = [
   'Sweet and sour pork with rice',
 ];
 
-// #31's list, with #29's "Avocado toast with fried egg"
+// #31's list, with #29's "Avocado toast with fried egg" and #58's "Spaghetti puttanesca" and "Beef tacos"
 const NOT_KID_FRIENDLY = [
   'Chicken fajitas',
   'Chicken Caesar salad',
@@ -480,6 +1227,37 @@ const NOT_KID_FRIENDLY = [
   'Sweet potato and black bean chili',
   'Niçoise salad',
   'Avocado toast with fried egg',
+  'Spaghetti puttanesca',
+  'Beef tacos',
+];
+
+// The 25 ingredient names of #58 that the first 44 recipes don't use
+const ADDED_INGREDIENTS = [
+  'apple',
+  'bacon',
+  'bagel',
+  'caper',
+  'cauliflower',
+  'chorizo',
+  'cream cheese',
+  'emmental',
+  'fusilli',
+  'ground lamb',
+  'ham',
+  'italian sausage',
+  'mayonnaise',
+  'peanut butter',
+  'pita bread',
+  'pork chop',
+  'pork tenderloin',
+  'rocket',
+  'rosemary',
+  'smoked salmon',
+  'spätzle',
+  'tagliatelle',
+  'tortellini',
+  'trout',
+  'yogurt',
 ];
 
 // #24's list without "chive" and "cream", which #32's recipes use again
@@ -517,11 +1295,41 @@ describe('RECIPES', () => {
     expect(problems).toEqual([]);
   });
 
-  it('contains exactly the 44 recipes of the spec table, in its order, each with its minutes and workMinutes', () => {
+  it('contains exactly the 84 recipes of the spec table, in its order, each with its minutes and workMinutes', () => {
     expect(Object.keys(SPEC_TIMES), 'recipes in the times table').toEqual(SPEC_NAMES);
     expect(
       RECIPES.map(({ name, minutes, workMinutes }) => ({ name, minutes, workMinutes })),
     ).toEqual(SPEC_NAMES.map((name) => ({ name, ...SPEC_TIMES[name] })));
+  });
+
+  it('holds the 40 recipes of #58 after the first 44, in their order, each with exactly its name, servings, minutes, workMinutes and ingredients, and at least three non-empty steps (#58 1)', () => {
+    const added = RECIPES.slice(ADDED_START, ADDED_END);
+    expect(added.map(({ steps, ...recipe }) => recipe)).toEqual(ADDED_RECIPES);
+    expect(
+      added
+        .filter(
+          (recipe) =>
+            stepsOf(recipe).length < 3 || stepsOf(recipe).some((step) => step.trim() === ''),
+        )
+        .map((recipe) => recipe.name),
+      'recipes with fewer than three steps or an empty one',
+    ).toEqual([]);
+  });
+
+  it('uses exactly the 25 ingredient names of #58, sorted, in the 40 recipes of #58 that the first 44 recipes do not use (#58 2)', () => {
+    const known = new Set(
+      RECIPES.slice(0, ADDED_START).flatMap((recipe) =>
+        recipe.ingredients.map((ingredient) => ingredient.name),
+      ),
+    );
+    const added = RECIPES.slice(ADDED_START, ADDED_END).flatMap((recipe) =>
+      recipe.ingredients.map((ingredient) => ingredient.name),
+    );
+    expect(added.length, 'no recipes of #58 loaded').toBeGreaterThan(0);
+    expect([...new Set(added.filter((name) => !known.has(name)))].sort()).toEqual(
+      ADDED_INGREDIENTS,
+    );
+    expect([...ADDED_INGREDIENTS].sort(), 'the list sorted').toEqual(ADDED_INGREDIENTS);
   });
 
   it('holds the 5 easy recipes of #29 after the first 29, in their order, each with exactly its servings, minutes, workMinutes, ingredients and steps', () => {
@@ -529,11 +1337,11 @@ describe('RECIPES', () => {
   });
 
   it('holds the 10 family recipes of #32 after the first 34, in their order, each with exactly its servings, minutes, workMinutes, ingredients and steps', () => {
-    expect(RECIPES.slice(FAMILY_START)).toEqual(FAMILY_RECIPES);
+    expect(RECIPES.slice(FAMILY_START, ADDED_START)).toEqual(FAMILY_RECIPES);
   });
 
   it('gives none of the 10 family recipes of #32 the name of one of the 27 recipes the spec removes', () => {
-    const family = RECIPES.slice(FAMILY_START).map((recipe) => recipe.name);
+    const family = RECIPES.slice(FAMILY_START, ADDED_START).map((recipe) => recipe.name);
     expect(family, 'family recipes loaded').toHaveLength(10);
     expect(family.filter((name) => REMOVED_NAMES.includes(name))).toEqual([]);
   });
@@ -544,7 +1352,7 @@ describe('RECIPES', () => {
         recipe.ingredients.map((ingredient) => ingredient.name),
       ),
     );
-    const family = RECIPES.slice(FAMILY_START).flatMap((recipe) =>
+    const family = RECIPES.slice(FAMILY_START, ADDED_START).flatMap((recipe) =>
       recipe.ingredients.map((ingredient) => ingredient.name),
     );
     expect(family.length, 'no family recipes loaded').toBeGreaterThan(0);
@@ -557,14 +1365,19 @@ describe('RECIPES', () => {
     ]);
   });
 
-  it('has exactly the 11 recipes of #31 and #29 that are not kid-friendly, the other 33 kid-friendly, the 10 of #32 among them, at least MIN_SUGGESTED of them', () => {
+  it('has exactly the 13 recipes of #31, #29 and #58 that are not kid-friendly, the other 71 kid-friendly, the 10 of #32 and 38 of #58 among them, at least MIN_SUGGESTED of them', () => {
     expect(RECIPES.filter((recipe) => !isKidFriendly(recipe)).map((recipe) => recipe.name)).toEqual(
       SPEC_NAMES.filter((name) => NOT_KID_FRIENDLY.includes(name)),
     );
     const kidFriendly = RECIPES.filter(isKidFriendly).map((recipe) => recipe.name);
     expect(kidFriendly).toEqual(SPEC_NAMES.filter((name) => !NOT_KID_FRIENDLY.includes(name)));
-    expect(kidFriendly).toHaveLength(33);
-    expect(kidFriendly.slice(-10), 'family recipes').toEqual(SPEC_NAMES.slice(FAMILY_START));
+    expect(kidFriendly).toHaveLength(71);
+    expect(kidFriendly.slice(23, 33), 'family recipes').toEqual(
+      SPEC_NAMES.slice(FAMILY_START, ADDED_START),
+    );
+    expect(kidFriendly.slice(33, 71), 'recipes of #58').toEqual(
+      SPEC_NAMES.slice(ADDED_START, ADDED_END).filter((name) => !NOT_KID_FRIENDLY.includes(name)),
+    );
     expect(kidFriendly.length).toBeGreaterThanOrEqual(MIN_SUGGESTED);
   });
 

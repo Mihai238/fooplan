@@ -53,6 +53,48 @@ const FAMILY_RECIPES = [
   'Chicken and vegetable skewers with rice',
   'Pasta with broccoli and parmesan',
 ];
+const ADDED_RECIPES = [
+  'Chicken fried rice',
+  'Beef and broccoli stir-fry with rice',
+  'Pork and bell pepper stir-fry with rice',
+  'Salmon teriyaki with rice and broccoli',
+  'Garlic prawns with rice',
+  'Chicken satay with rice',
+  'Spinach rice with feta',
+  'Coconut prawn curry with rice',
+  'Potato and cauliflower curry with rice',
+  'Tagliatelle alfredo with chicken',
+  'Chicken chow mein',
+  'Chicken paprikash with egg noodles',
+  'Chicken parmigiana with spaghetti',
+  'Penne with Italian sausage and tomato sauce',
+  'Tortellini with ham and peas',
+  'Spaghetti puttanesca',
+  'Tagliatelle with smoked salmon and dill',
+  'Pasta alla norma',
+  'Pasta salad with mozzarella and cherry tomatoes',
+  'Spätzle with creamy mushroom sauce',
+  'Pork chops with mashed potatoes and apple sauce',
+  'Fish cakes with peas',
+  'Frankfurters with potato salad',
+  'Fried potatoes with bacon and fried eggs',
+  'Pan-fried cod with potatoes and spinach',
+  'Chicken thighs with roast potatoes and rosemary',
+  'Currywurst with fries',
+  'Trout with potatoes and parsley butter',
+  'Tuna melts',
+  'Smoked salmon bagels',
+  'Steak sandwiches with caramelised onions',
+  'Croque monsieur',
+  'Chicken gyros with pita and tzatziki',
+  'BLT sandwiches',
+  'Lamb koftas with pita and tzatziki',
+  'Beef tacos',
+  'White bean stew with chorizo and bread',
+  'Baked cod with tomatoes, olives and bread',
+  'Savoury pancakes with ham and cheese',
+  'Salmon with couscous and roasted vegetables',
+];
 
 describe('PlanStore', () => {
   let today: string;
@@ -70,7 +112,7 @@ describe('PlanStore', () => {
     expectFreshPlan(store.plan(), '2026-10-24');
   });
 
-  it('suggests three different recipes for each of the 10 meals of a new 5-day plan, 30 different ones from the 44 recipes, leaving 14 unshown', () => {
+  it('suggests three different recipes for each of the 10 meals of a new 5-day plan, 30 different ones from the 84 recipes, leaving 54 unshown', () => {
     const plan = store.plan();
     expect(plan.days, 'days').toHaveLength(5);
     for (const planDay of plan.days) {
@@ -85,16 +127,16 @@ describe('PlanStore', () => {
     const suggestions = suggestionsOf(plan);
     expect(suggestions, 'suggestions').toHaveLength(30);
     expect(new Set(suggestions).size, 'different recipes suggested').toBe(30);
-    expect(NAMES, 'recipes').toHaveLength(44);
+    expect(NAMES, 'recipes').toHaveLength(84);
     expect(suggestions.filter((name) => !NAMES.includes(name))).toEqual([]);
-    expect(NAMES.filter((name) => !suggestions.includes(name))).toHaveLength(14);
+    expect(NAMES.filter((name) => !suggestions.includes(name))).toHaveLength(54);
   });
 
   it('suggests no recipe whose name contains "soup" in a new 5-day plan', () => {
     expect(suggestionsOf(store.plan()).filter((name) => /soup/i.test(name))).toEqual([]);
   });
 
-  it('suggests 30 different recipes for the 10 meals of a new 5-day plan, leaving 14 of the 44 unshown, whatever the draw', async () => {
+  it('suggests 30 different recipes for the 10 meals of a new 5-day plan, leaving 54 of the 84 unshown, whatever the draw', async () => {
     for (let draw = 1; draw <= 10; draw++) {
       localStorage.clear();
       seed = draw * 7;
@@ -104,7 +146,7 @@ describe('PlanStore', () => {
       expect(
         NAMES.filter((name) => !suggestions.includes(name)),
         `draw ${draw}: unshown`,
-      ).toHaveLength(14);
+      ).toHaveLength(54);
     }
   });
 
@@ -192,14 +234,14 @@ describe('PlanStore', () => {
     }
   });
 
-  it('brings only recipes not shown yet on the first four "Other suggestions", and the last 2 of the 14 a new 5-day plan does not show with the first suggestion the meal started with on the fifth', () => {
+  it('brings only recipes not shown yet on the first 18 "Other suggestions", all 54 a new 5-day plan does not show, and only recipes shown before, the three the meal started with, on the 19th', () => {
     const plan = store.plan();
     const notShown = NAMES.filter((name) => !suggestionsOf(plan).includes(name));
-    expect(notShown, 'recipes not shown').toHaveLength(14);
+    expect(notShown, 'recipes not shown').toHaveLength(54);
     const before = plan.days[0].lunch.suggestions;
 
     const brought: string[] = [];
-    for (let click = 1; click <= 4; click++) {
+    for (let click = 1; click <= 18; click++) {
       store.otherSuggestions(LUNCH);
       const suggestions = store.plan().days[0].lunch.suggestions;
       expect(new Set(suggestions).size, `click ${click}: ${suggestions.join(', ')}`).toBe(3);
@@ -210,17 +252,24 @@ describe('PlanStore', () => {
       brought.push(...suggestions);
     }
 
+    expect(
+      notShown.filter((name) => !brought.includes(name)),
+      'not shown after 18 clicks',
+    ).toEqual([]);
+    const shownBefore = store.plan().shown;
     store.otherSuggestions(LUNCH);
-    const fifth = store.plan().days[0].lunch.suggestions;
-    const left = notShown.filter((name) => !brought.includes(name));
-    expect(left, 'recipes not shown after four clicks').toHaveLength(2);
-    expect([...fifth].sort()).toEqual([...left, before[0]].sort());
+    const nineteenth = store.plan().days[0].lunch.suggestions;
+    expect(
+      nineteenth.filter((name) => !shownBefore.includes(name)),
+      'not shown before',
+    ).toEqual([]);
+    expect([...nineteenth].sort()).toEqual([...before].sort());
   });
 
-  it('suggests all 30 recipes still suggested, the own recipe "Grandma\'s Soup" among them, in a new 5-day plan of the 44 recipes and "Grandma\'s Soup" with the 5 easy ones and the 10 family ones taken out', async () => {
+  it('suggests all 30 recipes still suggested, the own recipe "Grandma\'s Soup" among them, in a new 5-day plan of the 84 recipes and "Grandma\'s Soup" with the 5 easy ones, the 10 family ones and the 40 of #58 taken out', async () => {
     localStorage.clear();
     storeOwnRecipes(ownRecipe("Grandma's Soup"));
-    const takenOut = [...EASY_RECIPES, ...FAMILY_RECIPES];
+    const takenOut = [...EASY_RECIPES, ...FAMILY_RECIPES, ...ADDED_RECIPES];
     localStorage.setItem(REMOVED_KEY, JSON.stringify(takenOut));
     store = await reload();
     expect(store.removed(), 'taken out').toEqual(takenOut);
@@ -298,7 +347,7 @@ describe('PlanStore', () => {
     store = await reload();
     expect(store.plan(), 'saved plan not loaded').toEqual(saved);
 
-    // 38 of the 44 recipes start unshown, enough for 3 new ones on each of the 7 clicks
+    // 78 of the 84 recipes start unshown, enough for 3 new ones on each of the 7 clicks
     clickOtherSuggestions(1, 3);
     const before = store.plan();
     store = await reload();
@@ -528,7 +577,7 @@ describe('PlanStore', () => {
       // A kid-friendly plan stops removals at 15 kid-friendly recipes
       localStorage.clear();
       store = await reload();
-      leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+      leaveSuggested(store, 27, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
       const before = store.plan();
       for (const settings of [
         { days: 3, people: 2, kidFriendly: true },
@@ -570,7 +619,7 @@ describe('PlanStore', () => {
         expect(store.plan().days).toHaveLength(5);
         expect(store.plan().people).toBe(100);
 
-        leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 15), ...NOT_KID_FRIENDLY);
+        leaveSuggested(store, 28, ...KID_FRIENDLY.slice(0, 15), ...NOT_KID_FRIENDLY);
         store.newPlan({ days: 2, people: 2, kidFriendly: true });
         expect(store.plan().days).toHaveLength(2);
         expect(store.plan().kidFriendly).toBe(true);
@@ -581,7 +630,7 @@ describe('PlanStore', () => {
         expect(store.newPlan({ ...DEFAULT_SETTINGS, days: 3 })).toBe(true);
         expect(store.newPlan({ ...DEFAULT_SETTINGS, days: 6 })).toBe(false);
         expect(store.newPlan({ ...DEFAULT_SETTINGS, people: 0 })).toBe(false);
-        leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+        leaveSuggested(store, 27, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
         expect(store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true })).toBe(false);
         expect(store.newPlan(DEFAULT_SETTINGS)).toBe(true);
       });
@@ -1062,7 +1111,7 @@ describe('PlanStore', () => {
   });
 
   describe('kid-friendly', () => {
-    it('starts a kid-friendly plan with newPlan, suggesting none of the 11 recipes that are not kid-friendly, saves it and keeps it after a reload', async () => {
+    it('starts a kid-friendly plan with newPlan, suggesting none of the 13 recipes that are not kid-friendly, saves it and keeps it after a reload', async () => {
       expect(store.plan().kidFriendly, 'new plan').toBe(false);
       expect(
         suggestionsOf(store.plan()).filter((name) => NOT_KID_FRIENDLY.includes(name)).length,
@@ -1109,7 +1158,7 @@ describe('PlanStore', () => {
 
     it('lets recipes be removed with kid-friendly on while 16 kid-friendly recipes are suggested, none once 15 are left, not even one that is not kid-friendly, and again for a new plan that is not kid-friendly', () => {
       const sixteen = KID_FRIENDLY.slice(0, 16);
-      leaveSuggested(store, 27, ...sixteen, ...NOT_KID_FRIENDLY);
+      leaveSuggested(store, 29, ...sixteen, ...NOT_KID_FRIENDLY);
       store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
       expect(store.canRemove(), '16 kid-friendly suggested').toBe(true);
 
@@ -1202,7 +1251,7 @@ describe('PlanStore', () => {
     it('turns kid-friendly off once the own recipe "Plain Rice", one of exactly 15 kid-friendly recipes suggested, is edited to use chili flakes with kid-friendly on and 9 meals picked, so "Other suggestions" still gives the open meal 3 suggestions and the saved plan loads again', async () => {
       storeOwnRecipes(PLAIN_RICE);
       store = await reload();
-      leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 14), PLAIN_RICE.name, ...NOT_KID_FRIENDLY);
+      leaveSuggested(store, 28, ...KID_FRIENDLY.slice(0, 14), PLAIN_RICE.name, ...NOT_KID_FRIENDLY);
       store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
       expect(store.plan().kidFriendly, 'not kid-friendly').toBe(true);
       for (const meal of mealRefs(store.plan()).slice(0, -1)) {
@@ -1279,7 +1328,7 @@ describe('PlanStore', () => {
     });
 
     it('can be kid-friendly with 15 kid-friendly recipes suggested and not with 14, whatever the number of other recipes suggested', () => {
-      leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+      leaveSuggested(store, 27, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
       expect(store.canBeKidFriendly(), '14 kid-friendly suggested').toBe(false);
 
       store.restoreRecipe(KID_FRIENDLY[14]);
@@ -1380,7 +1429,7 @@ describe('PlanStore', () => {
         store = await reload();
         leaveSuggested(
           store,
-          26,
+          28,
           ...KID_FRIENDLY.slice(0, 14),
           PLAIN_RICE.name,
           ...NOT_KID_FRIENDLY,
@@ -1579,13 +1628,14 @@ describe('PlanStore', () => {
       expect(saved()).toEqual(before);
     });
 
-    it('takes out the 5 easy recipes of #29 like any other, and 24 more of the 44 recipes but not a 30th, as 15 stay suggested', () => {
+    it('takes out the 5 easy recipes of #29 like any other, and 64 more of the 84 recipes but not a 70th, as 15 stay suggested', () => {
       EASY_RECIPES.forEach((name) => store.removeRecipe(name));
       expect(store.removed(), 'easy recipes not removed').toEqual(EASY_RECIPES);
       expect(suggestionsOf(store.plan()).filter((name) => EASY_RECIPES.includes(name))).toEqual([]);
 
-      NAMES.slice(0, 25).forEach((name) => store.removeRecipe(name));
-      expect(store.removed()).toEqual([...EASY_RECIPES, ...NAMES.slice(0, 24)]);
+      const others = NAMES.filter((name) => !EASY_RECIPES.includes(name));
+      others.slice(0, 65).forEach((name) => store.removeRecipe(name));
+      expect(store.removed()).toEqual([...EASY_RECIPES, ...others.slice(0, 64)]);
       expect(store.canRemove()).toBe(false);
     });
 
@@ -1998,7 +2048,7 @@ describe('PlanStore', () => {
         expect(saved.map((recipe) => recipe.name)).toEqual(['Quick Dal', 'Plain Rice']);
       });
 
-      it('reports a rejected write to SaveStatus as failed, and the next write that resolves as saved (#45 7c)', async () => {
+      it('reports a rejected write to SaveStatus as failed, and the next write that resolves as saved (#45 7c, changed by #58)', async () => {
         const backend = new RejectingBackend();
         const loaded = unloaded({ provide: StorageBackend, useValue: backend });
         await loaded.load();
@@ -2009,7 +2059,8 @@ describe('PlanStore', () => {
         expect(status.failed(), 'after the rejected write').toBe(true);
 
         vi.spyOn(backend, 'write').mockResolvedValue();
-        loaded.removeRecipe('Bean burritos');
+        // A suggested recipe, so its replacement writes the plan again
+        loaded.removeRecipe(loaded.plan().days[1].lunch.suggestions[0]);
         await new Promise((resolve) => setTimeout(resolve));
         expect(status.failed(), 'after the resolved write').toBe(false);
       });
@@ -2345,6 +2396,110 @@ describe('PlanStore', () => {
     function cookedWrites(write: { mock: { calls: [string, unknown][] } }): unknown[] {
       return write.mock.calls.filter(([key]) => key === COOKED_KEY).map(([, value]) => value);
     }
+  });
+
+  describe('forty more recipes (#58)', () => {
+    it('suggests 30 different kid-friendly recipes, none of the 13 that are not, in a new kid-friendly 5-day plan of the 84 recipes, and lets "×" take out its suggestions until 15 of the 71 kid-friendly recipes are left, but not a 57th (#58 11)', () => {
+      expect(KID_FRIENDLY, 'kid-friendly recipes').toHaveLength(71);
+      store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
+      const suggestions = suggestionsOf(store.plan());
+      expect(new Set(suggestions).size, 'different recipes suggested').toBe(30);
+      expect(suggestions.filter((name) => !KID_FRIENDLY.includes(name))).toEqual([]);
+
+      for (let click = 1; click <= 56; click++) {
+        const name = store.plan().days[0].lunch.suggestions[0];
+        store.removeRecipe(name);
+        expect(store.removed(), `"×" ${click} on "${name}"`).toHaveLength(click);
+        expectKidFriendly(`after "×" ${click}`);
+      }
+      expect(KID_FRIENDLY.filter((name) => !store.removed().includes(name))).toHaveLength(15);
+      expect(store.canRemove(), '15 kid-friendly suggested').toBe(false);
+      const before = store.removed();
+      store.removeRecipe(store.plan().days[0].lunch.suggestions[0]);
+      expect(store.removed(), 'the 57th').toEqual(before);
+    });
+
+    it('loads a 1-day plan saved before #58, whose shown list holds all 44 recipes of before, unchanged, and draws three of the 40 recipes of #58 on its next "Other suggestions" (#58 12)', async () => {
+      const before = NAMES.filter((name) => !ADDED_RECIPES.includes(name));
+      expect(before, 'recipes of before #58').toHaveLength(44);
+      const saved: Plan = {
+        ...planOf([
+          day(
+            '2026-10-24',
+            open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
+            picked('Potato goulash'),
+          ),
+        ]),
+        shown: before,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      store = await reload();
+      expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+
+      store.otherSuggestions(LUNCH);
+      const suggestions = store.plan().days[0].lunch.suggestions;
+      expect(suggestions, 'suggestions').toHaveLength(3);
+      expect(suggestions.filter((name) => !ADDED_RECIPES.includes(name))).toEqual([]);
+    });
+
+    describe('edge cases', () => {
+      it('never suggests "Spaghetti puttanesca", "Beef tacos" or another of the 13 recipes that are not kid-friendly in a new kid-friendly 5-day plan of any draw, not even once "Other suggestions" has shown all 71 kid-friendly recipes (#58 11a)', async () => {
+        expect(KID_FRIENDLY, 'kid-friendly recipes').toHaveLength(71);
+        for (let draw = 1; draw <= 5; draw++) {
+          localStorage.clear();
+          seed = draw * 7;
+          store = await reload();
+          store.newPlan({ ...DEFAULT_SETTINGS, kidFriendly: true });
+          expectKidFriendly(`draw ${draw}: new plan`);
+          for (let click = 1; click <= 14; click++) {
+            store.otherSuggestions(LUNCH);
+            expectKidFriendly(`draw ${draw}: "Other suggestions" ${click}`);
+          }
+          expect([...store.plan().shown].sort(), `draw ${draw}: shown`).toEqual(
+            [...KID_FRIENDLY].sort(),
+          );
+        }
+      });
+
+      it('draws one of the 40 recipes of #58 within the first 13 "Other suggestions", the first by the 3rd, for a plan saved before #58 that showed 6 of the 44 recipes, each click bringing recipes not shown yet (#58 12a)', async () => {
+        const names = NAMES.filter((name) => !ADDED_RECIPES.includes(name));
+        const saved: Plan = {
+          days: [day('2026-10-24', open(...names.slice(0, 3)), open(...names.slice(3, 6)))],
+          people: 2,
+          accepted: false,
+          ticked: [],
+          added: [],
+          shown: names.slice(0, 6),
+          kidFriendly: false,
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+        store = await reload();
+        expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+
+        let firstWithAdded: number | undefined;
+        for (let click = 1; click <= 13; click++) {
+          const seen = store.plan().shown;
+          store.otherSuggestions(LUNCH);
+          const suggestions = store.plan().days[0].lunch.suggestions;
+          expect(
+            suggestions.filter((name) => seen.includes(name)),
+            `click ${click}: ${suggestions.join(', ')}`,
+          ).toEqual([]);
+          if (
+            firstWithAdded === undefined &&
+            suggestions.some((name) => ADDED_RECIPES.includes(name))
+          ) {
+            firstWithAdded = click;
+          }
+        }
+        // 13 clicks of 3 new recipes each can't all come from the 38 the plan hadn't shown, so only an
+        // early first one proves the 40 are drawn like the others rather than as a last resort
+        expect(
+          firstWithAdded ?? Infinity,
+          'first click bringing a recipe of #58',
+        ).toBeLessThanOrEqual(3);
+      });
+    });
   });
 
   function createStore(): Promise<PlanStore> {
