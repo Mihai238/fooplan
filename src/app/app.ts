@@ -42,6 +42,7 @@ export const IMPORT_PLAN_STORE = new InjectionToken<() => Promise<Type<PlanStore
 );
 
 @Component({
+  host: { '(document:pointerdown)': 'closeOnPressOutside($event)' },
   imports: [RouterLink, RouterLinkActive, RouterOutlet],
   selector: 'app-root',
   styleUrl: './app.css',
@@ -55,7 +56,14 @@ export class App {
   protected readonly language = inject(LanguageStore);
   protected readonly auth = inject(AuthStore);
   protected readonly saves = inject(SaveStatus);
-  private readonly signInLink = viewChild<ElementRef<HTMLAnchorElement>>('signInLink');
+  private readonly accountButton =
+    viewChild.required<ElementRef<HTMLButtonElement>>('accountButton');
+  private readonly accountMenu = viewChild<ElementRef<HTMLElement>>('accountMenu');
+  protected readonly menuOpen = signal(false);
+  protected readonly languages = [
+    { language: 'en', label: 'language.en' },
+    { language: 'de', label: 'language.de' },
+  ] as const;
   // A recipe page and the form to add one belong to Recipes, so the link stays current there, but
   // they aren't that page. RouterLinkActive can't do this: it would take the class and aria-current
   // off again on /add-recipe, which isn't under /recipes
@@ -119,17 +127,98 @@ export class App {
     }
   }
 
+  protected toggleMenu(): void {
+    if (this.menuOpen()) {
+      this.closeMenu();
+    } else {
+      this.openMenu('first');
+    }
+  }
+
+  protected openMenu(item: 'first' | 'last'): void {
+    this.menuOpen.set(true);
+    const at = item === 'first' ? 0 : -1;
+    afterNextRender(() => this.menuItems().at(at)?.focus(), { injector: this.injector });
+  }
+
+  protected keyInMenu(event: KeyboardEvent): void {
+    const items = this.menuItems();
+    const index = items.indexOf(document.activeElement as HTMLElement);
+    let to: number;
+    switch (event.key) {
+      case 'ArrowDown':
+        to = index + 1;
+        break;
+      // From the menu itself, as a click on the email line focuses it, this goes to the last item
+      case 'ArrowUp':
+        to = index === -1 ? -1 : index - 1;
+        break;
+      case 'Home':
+        to = 0;
+        break;
+      case 'End':
+        to = -1;
+        break;
+      // Tab isn't prevented: the browser moves on from the button, to the page or with Shift back to
+      // the nav, as the items are out of the tab order
+      case 'Escape':
+      case 'Tab':
+        this.closeMenu();
+        return;
+      default:
+        return;
+    }
+    event.preventDefault();
+    items.at(to % items.length)?.focus();
+  }
+
+  // Focus lost to nothing keeps the menu open: Safari doesn't focus a pressed button, so a press on
+  // the account button blurs the item first and its click would open the menu again, and a window
+  // losing the focus needn't close it. A press outside closes it instead
+  protected closeOnFocusOut(event: FocusEvent): void {
+    const to = event.relatedTarget as Node | null;
+    if (to && !this.inAccountMenu(to)) {
+      this.menuOpen.set(false);
+    }
+  }
+
+  // A press on the button is left to its click, which toggles the menu
+  protected closeOnPressOutside(event: PointerEvent): void {
+    if (!this.inAccountMenu(event.target as Node)) {
+      this.menuOpen.set(false);
+    }
+  }
+
   protected showLanguage(language: Language): void {
     if (language !== this.language.language()) {
       this.language.set(language);
     }
+    this.closeMenu();
   }
 
-  // "Sign out" goes with the render, which would drop the focus to <body>; "Sign in" takes its place
-  protected async signOut(): Promise<void> {
-    if (await this.auth.signOut()) {
-      afterNextRender(() => this.signInLink()?.nativeElement.focus(), { injector: this.injector });
-    }
+  // The change of user takes the app to the Plan page; a failed sign-out leaves it as it was
+  protected signOut(): void {
+    this.closeMenu();
+    void this.auth.signOut();
+  }
+
+  // The focused item goes with the render, which would drop the focus to <body>
+  protected closeMenu(): void {
+    this.accountButton().nativeElement.focus();
+    this.menuOpen.set(false);
+  }
+
+  private inAccountMenu(target: Node): boolean {
+    return (
+      this.accountButton().nativeElement.contains(target) ||
+      (this.accountMenu()?.nativeElement.contains(target) ?? false)
+    );
+  }
+
+  private menuItems(): HTMLElement[] {
+    return Array.from(
+      this.accountMenu()?.nativeElement.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [],
+    );
   }
 
   // The link lands on the base URL, where the client signs in from it; the user goes on planning.

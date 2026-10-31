@@ -231,8 +231,7 @@ describe('App', () => {
         expect(
           Array.from(compiled.querySelectorAll('header nav a')).map((a) => a.textContent?.trim()),
         ).toEqual(['Plan', 'Grocery list', 'Recipes']);
-        expect(compiled.querySelector('header [aria-label="Language"]')).not.toBeNull();
-        expect(compiled.querySelector('header [aria-label="Account"]')).not.toBeNull();
+        expect(compiled.querySelector('header button.account-button')).not.toBeNull();
         backend.release();
         await fixture.whenStable();
       });
@@ -269,113 +268,6 @@ describe('App', () => {
     }
   });
 
-  describe('language switch (#35)', () => {
-    afterEach(() => {
-      vi.restoreAllMocks();
-      document.documentElement.lang = 'en';
-    });
-
-    it('puts a group named "Language" right after the nav, last in the header, with the buttons "English" (text "EN") and "Deutsch" (text "DE"), in this order; tabs through "Fooplan", "Plan", "Grocery list", "Recipes", "EN", "DE" and then the page; and writes nothing to localStorage when the user clicks the pressed "EN"', async () => {
-      const fixture = TestBed.createComponent(App);
-      await TestBed.inject(Router).navigateByUrl('/plan');
-      await fixture.whenStable();
-      const compiled = fixture.nativeElement as HTMLElement;
-      const group = languageGroup(compiled);
-      const header = compiled.querySelector('header')!;
-      expect(group.getAttribute('aria-label')).toBe('Language');
-      expect(group.previousElementSibling, 'before the group').toBe(header.querySelector('nav'));
-      expect(header.lastElementChild, 'last in the header').toBe(group);
-      expect(
-        Array.from(group.children).map((button) => [
-          button.tagName,
-          button.getAttribute('type'),
-          button.getAttribute('aria-label'),
-          button.textContent?.trim(),
-          button.getAttribute('aria-pressed'),
-        ]),
-      ).toEqual([
-        ['BUTTON', 'button', 'English', 'EN', 'true'],
-        ['BUTTON', 'button', 'Deutsch', 'DE', 'false'],
-      ]);
-
-      const tabbable = Array.from(compiled.querySelectorAll<HTMLElement>(TABBABLE)).filter(
-        (candidate) => !candidate.closest('dialog'),
-      );
-      expect(tabbable.slice(0, 6).map((candidate) => candidate.textContent?.trim())).toEqual([
-        'Fooplan',
-        'Plan',
-        'Grocery list',
-        'Recipes',
-        'EN',
-        'DE',
-      ]);
-      expect(tabbable[6]?.closest('main'), 'the page after "DE"').not.toBeNull();
-
-      const setItem = vi.spyOn(Storage.prototype, 'setItem');
-      (group.children[0] as HTMLButtonElement).click();
-      await fixture.whenStable();
-      expect(setItem.mock.calls.filter(([key]) => key === LANGUAGE_KEY)).toEqual([]);
-      expect(localStorage.getItem(LANGUAGE_KEY)).toBeNull();
-      expect(group.children[0].getAttribute('aria-pressed'), '"EN" pressed').toBe('true');
-    });
-
-    describe('edge cases', () => {
-      it('names the group "Sprache" and the links "Plan", "Einkaufsliste" and "Rezepte" in German, keeping the buttons "English" ("EN") and "Deutsch" ("DE"), with "DE" pressed', async () => {
-        localStorage.setItem(LANGUAGE_KEY, 'de');
-        const fixture = TestBed.createComponent(App);
-        await fixture.whenStable();
-        const compiled = fixture.nativeElement as HTMLElement;
-        const group = languageGroup(compiled);
-        expect(group.getAttribute('aria-label')).toBe('Sprache');
-        expect(
-          Array.from(compiled.querySelectorAll('nav a')).map((a) => a.textContent?.trim()),
-        ).toEqual(['Plan', 'Einkaufsliste', 'Rezepte']);
-        expect(
-          Array.from(group.children).map((button) => [
-            button.getAttribute('aria-label'),
-            button.textContent?.trim(),
-            button.getAttribute('aria-pressed'),
-          ]),
-        ).toEqual([
-          ['English', 'EN', 'false'],
-          ['Deutsch', 'DE', 'true'],
-        ]);
-      });
-
-      it('writes nothing to localStorage when the user clicks the pressed "DE" in German, and saves en with "EN" pressed and the links in English when the user clicks "EN"', async () => {
-        localStorage.setItem(LANGUAGE_KEY, 'de');
-        const fixture = TestBed.createComponent(App);
-        await fixture.whenStable();
-        const compiled = fixture.nativeElement as HTMLElement;
-        const group = languageGroup(compiled);
-        const [english, deutsch] = Array.from(group.querySelectorAll('button'));
-        const setItem = vi.spyOn(Storage.prototype, 'setItem');
-
-        deutsch.click();
-        await fixture.whenStable();
-        expect(setItem.mock.calls.filter(([key]) => key === LANGUAGE_KEY)).toEqual([]);
-        expect(deutsch.getAttribute('aria-pressed'), '"DE" pressed').toBe('true');
-
-        english.click();
-        await fixture.whenStable();
-        expect(setItem.mock.calls.filter(([key]) => key === LANGUAGE_KEY)).toEqual([
-          [LANGUAGE_KEY, 'en'],
-        ]);
-        expect(english.getAttribute('aria-pressed'), '"EN" pressed').toBe('true');
-        expect(deutsch.getAttribute('aria-pressed'), '"DE" pressed').toBe('false');
-        expect(
-          Array.from(compiled.querySelectorAll('nav a')).map((a) => a.textContent?.trim()),
-        ).toEqual(['Plan', 'Grocery list', 'Recipes']);
-      });
-    });
-
-    function languageGroup(compiled: HTMLElement): HTMLElement {
-      const found = compiled.querySelector<HTMLElement>('header div.language[role="group"]');
-      expect(found, 'no div.language group in the header').not.toBeNull();
-      return found!;
-    }
-  });
-
   describe('account (#43)', () => {
     let fixture: ComponentFixture<App>;
     let compiled: HTMLElement;
@@ -386,62 +278,17 @@ describe('App', () => {
       document.documentElement.lang = 'en';
     });
 
-    it('ends the header with the group "Account", right after "Language", holding only the link "Sign in" to /sign-in without a session, "Konto" and "Anmelden" in German (#43 1)', async () => {
-      fake.load(null);
+    it('shows only the language in the account menu until the client has returned the saved session, and then "Sign in" (#43 2)', async () => {
       await open('/plan');
-      const group = accountGroup();
-      const header = compiled.querySelector('header')!;
-      expect(header.lastElementChild, 'last in the header').toBe(group);
-      expect(group.previousElementSibling?.getAttribute('aria-label'), 'before the group').toBe(
-        'Language',
-      );
-      expect(
-        Array.from(group.children).map((child) => [
-          child.tagName,
-          textOf(child),
-          child.getAttribute('href'),
-        ]),
-      ).toEqual([['A', 'Sign in', '/sign-in']]);
-
-      TestBed.inject(LanguageStore).set('de');
-      await stable();
-      expect(group.getAttribute('aria-label'), 'German group').toBe('Konto');
-      expect(textOf(group), 'German link').toBe('Anmelden');
-    });
-
-    it('renders no "Account" group until the client has returned the saved session, and then the group with "Sign in" (#43 2)', async () => {
-      await open('/plan');
-      expect(findAccountGroup(), 'before the session is read').toBeNull();
-      expect(textOf(compiled.querySelector('header')!), 'before').not.toContain('Sign in');
+      expect(linesOf(await openMenu()), 'before the session is read').toEqual([
+        'English',
+        'Deutsch',
+      ]);
+      await click(accountButton());
 
       fake.load(null);
       await stable();
-      expect(textOf(accountGroup())).toBe('Sign in');
-    });
-
-    it('shows the email "ana@example.com" and the button "Sign out", and no "Sign in", with a session (#43 7)', async () => {
-      fake.load(sessionFor('ana@example.com'));
-      await open('/recipes');
-      const group = accountGroup();
-      expect(childTexts(group)).toEqual(['ana@example.com', 'Sign out']);
-      expect(group.querySelector('a'), 'a link in the group').toBeNull();
-      const button = group.querySelector('button');
-      expect(button?.type).toBe('button');
-      expect(textOf(button!)).toBe('Sign out');
-      expect(textOf(button!.previousElementSibling!), 'before "Sign out"').toBe('ana@example.com');
-    });
-
-    it('goes to the Plan page when "Sign out" is clicked on the Recipes page, and shows "Sign in" with the focus (#43 8, changed by #45 5)', async () => {
-      fake.load(sessionFor('ana@example.com'));
-      await open('/recipes');
-
-      await click(buttonIn(accountGroup(), 'Sign out'));
-      expect(fake.signOuts.length, 'signed out').toBe(1);
-      expect(TestBed.inject(Router).url).toBe('/plan');
-      expect(compiled.querySelector('main h1')?.textContent?.trim()).toBe('Plan');
-      const link = accountGroup().querySelector('a');
-      expect(textOf(accountGroup())).toBe('Sign in');
-      expect(document.activeElement, 'focus after "Sign out"').toBe(link);
+      expect(linesOf(await openMenu())).toEqual(['English', 'Deutsch', 'Sign in']);
     });
 
     it('goes to the Plan page, replacing the URL, once the client has signed in from the link the app opened with and the router has followed the cleared URL, when the session comes first (#43 9)', async () => {
@@ -455,7 +302,12 @@ describe('App', () => {
       await clearLink();
       expect(navigate).toHaveBeenCalledExactlyOnceWith('/plan', { replaceUrl: true });
       expect(TestBed.inject(Router).url).toBe('/plan');
-      expect(childTexts(accountGroup())).toEqual(['ana@example.com', 'Sign out']);
+      expect(linesOf(await openMenu())).toEqual([
+        'ana@example.com',
+        'English',
+        'Deutsch',
+        'Sign out',
+      ]);
     });
 
     it('goes to the Plan page when the router has followed the cleared URL with a navigation of its own before the session comes (#43 9b)', async () => {
@@ -469,34 +321,21 @@ describe('App', () => {
     });
 
     describe('edge cases', () => {
-      it('tabs through "Fooplan", "Plan", "Grocery list", "Recipes", "EN", "DE", "Sign in" and then the page (#43 1a)', async () => {
-        fake.load(null);
+      it('shows neither "Sign in" nor the email in the account menu until a saved session is returned, and then the email and "Sign out" (#43 2a)', async () => {
         await open('/plan');
-        const tabbable = Array.from(compiled.querySelectorAll<HTMLElement>(TABBABLE)).filter(
-          (candidate) => !candidate.closest('dialog'),
-        );
-        expect(tabbable.slice(0, 7).map((candidate) => textOf(candidate))).toEqual([
-          'Fooplan',
-          'Plan',
-          'Grocery list',
-          'Recipes',
-          'EN',
-          'DE',
-          'Sign in',
-        ]);
-        expect(tabbable[7]?.closest('main'), 'the page after "Sign in"').not.toBeNull();
-      });
-
-      it('shows neither "Sign in" nor the email until a saved session is returned, and then the email and "Sign out" (#43 2a)', async () => {
-        await open('/plan');
-        const header = compiled.querySelector('header')!;
-        expect(findAccountGroup(), 'before the session is read').toBeNull();
-        expect(textOf(header)).not.toContain('Sign in');
-        expect(textOf(header)).not.toContain('ana@example.com');
+        const menu = await openMenu();
+        expect(textOf(menu)).not.toContain('Sign in');
+        expect(textOf(menu)).not.toContain('ana@example.com');
+        await click(accountButton());
 
         fake.load(sessionFor('ana@example.com'));
         await stable();
-        expect(childTexts(accountGroup())).toEqual(['ana@example.com', 'Sign out']);
+        expect(linesOf(await openMenu())).toEqual([
+          'ana@example.com',
+          'English',
+          'Deutsch',
+          'Sign out',
+        ]);
       });
 
       it('stays on the page of a reload while signed in, and on the home page when the link brings no session (#43 9a)', async () => {
@@ -524,23 +363,472 @@ describe('App', () => {
         expect(navigate).not.toHaveBeenCalled();
         expect(TestBed.inject(Router).url).toBe('/');
       });
+    });
 
-      it('names the group "Konto" and the button "Abmelden" in German with a session (#43 7a)', async () => {
-        localStorage.setItem(LANGUAGE_KEY, 'de');
-        fake.load(sessionFor('ana@example.com'));
+    describe('account menu (#51)', () => {
+      it('ends the header with the button "Account", collapsed, controlling #account-menu and holding only a hidden icon, shows neither the language nor the account in the header, tabs through "Fooplan", "Plan", "Grocery list", "Recipes", the account button and then the page, and names the button "Konto" in German (#51 1)', async () => {
+        fake.load(null);
         await open('/plan');
-        const group = accountGroup('Konto');
-        expect(childTexts(group)).toEqual(['ana@example.com', 'Abmelden']);
+        const header = compiled.querySelector('header')!;
+        const button = accountButton();
+        expect(header.lastElementChild, 'last in the header').toBe(button);
+        expect([
+          button.type,
+          nameOf(button),
+          button.getAttribute('aria-haspopup'),
+          button.getAttribute('aria-expanded'),
+          button.getAttribute('aria-controls'),
+        ]).toEqual(['button', 'Account', 'menu', 'false', 'account-menu']);
+        expect(button.querySelector('svg')?.getAttribute('aria-hidden'), 'icon').toBe('true');
+        expect(textOf(button), 'text in the button').toBe('');
+        expect(header.querySelector('[role="group"]'), 'a group in the header').toBeNull();
+        expect(textOf(header)).toBe('Fooplan Plan Grocery list Recipes');
+
+        const tabbable = Array.from(compiled.querySelectorAll<HTMLElement>(TABBABLE)).filter(
+          (candidate) => !candidate.closest('dialog'),
+        );
+        expect(tabbable.slice(0, 5).map(nameOf)).toEqual([
+          'Fooplan',
+          'Plan',
+          'Grocery list',
+          'Recipes',
+          'Account',
+        ]);
+        expect(tabbable[4], 'the account button').toBe(button);
+        expect(tabbable[5]?.closest('main'), 'the page after the account button').not.toBeNull();
+
+        TestBed.inject(LanguageStore).set('de');
+        await stable();
+        expect(nameOf(accountButton()), 'German').toBe('Konto');
       });
 
-      it('keeps the email and "Sign out" when signing out fails (#43 8a)', async () => {
+      it('opens #account-menu right after the button, named by it, with only the group "Language" of "English", checked and marked ✓, and "Deutsch" before the session is read, expanding the button and focusing "English" (#51 2)', async () => {
+        await open('/plan');
+        const button = accountButton();
+        await click(button);
+        const menu = shownMenu();
+        expect(menu.getAttribute('role')).toBe('menu');
+        expect(button.nextElementSibling, 'after the button').toBe(menu);
+        expect(
+          document.getElementById(menu.getAttribute('aria-labelledby') ?? ''),
+          'named by',
+        ).toBe(button);
+        expect(contentOf(menu)).toEqual([['DIV', 'group', 'Language']]);
+        expect(
+          itemsOf(menu).map((item) => [
+            item.tagName,
+            item.getAttribute('type'),
+            item.getAttribute('role'),
+            nameOf(item),
+            item.getAttribute('aria-checked'),
+          ]),
+        ).toEqual([
+          ['BUTTON', 'button', 'menuitemradio', 'English', 'true'],
+          ['BUTTON', 'button', 'menuitemradio', 'Deutsch', 'false'],
+        ]);
+        const [english, deutsch] = itemsOf(menu);
+        expect(
+          english.querySelector('[aria-hidden="true"]')?.textContent?.trim(),
+          '"English"',
+        ).toBe('✓');
+        expect(textOf(deutsch), '"Deutsch"').not.toContain('✓');
+        expect(button.getAttribute('aria-expanded')).toBe('true');
+        expect(document.activeElement, 'focus').toBe(english);
+      });
+
+      it('holds the language group, a separator and the link "Sign in" to /sign-in without a session, and the email line, a separator, the language group, a separator and the button "Sign out" with the session of "ana@example.com", with "Sprache", "Anmelden" and "Abmelden" in German (#51 3)', async () => {
+        fake.load(null);
+        await open('/plan');
+        let menu = await openMenu();
+        expect(contentOf(menu), 'no session').toEqual([
+          ['DIV', 'group', 'Language'],
+          ['DIV', 'separator', ''],
+          ['A', 'menuitem', 'Sign in'],
+        ]);
+        expect(itemIn(menu, 'Sign in').getAttribute('href')).toBe('/sign-in');
+        await click(accountButton());
+        TestBed.inject(LanguageStore).set('de');
+        await stable();
+        expect(contentOf(await openMenu()), 'no session, German').toEqual([
+          ['DIV', 'group', 'Sprache'],
+          ['DIV', 'separator', ''],
+          ['A', 'menuitem', 'Anmelden'],
+        ]);
+        await click(accountButton());
+
+        fake.emit('SIGNED_IN', sessionFor('ana@example.com'));
+        await stable();
+        expect(contentOf(await openMenu()), 'session, German').toEqual([
+          ['P', 'none', 'ana@example.com'],
+          ['DIV', 'separator', ''],
+          ['DIV', 'group', 'Sprache'],
+          ['DIV', 'separator', ''],
+          ['BUTTON', 'menuitem', 'Abmelden'],
+        ]);
+        await click(accountButton());
+        TestBed.inject(LanguageStore).set('en');
+        await stable();
+        menu = await openMenu();
+        expect(contentOf(menu), 'session').toEqual([
+          ['P', 'none', 'ana@example.com'],
+          ['DIV', 'separator', ''],
+          ['DIV', 'group', 'Language'],
+          ['DIV', 'separator', ''],
+          ['BUTTON', 'menuitem', 'Sign out'],
+        ]);
+        expect(menu.firstElementChild?.classList, 'email line').toContain('account-email');
+        expect(itemIn(menu, 'Sign out').getAttribute('type')).toBe('button');
+      });
+
+      it('moves the focus with ArrowDown from "English" to "Deutsch", "Sign in" and back to "English", with ArrowUp from "English" to "Sign in", and with Home and End to the first and last item, and opens the closed menu with ArrowUp on the button with the focus on "Sign in" (#51 4)', async () => {
+        fake.load(null);
+        await open('/plan');
+        await click(accountButton());
+        expect(focusedName(), 'opened').toBe('English');
+        expect(
+          await focusAfter(['ArrowDown', 'ArrowDown', 'ArrowDown', 'ArrowUp', 'Home', 'End']),
+        ).toEqual(['Deutsch', 'Sign in', 'English', 'Sign in', 'English', 'Sign in']);
+
+        await press('Escape');
+        expect(accountMenu(), 'closed').toBeNull();
+        await press('ArrowUp');
+        expect(accountMenu(), 'ArrowUp on the button').not.toBeNull();
+        expect(focusedName(), 'ArrowUp on the button').toBe('Sign in');
+      });
+
+      it('closes on Escape with the focus on the button, on a pointerdown on <main> and on the focus moving to the brand without moving the focus to the button, and on a click on the button with the focus staying on it (#51 5)', async () => {
+        fake.load(null);
+        await open('/plan');
+        const button = accountButton();
+
+        await click(button);
+        await press('Escape');
+        expect(accountMenu(), 'Escape').toBeNull();
+        expect(button.getAttribute('aria-expanded'), 'Escape').toBe('false');
+        expect(document.activeElement, 'Escape').toBe(button);
+
+        await click(button);
+        await pointerDown(compiled.querySelector('main')!);
+        expect(accountMenu(), 'pointerdown on <main>').toBeNull();
+        expect(button.getAttribute('aria-expanded'), 'pointerdown on <main>').toBe('false');
+        expect(document.activeElement, 'pointerdown on <main>').not.toBe(button);
+
+        await click(button);
+        const brand = compiled.querySelector<HTMLElement>('header a.brand')!;
+        brand.focus();
+        await stable();
+        expect(accountMenu(), 'focus on the brand').toBeNull();
+        expect(document.activeElement, 'focus on the brand').toBe(brand);
+
+        await click(button);
+        await click(button);
+        expect(accountMenu(), 'second click').toBeNull();
+        expect(button.getAttribute('aria-expanded'), 'second click').toBe('false');
+        expect(document.activeElement, 'second click').toBe(button);
+      });
+
+      it('switches to German when "Deutsch" is clicked, saving de, closing the menu and focusing the button, and writes nothing to localStorage but closes the menu on Enter on the checked "Deutsch" (#51 6)', async () => {
+        fake.load(null);
+        await open('/plan');
+        await click(accountButton());
+        await click(itemIn(shownMenu(), 'Deutsch'));
+        expect(navTexts()).toEqual(['Plan', 'Einkaufsliste', 'Rezepte']);
+        expect(localStorage.getItem(LANGUAGE_KEY)).toBe('de');
+        expect(accountMenu(), 'after "Deutsch"').toBeNull();
+        expect(document.activeElement, 'after "Deutsch"').toBe(accountButton());
+
+        await click(accountButton());
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+        itemIn(shownMenu(), 'Deutsch').focus();
+        await press('Enter');
+        expect(setItem.mock.calls.filter(([key]) => key === LANGUAGE_KEY)).toEqual([]);
+        expect(accountMenu(), 'after Enter on the checked "Deutsch"').toBeNull();
+        expect(document.activeElement, 'after Enter on the checked "Deutsch"').toBe(
+          accountButton(),
+        );
+        expect(navTexts(), 'still German').toEqual(['Plan', 'Einkaufsliste', 'Rezepte']);
+      });
+
+      it('keeps the session when signing out with "Sign out" fails, and signs out to the Plan page from the Recipes page once it succeeds, closing the menu and focusing the account button each time (#51 7)', async () => {
         fake.load(sessionFor('ana@example.com'));
         fake.signOutResult = () => Promise.resolve(SIGN_OUT_FAILED);
         await open('/recipes');
-        await click(buttonIn(accountGroup(), 'Sign out'));
-        expect(fake.signOuts.length, 'not signed out').toBe(1);
-        expect(childTexts(accountGroup())).toEqual(['ana@example.com', 'Sign out']);
+        await click(await signOutItem());
+        expect(fake.signOuts.length, 'failed').toBe(1);
+        expect(accountMenu(), 'failed').toBeNull();
+        expect(document.activeElement, 'failed').toBe(accountButton());
+        expect(TestBed.inject(Router).url, 'failed').toBe('/recipes');
+        expect(linesOf(await openMenu()), 'failed').toEqual([
+          'ana@example.com',
+          'English',
+          'Deutsch',
+          'Sign out',
+        ]);
+        await press('Escape');
+
+        fake.signOutResult = () => Promise.resolve({ error: null });
+        await click(await signOutItem());
+        expect(fake.signOuts.length, 'signed out').toBe(2);
+        expect(TestBed.inject(Router).url).toBe('/plan');
+        expect(compiled.querySelector('main h1')?.textContent?.trim()).toBe('Plan');
+        expect(accountMenu(), 'signed out').toBeNull();
+        expect(document.activeElement, 'signed out').toBe(accountButton());
       });
+
+      it('goes to /sign-in and closes the menu on Enter on "Sign in" (#51 8)', async () => {
+        fake.load(null);
+        await open('/plan');
+        await click(accountButton());
+        itemIn(shownMenu(), 'Sign in').focus();
+        await press('Enter');
+        expect(TestBed.inject(Router).url).toBe('/sign-in');
+        expect(accountMenu()).toBeNull();
+      });
+
+      it('closes the menu with the focus on the button on Tab and on Shift+Tab, without preventing the keydown, and keeps the items out of the tab order (#51 9)', async () => {
+        fake.load(null);
+        await open('/plan');
+        for (const shiftKey of [false, true]) {
+          const key = shiftKey ? 'Shift+Tab' : 'Tab';
+          await click(accountButton());
+          // jsdom doesn't move the focus on Tab: a browser moves it on from the button only past
+          // items it can't tab to
+          expect(tabbableIn(shownMenu()), key).toEqual([]);
+          const keydown = await press('Tab', { shiftKey });
+          expect(keydown.defaultPrevented, key).toBe(false);
+          expect(accountMenu(), key).toBeNull();
+          expect(document.activeElement, key).toBe(accountButton());
+        }
+      });
+
+      describe('edge cases', () => {
+        it('shows neither the email nor "Sign out" in the header with a session (#51 1a)', async () => {
+          fake.load(sessionFor('ana@example.com'));
+          await open('/plan');
+          expect(nameOf(accountButton())).toBe('Account');
+          expect(textOf(compiled.querySelector('header')!)).toBe(
+            'Fooplan Plan Grocery list Recipes',
+          );
+        });
+
+        it('renders the account button, collapsed and last in the header, before the client has returned the saved session (#51 1b)', async () => {
+          await open('/plan');
+          const button = accountButton();
+          expect(nameOf(button)).toBe('Account');
+          expect(button.getAttribute('aria-expanded')).toBe('false');
+          expect(compiled.querySelector('header')!.lastElementChild).toBe(button);
+        });
+
+        it('opens the menu once, with the focus on "English", on Enter and on Space on the closed button (#51 2a)', async () => {
+          fake.load(null);
+          await open('/plan');
+          for (const key of ['Enter', ' ']) {
+            const name = key === ' ' ? 'Space' : key;
+            accountButton().focus();
+            await press(key);
+            expect(accountMenu(), name).not.toBeNull();
+            expect(accountButton().getAttribute('aria-expanded'), name).toBe('true');
+            expect(focusedName(), name).toBe('English');
+            await press('Escape');
+          }
+        });
+
+        it('skips the email line and the separators: ArrowUp from "English" goes to "Sign out", ArrowDown from "Sign out" and Home to "English" (#51 4a)', async () => {
+          fake.load(sessionFor('ana@example.com'));
+          await open('/plan');
+          await click(accountButton());
+          expect(focusedName(), 'opened').toBe('English');
+          expect(
+            await focusAfter(['ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowDown', 'Home', 'End']),
+          ).toEqual(['Sign out', 'English', 'Deutsch', 'Sign out', 'English', 'Sign out']);
+        });
+
+        it('opens the closed menu with ArrowDown on the button, with the focus on "English" and not on the email line (#51 4b)', async () => {
+          fake.load(sessionFor('ana@example.com'));
+          await open('/plan');
+          accountButton().focus();
+          await press('ArrowDown');
+          expect(accountMenu(), 'not opened').not.toBeNull();
+          expect(accountButton().getAttribute('aria-expanded')).toBe('true');
+          expect(focusedName()).toBe('English');
+        });
+
+        it('moves between "English" and "Deutsch" only before the session is read: ArrowUp on the button opens on "Deutsch", the arrows wrap, Home and End go to them, and Escape closes with the focus on the button (#51 4c)', async () => {
+          await open('/plan');
+          accountButton().focus();
+          await press('ArrowUp');
+          expect(focusedName(), 'ArrowUp on the button').toBe('Deutsch');
+          expect(await focusAfter(['ArrowDown', 'ArrowDown', 'End', 'Home', 'ArrowUp'])).toEqual([
+            'English',
+            'Deutsch',
+            'Deutsch',
+            'English',
+            'Deutsch',
+          ]);
+          await press('Escape');
+          expect(accountMenu(), 'Escape').toBeNull();
+          expect(document.activeElement, 'Escape').toBe(accountButton());
+        });
+
+        it('prevents the default of ArrowDown, ArrowUp, Home and End in the menu, and not of Tab (#51 4d)', async () => {
+          fake.load(null);
+          await open('/plan');
+          await click(accountButton());
+          const prevented: [string, boolean][] = [];
+          for (const key of ['ArrowDown', 'ArrowUp', 'Home', 'End', 'Tab']) {
+            prevented.push([key, (await press(key)).defaultPrevented]);
+          }
+          expect(prevented).toEqual([
+            ['ArrowDown', true],
+            ['ArrowUp', true],
+            ['Home', true],
+            ['End', true],
+            ['Tab', false],
+          ]);
+        });
+
+        // The focus goes to nothing when Safari presses the account button, which it doesn't focus,
+        // or when the window loses the focus
+        it('stays open when the focus leaves an item for nothing, so a click on "Deutsch" after it still switches to German (#51 5a)', async () => {
+          fake.load(null);
+          await open('/plan');
+          await click(accountButton());
+          (document.activeElement as HTMLElement).blur();
+          await stable();
+          expect(accountMenu(), 'focus left for nothing').not.toBeNull();
+
+          itemIn(shownMenu(), 'Deutsch').click();
+          await stable();
+          expect(TestBed.inject(LanguageStore).language()).toBe('de');
+          expect(accountMenu(), 'after "Deutsch"').toBeNull();
+        });
+
+        it('stays open on a pointerdown on an item, and closes, not to open again, on a press on the button: pointerdown, focus, click (#51 5b)', async () => {
+          fake.load(null);
+          await open('/plan');
+          const button = accountButton();
+          await click(button);
+          await pointerDown(itemIn(shownMenu(), 'Deutsch'));
+          expect(accountMenu(), 'pointerdown on an item').not.toBeNull();
+
+          await pointerDown(button);
+          button.focus();
+          await stable();
+          expect(accountMenu(), 'pointerdown on the button, focus on it').not.toBeNull();
+          button.click();
+          await stable();
+          expect(accountMenu(), 'click on the button').toBeNull();
+          expect(button.getAttribute('aria-expanded')).toBe('false');
+          expect(document.activeElement).toBe(button);
+        });
+
+        // A browser focuses the closest focusable ancestor of what is pressed
+        it('keeps the keys working after a press on the email line or the menu outside an item: Escape closes with the focus on the button, ArrowUp from the menu goes to the last item and ArrowDown to the first (#51 5d)', async () => {
+          fake.load(sessionFor('ana@example.com'));
+          await open('/plan');
+          await click(accountButton());
+          await pressOnMenu(shownMenu().querySelector<HTMLElement>('.account-email')!);
+          expect(document.activeElement, 'press on the email line').toBe(shownMenu());
+          await press('Escape');
+          expect(accountMenu(), 'Escape').toBeNull();
+          expect(document.activeElement, 'Escape').toBe(accountButton());
+
+          await click(accountButton());
+          await pressOnMenu(shownMenu());
+          await press('ArrowUp');
+          expect(focusedName(), 'ArrowUp from the menu').toBe('Sign out');
+          await pressOnMenu(shownMenu().querySelector<HTMLElement>('[role="separator"]')!);
+          await press('ArrowDown');
+          expect(focusedName(), 'ArrowDown from the menu').toBe('English');
+
+          async function pressOnMenu(target: HTMLElement) {
+            await pointerDown(target);
+            shownMenu().focus();
+            await stable();
+            expect(accountMenu(), 'pressed').not.toBeNull();
+          }
+        });
+
+        it('writes nothing to localStorage, signs nothing out and stays on the page when the menu is opened and closed by Escape, a click on the button and a pointerdown outside (#51 5c)', async () => {
+          fake.load(sessionFor('ana@example.com'));
+          await open('/recipes');
+          const setItem = vi.spyOn(Storage.prototype, 'setItem');
+          const removeItem = vi.spyOn(Storage.prototype, 'removeItem');
+
+          await click(accountButton());
+          await press('Escape');
+          await click(accountButton());
+          await click(accountButton());
+          await click(accountButton());
+          await pointerDown(compiled.querySelector('main')!);
+          expect(setItem).not.toHaveBeenCalled();
+          expect(removeItem).not.toHaveBeenCalled();
+          expect(fake.signOuts).toEqual([]);
+          expect(TestBed.inject(LanguageStore).language()).toBe('en');
+          expect(TestBed.inject(Router).url).toBe('/recipes');
+          expect(linesOf(await openMenu())).toEqual([
+            'ana@example.com',
+            'English',
+            'Deutsch',
+            'Sign out',
+          ]);
+        });
+
+        it('closes the menu and focuses the account button as soon as "Sign out" is clicked, while the client is still signing out (#51 7a)', async () => {
+          const signingOut = deferred<{ error: null }>();
+          fake.signOutResult = () => signingOut.promise;
+          fake.load(sessionFor('ana@example.com'));
+          await open('/recipes');
+          await click(await signOutItem());
+          expect(fake.signOuts.length, 'signing out').toBe(1);
+          expect(accountMenu(), 'while signing out').toBeNull();
+          expect(document.activeElement, 'while signing out').toBe(accountButton());
+
+          signingOut.resolve({ error: null });
+          await stable();
+          expect(TestBed.inject(Router).url).toBe('/plan');
+          expect(document.activeElement, 'signed out').toBe(accountButton());
+        });
+      });
+
+      // The name of the item focused after each key
+      async function focusAfter(keys: string[]): Promise<string[]> {
+        const focused: string[] = [];
+        for (const key of keys) {
+          await press(key);
+          focused.push(focusedName());
+        }
+        return focused;
+      }
+
+      function focusedName(): string {
+        const focused = document.activeElement;
+        return !focused || focused === document.body ? '<body>' : nameOf(focused);
+      }
+
+      async function pointerDown(target: HTMLElement) {
+        target.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true }));
+        await stable();
+      }
+
+      // TABBABLE matches a button or a link whatever its tabindex; -1 takes it out of the tab order
+      function tabbableIn(menu: HTMLElement): string[] {
+        return [menu, ...Array.from(menu.querySelectorAll<HTMLElement>(TABBABLE))]
+          .filter((candidate) => candidate.matches(TABBABLE) && candidate.tabIndex >= 0)
+          .map(nameOf);
+      }
+
+      function contentOf(menu: HTMLElement): (string | null)[][] {
+        return Array.from(menu.children).map((child) => [
+          child.tagName,
+          child.getAttribute('role'),
+          nameOf(child),
+        ]);
+      }
+
+      function navTexts(): string[] {
+        return Array.from(compiled.querySelectorAll('nav a')).map((a) => textOf(a));
+      }
     });
 
     describe('data in the account (#45)', () => {
@@ -597,8 +885,8 @@ describe('App', () => {
         expect(compiled.querySelector('main')?.textContent).not.toContain('Accept a plan');
         const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
 
+        const signOut = await signOutItem();
         let release = holdReads();
-        const signOut = buttonIn(accountGroup(), 'Sign out');
         signOut.focus();
         signOut.click();
         await rendered();
@@ -670,7 +958,7 @@ describe('App', () => {
         await click(suggestionButtons(0)[0]);
         expect(pickedNames().length, 'picked in the account').toBe(1);
 
-        await click(buttonIn(accountGroup(), 'Sign out'));
+        await click(await signOutItem());
         expect(pickedNames(), 'browser plan again').toEqual(['Pizza toast', 'Potato goulash']);
         await TestBed.inject(Router).navigateByUrl('/recipes');
         await stable();
@@ -751,8 +1039,8 @@ describe('App', () => {
           await open('/recipes');
           expect(mainContent(), 'failed').toEqual([['P', 'alert', LOAD_FAILED]]);
 
+          const signOut = await signOutItem();
           const release = holdReads();
-          const signOut = buttonIn(accountGroup(), 'Sign out');
           signOut.focus();
           signOut.click();
           await rendered();
@@ -821,7 +1109,7 @@ describe('App', () => {
           await click(suggestionButtons(0)[0]);
           expect(saveAlert(), 'after the failed save').not.toBeNull();
 
-          await click(buttonIn(accountGroup(), 'Sign out'));
+          await click(await signOutItem());
           expect(TestBed.inject(Router).url).toBe('/plan');
           expect(saveAlert(), 'after signing out').toBeNull();
         });
@@ -872,7 +1160,7 @@ describe('App', () => {
             await open(url);
             expect(TestBed.inject(Router).url, 'opened').toBe(url);
 
-            await click(buttonIn(accountGroup(), 'Sign out'));
+            await click(await signOutItem());
             expect(TestBed.inject(Router).url).toBe('/plan');
             expect(pickedNames()).toEqual(['Pizza toast', 'Potato goulash']);
           },
@@ -994,26 +1282,75 @@ describe('App', () => {
       await fixture.whenStable();
     }
 
-    function accountGroup(name = 'Account'): HTMLElement {
-      const group = findAccountGroup(name);
-      expect(group, `no "${name}" group in the header`).not.toBeNull();
-      return group!;
+    // The key on the focused element, then the click a browser sends for Enter on a button or a link
+    // and for Space on a button, unless the keydown is prevented
+    async function press(key: string, init: KeyboardEventInit = {}): Promise<KeyboardEvent> {
+      const target = document.activeElement as HTMLElement;
+      const keydown = new KeyboardEvent('keydown', {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...init,
+      });
+      const clicks =
+        (key === 'Enter' && target.matches('button, a[href]')) ||
+        (key === ' ' && target.matches('button'));
+      if (target.dispatchEvent(keydown) && clicks) {
+        target.click();
+      }
+      target.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, ...init }));
+      await stable();
+      return keydown;
     }
 
-    function findAccountGroup(name = 'Account'): HTMLElement | null {
-      return compiled.querySelector<HTMLElement>(`header [role="group"][aria-label="${name}"]`);
+    async function signOutItem(): Promise<HTMLElement> {
+      return itemIn(await openMenu(), 'Sign out');
     }
 
-    function buttonIn(group: HTMLElement, text: string): HTMLButtonElement {
-      const button = Array.from(group.querySelectorAll('button')).find(
-        (candidate) => textOf(candidate) === text,
-      );
-      expect(button, `no "${text}" button`).toBeDefined();
+    async function openMenu(): Promise<HTMLElement> {
+      await click(accountButton());
+      return shownMenu();
+    }
+
+    function accountButton(): HTMLButtonElement {
+      const button = compiled.querySelector<HTMLButtonElement>('header button.account-button');
+      expect(button, 'no account button in the header').not.toBeNull();
       return button!;
     }
 
-    function childTexts(target: Element): string[] {
-      return Array.from(target.children).map((child) => textOf(child));
+    function shownMenu(): HTMLElement {
+      const menu = accountMenu();
+      expect(menu, 'no account menu').not.toBeNull();
+      return menu!;
+    }
+
+    function accountMenu(): HTMLElement | null {
+      return compiled.querySelector<HTMLElement>('#account-menu');
+    }
+
+    function itemIn(menu: HTMLElement, name: string): HTMLElement {
+      const item = itemsOf(menu).find((candidate) => nameOf(candidate) === name);
+      expect(item, `no item "${name}" in the menu`).toBeDefined();
+      return item!;
+    }
+
+    function itemsOf(menu: HTMLElement): HTMLElement[] {
+      return Array.from(
+        menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]'),
+      );
+    }
+
+    function linesOf(menu: HTMLElement): string[] {
+      return Array.from(
+        menu.querySelectorAll('.account-email, [role="menuitem"], [role="menuitemradio"]'),
+      ).map(nameOf);
+    }
+
+    // As a screen reader reads it: without the ✓ of the checked language, which is hidden from it
+    function nameOf(target: Element): string {
+      const copy = target.cloneNode(true) as Element;
+      copy.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => hidden.remove());
+      return target.getAttribute('aria-label') ?? textOf(copy);
     }
 
     function textOf(target: Element): string {

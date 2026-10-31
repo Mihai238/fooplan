@@ -3147,7 +3147,7 @@ describe('PlanPage', () => {
       planDay('2026-10-25', covered(), open(...SHAKSHUKA_ROW)),
     ]);
 
-    it('shows the Plan page in German at once, at the same URL and with the same suggestions, when the user clicks "DE" in the header, saving de and setting lang="de" with "DE" pressed: "Plan", the steppers "Tage" and "Personen", the arrows "Ein Tag weniger", "Ein Tag mehr", "Eine Person weniger" and "Eine Person mehr", the meals "Mittagessen" and "Abendessen", times like "15 Minuten", "Andere Vorschläge", "Neuer Plan" and "Plan annehmen"; and every text in English again on "EN"', async () => {
+    it('shows the Plan page in German at once, at the same URL and with the same suggestions, when the user clicks "Deutsch" in the account menu, saving de and setting lang="de" with "Deutsch" checked: "Plan", the steppers "Tage" and "Personen", the arrows "Ein Tag weniger", "Ein Tag mehr", "Eine Person weniger" and "Eine Person mehr", the meals "Mittagessen" and "Abendessen", times like "15 Minuten", "Andere Vorschläge", "Neuer Plan" and "Plan annehmen"; and every text in English again on "English"', async () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         providers: [
@@ -3165,11 +3165,17 @@ describe('PlanPage', () => {
       const english = shownTexts();
       expect(english.text, 'English times').toContain('15 minutes');
 
-      await clickIn(app, headerButton('Deutsch'));
+      await chooseLanguage(app, 'Deutsch');
       expect(localStorage.getItem(LANGUAGE_KEY), 'saved language').toBe('de');
       expect(document.documentElement.lang).toBe('de');
-      expect(headerButton('Deutsch').getAttribute('aria-pressed'), '"DE" pressed').toBe('true');
-      expect(headerButton('English').getAttribute('aria-pressed'), '"EN" pressed').toBe('false');
+      await clickIn(app, accountButton());
+      expect(languageItem('Deutsch').getAttribute('aria-checked'), '"Deutsch" checked').toBe(
+        'true',
+      );
+      expect(languageItem('English').getAttribute('aria-checked'), '"English" checked').toBe(
+        'false',
+      );
+      await clickIn(app, accountButton());
       expect(router().url).toBe('/plan');
       expect(textOf(element.querySelector('main h1'))).toBe('Plan');
       expect(
@@ -3208,12 +3214,12 @@ describe('PlanPage', () => {
         expect(german, 'English left').not.toContain(english);
       }
 
-      await clickIn(app, headerButton('English'));
+      await chooseLanguage(app, 'English');
       expect(localStorage.getItem(LANGUAGE_KEY), 'saved language').toBe('en');
       expect(document.documentElement.lang).toBe('en');
       expect(router().url).toBe('/plan');
       expect(shownTexts()).toEqual(english);
-      expect(store.plan(), 'plan after "EN"').toEqual(plan);
+      expect(store.plan(), 'plan after "English"').toEqual(plan);
     });
 
     it('heads the 5 days of a German plan from 2026-10-25 "So., 25. Okt." to "Do., 29. Okt."; with a meal picked, heads the "Neuer Plan" dialog "Neuer Plan", says "Der Plan für So., 25. Okt. – Do., 29. Okt. mit 1 von 10 gewählten Mahlzeiten wird verworfen." and "Der neue Plan beginnt heute, für 5 Tage und 2 Personen." with "Plan behalten" and "Neuen Plan starten"; and sums up an accepted plan as "1 Tag für 1 Person" and "2 Tage für 2 Personen"', async () => {
@@ -3417,11 +3423,20 @@ describe('PlanPage', () => {
       return name!;
     }
 
-    function headerButton(name: 'English' | 'Deutsch'): HTMLButtonElement {
-      const found = Array.from(element.querySelectorAll('header button')).find(
-        (candidate) => candidate.getAttribute('aria-label') === name,
+    async function chooseLanguage(app: ComponentFixture<App>, name: 'English' | 'Deutsch') {
+      await clickIn(app, accountButton());
+      await clickIn(app, languageItem(name));
+    }
+
+    function accountButton(): HTMLButtonElement {
+      return element.querySelector<HTMLButtonElement>('header button.account-button')!;
+    }
+
+    function languageItem(name: 'English' | 'Deutsch'): HTMLButtonElement {
+      const found = Array.from(element.querySelectorAll('[role="menuitemradio"]')).find(
+        (candidate) => candidate.textContent?.includes(name),
       );
-      expect(found, `no "${name}" button in the header`).toBeDefined();
+      expect(found, `no "${name}" in the account menu`).toBeDefined();
       return found as HTMLButtonElement;
     }
 

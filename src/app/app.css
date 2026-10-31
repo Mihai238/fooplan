@@ -7,6 +7,7 @@ header {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 1.5rem;
+  position: relative;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
@@ -21,9 +22,8 @@ header {
 }
 
 .brand:focus-visible,
-.language button:focus-visible,
-.account a:focus-visible,
-.account button:focus-visible {
+.account-button:focus-visible,
+.account-menu [role^='menuitem']:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
@@ -51,70 +51,92 @@ nav a.active {
   color: var(--on-accent);
 }
 
-.language {
-  display: inline-flex;
-  margin-left: auto;
-}
-
-.language button,
-.account a,
-.account button {
+.account-button {
   display: inline-flex;
   align-items: center;
-  box-sizing: border-box;
-  min-height: max(2.75rem, 44px);
-  padding: 0.375rem 0.5rem;
+  justify-content: center;
+  width: max(2.75rem, 44px);
+  height: max(2.75rem, 44px);
+  margin-left: auto;
+  padding: 0;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 50%;
   background: none;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.875rem;
-  font-weight: 400;
-  line-height: normal;
+  color: var(--text);
   cursor: pointer;
 }
 
-.language button[aria-pressed='false']:hover,
-.account a:hover,
-.account button:hover {
+.account-button:hover,
+.account-button[aria-expanded='true'] {
   background: var(--hover);
 }
 
-.account {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 0.5rem;
-  min-width: 0;
+.account-menu {
+  position: absolute;
+  top: 100%;
+  right: 1rem;
+  z-index: 3;
+  box-sizing: border-box;
+  min-width: 14rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
 }
 
-.account .email {
+.account-email {
+  margin: 0;
+  padding: 0.25rem 1rem;
   color: var(--muted);
   font-size: 0.875rem;
   overflow-wrap: anywhere;
 }
 
-.account a,
-.account button {
-  color: var(--text);
-  text-decoration: none;
-  white-space: nowrap;
+.account-menu [role='separator'] {
+  margin: 0.5rem 0;
+  border-top: 1px solid var(--border);
 }
 
-.language button[aria-pressed='true'] {
+.account-menu [role^='menuitem'] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: max(2.75rem, 44px);
+  padding: 0.375rem 1rem;
+  border: none;
+  background: none;
   color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.account-menu [role^='menuitem']:hover,
+.account-menu [role^='menuitem']:focus {
+  background: var(--hover);
+}
+
+/* Drawn inside, as the items span the menu's full width */
+.account-menu [role^='menuitem']:focus-visible {
+  outline-offset: -2px;
+}
+
+.account-menu [aria-checked='true'] {
   font-weight: 600;
 }
 
-/* The ring reaches into the neighbour, whose hover background is painted later and would cover it */
-.language button:focus-visible {
-  position: relative;
-  z-index: 1;
+.account-check {
+  flex: none;
+  width: 1em;
 }
 
-/* Too narrow for one row: the links go below, and the switch stays beside the brand. The tab order
-   stays the page's order, links first */
+/* Too narrow for one row: the links go below, and the account button stays beside the brand. The
+   tab order stays the page's order, links first */
 @media (max-width: 40rem) {
   nav {
     order: 1;

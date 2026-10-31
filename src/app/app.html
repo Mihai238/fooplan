@@ -23,31 +23,69 @@
       {{ language.t('nav.recipes') }}
     </a>
   </nav>
-  <div class="language" role="group" [attr.aria-label]="language.t('language.group')">
-    <button
-      type="button"
-      [attr.aria-label]="language.t('language.en')"
-      [attr.aria-pressed]="language.language() === 'en'"
-      (click)="showLanguage('en')"
+  <button
+    #accountButton
+    id="account-button"
+    type="button"
+    class="account-button"
+    aria-haspopup="menu"
+    aria-controls="account-menu"
+    [attr.aria-expanded]="menuOpen()"
+    [attr.aria-label]="language.t('account.group')"
+    (click)="toggleMenu()"
+    (keydown.arrowdown)="$event.preventDefault(); openMenu('first')"
+    (keydown.arrowup)="$event.preventDefault(); openMenu('last')"
+    (focusout)="closeOnFocusOut($event)"
+  >
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0z" />
+    </svg>
+  </button>
+  @if (menuOpen()) {
+    <div
+      #accountMenu
+      id="account-menu"
+      class="account-menu"
+      role="menu"
+      tabindex="-1"
+      aria-labelledby="account-button"
+      (keydown)="keyInMenu($event)"
+      (focusout)="closeOnFocusOut($event)"
     >
-      EN
-    </button>
-    <button
-      type="button"
-      [attr.aria-label]="language.t('language.de')"
-      [attr.aria-pressed]="language.language() === 'de'"
-      (click)="showLanguage('de')"
-    >
-      DE
-    </button>
-  </div>
-  @if (auth.loaded()) {
-    <div class="account" role="group" [attr.aria-label]="language.t('account.group')">
       @if (auth.email(); as email) {
-        <span class="email">{{ email }}</span>
-        <button type="button" (click)="signOut()">{{ language.t('account.signOut') }}</button>
-      } @else {
-        <a #signInLink routerLink="/sign-in">{{ language.t('account.signIn') }}</a>
+        <p class="account-email" role="none">{{ email }}</p>
+        <div role="separator"></div>
+      }
+      <div role="group" [attr.aria-label]="language.t('language.group')">
+        @for (option of languages; track option.language) {
+          <button
+            type="button"
+            role="menuitemradio"
+            tabindex="-1"
+            [attr.aria-checked]="language.language() === option.language"
+            (click)="showLanguage(option.language)"
+          >
+            <span class="account-check" aria-hidden="true">
+              @if (language.language() === option.language) {
+                ✓
+              }
+            </span>
+            {{ language.t(option.label) }}
+          </button>
+        }
+      </div>
+      @if (auth.loaded()) {
+        <div role="separator"></div>
+        @if (auth.email()) {
+          <button type="button" role="menuitem" tabindex="-1" (click)="signOut()">
+            {{ language.t('account.signOut') }}
+          </button>
+        } @else {
+          <a role="menuitem" tabindex="-1" routerLink="/sign-in" (click)="closeMenu()">
+            {{ language.t('account.signIn') }}
+          </a>
+        }
       }
     </div>
   }

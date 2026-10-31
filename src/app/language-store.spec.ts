@@ -21,19 +21,19 @@ describe('LanguageStore', () => {
     document.documentElement.lang = 'en';
   });
 
-  it('starts the app in en with lang="en" and "DE" not pressed with nothing saved and the browser in en-US, in de with lang="de" and "DE" pressed for de-AT, in de for a saved de with en-US, and by the browser for "de" saved with its quotes or fr', async () => {
+  it('starts the app in en with lang="en" and "Deutsch" not checked in the account menu with nothing saved and the browser in en-US, in de with lang="de" and "Deutsch" checked for de-AT, in de for a saved de with en-US, and by the browser for "de" saved with its quotes or fr', async () => {
     browserLanguage('en-US');
     let app = await startApp();
-    expectStarted(app, 'en', 'nothing saved, en-US');
+    await expectStarted(app, 'en', 'nothing saved, en-US');
 
     browserLanguage('de-AT');
     app = await startApp();
-    expectStarted(app, 'de', 'nothing saved, de-AT');
+    await expectStarted(app, 'de', 'nothing saved, de-AT');
 
     browserLanguage('en-US');
     localStorage.setItem(LANGUAGE_KEY, 'de');
     app = await startApp();
-    expectStarted(app, 'de', 'de saved, en-US');
+    await expectStarted(app, 'de', 'de saved, en-US');
 
     for (const saved of ['"de"', 'fr']) {
       for (const [browser, language] of [
@@ -43,7 +43,7 @@ describe('LanguageStore', () => {
         localStorage.setItem(LANGUAGE_KEY, saved);
         browserLanguage(browser);
         app = await startApp();
-        expectStarted(app, language, `${saved} saved, ${browser}`);
+        await expectStarted(app, language, `${saved} saved, ${browser}`);
       }
     }
   });
@@ -193,15 +193,17 @@ describe('LanguageStore', () => {
     return app;
   }
 
-  function expectStarted(app: ComponentFixture<App>, language: Language, when: string) {
+  async function expectStarted(app: ComponentFixture<App>, language: Language, when: string) {
     expect(TestBed.inject(LanguageStore).language(), when).toBe(language);
     expect(document.documentElement.lang, `lang, ${when}`).toBe(language);
     const element = app.nativeElement as HTMLElement;
-    const deutsch = Array.from(element.querySelectorAll('header button')).find(
-      (button) => button.getAttribute('aria-label') === 'Deutsch',
+    element.querySelector<HTMLButtonElement>('header button.account-button')!.click();
+    await app.whenStable();
+    const deutsch = Array.from(element.querySelectorAll('[role="menuitemradio"]')).find((item) =>
+      item.textContent?.includes('Deutsch'),
     );
-    expect(deutsch, `no "Deutsch" button in the header, ${when}`).toBeDefined();
-    expect(deutsch!.getAttribute('aria-pressed'), `"DE" pressed, ${when}`).toBe(
+    expect(deutsch, `no "Deutsch" in the account menu, ${when}`).toBeDefined();
+    expect(deutsch!.getAttribute('aria-checked'), `"Deutsch" checked, ${when}`).toBe(
       String(language === 'de'),
     );
   }
