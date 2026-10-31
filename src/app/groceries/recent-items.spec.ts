@@ -1,4 +1,11 @@
-import { forget, MAX_RECENT, parseRecentItems, remember } from './recent-items';
+import {
+  forget,
+  MAX_RECENT,
+  MAX_SUGGESTED,
+  parseRecentItems,
+  remember,
+  suggestions,
+} from './recent-items';
 
 const THIRTY = Array.from({ length: MAX_RECENT }, (_, i) => `item ${i + 1}`);
 
@@ -117,6 +124,37 @@ describe('parseRecentItems', () => {
 
     it('reads an empty list as []', () => {
       expect(parseRecentItems([])).toEqual([]);
+    });
+  });
+});
+
+describe('suggestions', () => {
+  const REMEMBERED = ['Toilet paper', 'milk', 'coffee', 'Crème fraîche'];
+
+  it('suggests the remembered items not on the list that contain the trimmed text, ignoring case and accents, the first 5 in remembered order, and nothing for a blank text', () => {
+    expect(suggestions(REMEMBERED, ['milk'], 'paper')).toEqual(['Toilet paper']);
+    expect(suggestions(REMEMBERED, ['milk'], ' paper ')).toEqual(['Toilet paper']);
+    expect(suggestions(REMEMBERED, ['milk'], 'creme')).toEqual(['Crème fraîche']);
+    expect(suggestions(REMEMBERED, ['milk'], ' MI '), 'on the list').toEqual([]);
+    expect(suggestions(REMEMBERED, ['milk'], ''), 'empty text').toEqual([]);
+    expect(suggestions(REMEMBERED, ['milk'], '  '), 'only spaces').toEqual([]);
+
+    const seven = ['tea', 'bananas', 'oats', 'pasta', 'carrots', 'salami', 'apples'];
+    expect(MAX_SUGGESTED).toBe(5);
+    expect(suggestions(seven, [], 'a')).toEqual(seven.slice(0, MAX_SUGGESTED));
+  });
+
+  describe('edge cases', () => {
+    it('ignores accents and case in the typed text, and case in the items on the list: "CRÈME" suggests "Crème fraîche", and "MILK" on the list keeps "milk" out', () => {
+      expect(suggestions(REMEMBERED, [], 'CRÈME')).toEqual(['Crème fraîche']);
+      expect(suggestions(REMEMBERED, ['MILK'], 'mi')).toEqual([]);
+    });
+
+    it('suggests all of exactly 5 matches, a match in the middle of an item, and nothing without remembered items', () => {
+      const five = ['tea', 'bananas', 'oats', 'pasta', 'salami'];
+      expect(suggestions([...five, 'flour'], [], 'a')).toEqual(five);
+      expect(suggestions(REMEMBERED, [], 'let')).toEqual(['Toilet paper']);
+      expect(suggestions([], [], 'milk')).toEqual([]);
     });
   });
 });

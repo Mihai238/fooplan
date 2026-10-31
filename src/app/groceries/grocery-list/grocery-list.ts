@@ -3,14 +3,15 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
+  linkedSignal,
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { LanguageStore } from '../../language-store';
-import { sameItem } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
 import { RecipeStore } from '../../recipes/recipe-store';
 import {
@@ -23,6 +24,7 @@ import {
   listItems,
   shoppingView,
 } from '../groceries';
+import { notOnList, suggestions } from '../recent-items';
 import { RecentItemsStore } from '../recent-items-store';
 
 const UNDO_SECONDS = 5;
@@ -58,13 +60,22 @@ export class GroceryList {
       byShownName((item) => this.nameOf(item), this.language.language()),
     ),
   );
-  protected readonly offered = computed(() => {
-    const added = this.plan().added;
-    return this.recentItems
-      .items()
-      .filter((item) => !added.some((other) => sameItem(other, item)))
-      .slice(0, MAX_OFFERED);
-  });
+  protected readonly offered = computed(() =>
+    notOnList(this.recentItems.items(), this.plan().added).slice(0, MAX_OFFERED),
+  );
+  private readonly typed = signal('');
+  private readonly fieldFocused = signal(false);
+  private readonly dismissed = signal(false);
+  protected readonly suggested = computed(() =>
+    this.fieldFocused() && !this.dismissed()
+      ? suggestions(this.recentItems.items(), this.plan().added, this.typed())
+      : [],
+  );
+  protected readonly highlight = linkedSignal({ source: this.suggested, computation: () => -1 });
+  private readonly highlighted = computed(() => this.suggested()[this.highlight()] ?? null);
+  protected readonly activeOption = computed(() =>
+    this.highlighted() === null ? null : `new-item-suggestion-${this.highlight()}`,
+  );
   private readonly feedback = signal<AddFeedback | null>(null);
   // Rendered from the message, so the status follows a change of language
   protected readonly feedbackText = computed(() => {
@@ -96,15 +107,67 @@ export class GroceryList {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.undoTimer));
+    // A new plan takes the field away without a blur, and the next accepted plan brings an empty one
+    effect(() => {
+      if (!this.plan().accepted) {
+        this.typed.set('');
+        this.fieldFocused.set(false);
+      }
+    });
   }
 
   // Without preventDefault the browser would submit the form and reload the page. Assistive
   // technology can submit it from elsewhere, so the focus goes back to the field for the next item
   protected add(event: SubmitEvent, input: HTMLInputElement): void {
     event.preventDefault();
-    this.addItem(input.value);
-    input.value = '';
-    input.focus();
+    this.addFromField(input.value, input);
+  }
+
+  protected typeInField(input: HTMLInputElement): void {
+    this.typed.set(input.value);
+    this.dismissed.set(false);
+  }
+
+  protected focusField(): void {
+    this.fieldFocused.set(true);
+    this.dismissed.set(false);
+  }
+
+  protected blurField(): void {
+    this.fieldFocused.set(false);
+  }
+
+  // Arrow keys would move the caret to the start or end of the text
+  protected keyInField(event: KeyboardEvent, input: HTMLInputElement): void {
+    const count = this.suggested().length;
+    // During an IME composition, Enter and the arrows pick from the IME's own candidates
+    if (event.isComposing || count === 0) {
+      return;
+    }
+    const highlighted = this.highlighted();
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      this.highlight.update((index) => Math.min(index + 1, count - 1));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      this.highlight.update((index) => Math.max(index - 1, -1));
+    } else if (event.key === 'Enter' && highlighted !== null) {
+      // Else the form would submit the typed text as well
+      event.preventDefault();
+      this.addFromField(highlighted, input);
+    } else if (event.key === 'Escape') {
+      this.dismissed.set(true);
+    }
+  }
+
+  // Without preventDefault the field would lose the focus, which closes a phone's keyboard; some
+  // browsers move it on mousedown even after a prevented pointerdown. Any primary press counts, as
+  // a ctrl+click is still a click outside macOS. The item is added on the click, not here, since a
+  // swipe that starts on a row scrolls the page and ends with no click
+  protected pressSuggestion(event: MouseEvent): void {
+    if (event.button === 0) {
+      event.preventDefault();
+    }
   }
 
   // Like remove: the button goes with the render. A click or tap leaves the focus alone, as a
@@ -204,6 +267,13 @@ export class GroceryList {
     if (event.pointerId === this.undoPress()) {
       this.undoPress.set(null);
     }
+  }
+
+  protected addFromField(text: string, input: HTMLInputElement): void {
+    this.addItem(text);
+    input.value = '';
+    this.typed.set('');
+    input.focus();
   }
 
   private addItem(text: string): void {

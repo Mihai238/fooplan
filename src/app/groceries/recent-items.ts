@@ -1,7 +1,9 @@
 import { sameItem } from '../plan/plan';
+import { normalize } from '../recipes/recipe-search';
 import { isStringList } from '../storage';
 
 export const MAX_RECENT = 30;
+export const MAX_SUGGESTED = 5;
 
 export function remember(items: readonly string[], text: string): readonly string[] {
   const item = text.trim();
@@ -32,4 +34,22 @@ export function parseRecentItems(value: unknown): readonly string[] {
     }
   }
   return items;
+}
+
+export function suggestions(
+  items: readonly string[],
+  added: readonly string[],
+  text: string,
+): readonly string[] {
+  const typed = normalize(text.trim());
+  if (typed === '') {
+    return [];
+  }
+  return notOnList(items, added)
+    .filter((item) => normalize(item).includes(typed))
+    .slice(0, MAX_SUGGESTED);
+}
+
+export function notOnList(items: readonly string[], added: readonly string[]): readonly string[] {
+  return items.filter((item) => !added.some((other) => sameItem(other, item)));
 }

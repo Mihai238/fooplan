@@ -7,7 +7,44 @@
 } @else {
   <form class="field" (submit)="add($event, itemInput)">
     <label for="new-item">{{ language.t('groceries.addItem') }}</label>
-    <input #itemInput type="text" id="new-item" autocomplete="off" enterkeyhint="done" />
+    <div class="suggestions">
+      <input
+        #itemInput
+        type="text"
+        id="new-item"
+        autocomplete="off"
+        enterkeyhint="done"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls="new-item-suggestions"
+        [attr.aria-expanded]="suggested().length > 0"
+        [attr.aria-activedescendant]="activeOption()"
+        (input)="typeInField(itemInput)"
+        (focus)="focusField()"
+        (blur)="blurField()"
+        (keydown)="keyInField($event, itemInput)"
+      />
+      @if (suggested().length > 0) {
+        <ul
+          id="new-item-suggestions"
+          role="listbox"
+          [attr.aria-label]="language.t('groceries.suggestions')"
+        >
+          @for (item of suggested(); track item) {
+            <li
+              role="option"
+              [id]="'new-item-suggestion-' + $index"
+              [attr.aria-selected]="$index === highlight()"
+              (pointerdown)="pressSuggestion($event)"
+              (mousedown)="pressSuggestion($event)"
+              (click)="addFromField(item, itemInput)"
+            >
+              {{ item }}
+            </li>
+          }
+        </ul>
+      }
+    </div>
     @if (offered().length > 0) {
       <div class="recent" role="group" aria-labelledby="recent-label">
         <span id="recent-label" class="recent-label">{{ language.t('groceries.addAgain') }}</span>

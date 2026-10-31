@@ -34,15 +34,49 @@ h1 {
   font-size: 0.875rem;
 }
 
-input[type='text'] {
+.suggestions {
+  position: relative;
   flex: 1;
   max-width: 20rem;
+}
+
+input[type='text'] {
+  box-sizing: border-box;
+  width: 100%;
   padding: 0.375rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   background: var(--surface);
   color: var(--text);
   font: inherit;
+}
+
+.suggestions ul {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem 0;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+  list-style: none;
+}
+
+.suggestions li {
+  box-sizing: border-box;
+  min-height: max(2.75rem, 44px);
+  padding: 0.5rem 0.75rem;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.suggestions li[aria-selected='true'],
+.suggestions li:hover {
+  background: var(--hover);
 }
 
 button {

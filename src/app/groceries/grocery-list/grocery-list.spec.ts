@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { LanguageStore } from '../../language-store';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
-import { addedKey } from '../../plan/plan';
+import { addedKey, DEFAULT_SETTINGS } from '../../plan/plan';
 import {
   acceptOneDayPlan,
   day,
@@ -470,7 +470,9 @@ describe('GroceryList', () => {
     await open();
     const form = element.querySelector('form.field');
     const label = form!.querySelector('label');
-    expect(Array.from(form!.children)).toEqual([label, field()]);
+    const box = form!.querySelector('div.suggestions');
+    expect(Array.from(form!.children)).toEqual([label, box]);
+    expect(Array.from(box!.children)).toEqual([field()]);
     expect(textOf(label)).toBe('Add an item');
     expect(field().id).toBe('new-item');
     expect(field().getAttribute('enterkeyhint')).toBe('done');
@@ -1907,7 +1909,7 @@ describe('GroceryList', () => {
       expect(group?.matches('div.recent[role="group"]'), 'last child of the form').toBe(true);
       expect(Array.from(form!.children)).toEqual([
         form!.querySelector('label[for="new-item"]'),
-        field(),
+        form!.querySelector('div.suggestions'),
         group,
       ]);
       const label = group!.firstElementChild;
@@ -2183,16 +2185,6 @@ describe('GroceryList', () => {
       });
     });
 
-    // A fresh app remembering these items, on a new accepted one-day plan for 2
-    async function openRemembering(...items: string[]) {
-      localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(items));
-      TestBed.resetTestingModule();
-      configure();
-      store = await loadStores();
-      acceptOneDayPlan(store);
-      await open();
-    }
-
     // A fresh app on an accepted plan saved with these added items, as before they were remembered
     async function openAcceptedWith(added: string[]) {
       const saved = {
@@ -2216,10 +2208,6 @@ describe('GroceryList', () => {
       await open();
     }
 
-    function storedRecent(): unknown {
-      return JSON.parse(localStorage.getItem(RECENT_ITEMS_KEY) ?? 'null');
-    }
-
     function recentButton(text: string): HTMLButtonElement {
       const button = recentButtons().find((candidate) => textOf(candidate) === text);
       expect(button, `no "Add again" button "${text}"`).toBeDefined();
@@ -2228,6 +2216,306 @@ describe('GroceryList', () => {
 
     function recentButtons(): HTMLButtonElement[] {
       return Array.from(element.querySelectorAll('div.recent button.recent-item'));
+    }
+  });
+
+  describe('suggestions (#49)', () => {
+    it('makes the field a combobox without a list, lists "toilet paper" and "tea", which contain "t", as options under it while it has the focus, and takes the list away for "tx"', async () => {
+      await openRemembering('toilet paper', 'coffee', 'tea');
+      expect(field().getAttribute('role')).toBe('combobox');
+      expect(field().getAttribute('aria-autocomplete')).toBe('list');
+      expect(field().getAttribute('aria-expanded')).toBe('false');
+      expect(field().getAttribute('aria-controls')).toBe('new-item-suggestions');
+      expect(field().hasAttribute('aria-activedescendant'), 'aria-activedescendant').toBe(false);
+      expect(field().hasAttribute('list'), 'list').toBe(false);
+      expect(listbox()).toBeNull();
+
+      await focusAndType('t');
+      expect(field().getAttribute('aria-expanded')).toBe('true');
+      expect(shownListbox().id).toBe('new-item-suggestions');
+      expect(shownListbox().getAttribute('aria-label')).toBe('Suggestions');
+      expect(options().map(textOf)).toEqual(['toilet paper', 'tea']);
+      expect(options().map((option) => option.getAttribute('aria-selected'))).toEqual([
+        'false',
+        'false',
+      ]);
+      expect(options().map((option) => option.id)).toEqual([
+        'new-item-suggestion-0',
+        'new-item-suggestion-1',
+      ]);
+
+      await type('tx');
+      expect(listbox()).toBeNull();
+      expect(field().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('shows no list for text typed while the field does not have the focus, and holds the field and the shown list in div.suggestions between the label and the "Add again" group', async () => {
+      await openRemembering('toilet paper', 'coffee', 'tea');
+      await type('t');
+      expect(document.activeElement).not.toBe(field());
+      expect(listbox()).toBeNull();
+      expect(field().getAttribute('aria-expanded')).toBe('false');
+
+      const form = element.querySelector('form.field')!;
+      const box = form.querySelector('div.suggestions');
+      const label = form.querySelector('label[for="new-item"]');
+      expect(Array.from(form.children)).toEqual([label, box, form.querySelector('div.recent')]);
+      expect(Array.from(box!.children)).toEqual([field()]);
+
+      field().focus();
+      await stable();
+      expect(Array.from(box!.children)).toEqual([field(), shownListbox()]);
+
+      await openRemembering();
+      const emptyForm = element.querySelector('form.field')!;
+      expect(Array.from(emptyForm.children)).toEqual([
+        emptyForm.querySelector('label[for="new-item"]'),
+        emptyForm.querySelector('div.suggestions'),
+      ]);
+    });
+
+    it('highlights "toilet paper" and then "tea" with ArrowDown, stays on "tea", goes back to no highlight with ArrowUp twice, and clears the highlight on typing', async () => {
+      await openRemembering('toilet paper', 'coffee', 'tea');
+      await focusAndType('t');
+
+      await keyInField('ArrowDown');
+      expect(highlighted()).toEqual(['toilet paper']);
+      expect(field().getAttribute('aria-activedescendant')).toBe(option('toilet paper').id);
+      await keyInField('ArrowDown');
+      expect(highlighted()).toEqual(['tea']);
+      expect(field().getAttribute('aria-activedescendant')).toBe(option('tea').id);
+      await keyInField('ArrowDown');
+      expect(highlighted(), 'past the last').toEqual(['tea']);
+
+      await keyInField('ArrowUp');
+      expect(highlighted()).toEqual(['toilet paper']);
+      await keyInField('ArrowUp');
+      expect(highlighted()).toEqual([]);
+      expect(field().hasAttribute('aria-activedescendant'), 'aria-activedescendant').toBe(false);
+
+      // The first option is highlighted, and "tea" becomes the first one
+      await keyInField('ArrowDown');
+      await type('te');
+      expect(options().map(textOf)).toEqual(['tea']);
+      expect(highlighted()).toEqual([]);
+      expect(field().hasAttribute('aria-activedescendant'), 'aria-activedescendant').toBe(false);
+    });
+
+    it('prevents the default of ArrowDown and ArrowUp while the list is shown, so the caret stays', async () => {
+      await openRemembering('toilet paper', 'coffee', 'tea');
+      await focusAndType('t');
+      expect((await keyInField('ArrowDown')).defaultPrevented, 'ArrowDown').toBe(true);
+      expect((await keyInField('ArrowUp')).defaultPrevented, 'ArrowUp').toBe(true);
+    });
+
+    it('adds the highlighted "tea" on Enter as typing it does, under "Other" and remembered first, with the field empty and focused and no list; and the typed "te" on Enter without a highlight', async () => {
+      await openRemembering('toilet paper', 'coffee', 'tea');
+      await focusAndType('t');
+      await keyInField('ArrowDown');
+      await keyInField('ArrowDown');
+      await pressEnter();
+      expect(store.plan().added).toEqual(['tea']);
+      expect(labelsIn(sectionHeaded('Other'))).toContain('tea');
+      expect(statusText()).toBe('Added "tea" to Other.');
+      expect(field().value).toBe('');
+      expect(document.activeElement).toBe(field());
+      expect(listbox()).toBeNull();
+      expect(field().getAttribute('aria-expanded')).toBe('false');
+      expect(storedRecent()).toEqual(['tea', 'toilet paper', 'coffee']);
+
+      await focusAndType('te');
+      await pressEnter();
+      expect(store.plan().added).toEqual(['tea', 'te']);
+      expect(statusText()).toBe('Added "te" to Other.');
+    });
+
+    it('suggests only "toilet paper" for "t" once "tea" is added, as it is on the list', async () => {
+      await openRemembering('toilet paper', 'coffee', 'tea');
+      await focusAndType('t');
+      await keyInField('ArrowDown');
+      await keyInField('ArrowDown');
+      await pressEnter();
+      expect(store.plan().added, '"tea" not added').toEqual(['tea']);
+
+      await focusAndType('t');
+      expect(options().map(textOf)).toEqual(['toilet paper']);
+    });
+
+    it('hides the list on Escape keeping the text, shows it again on typing on, and hides it when the field loses the focus, adding nothing', async () => {
+      await openRemembering('toilet paper', 'coffee', 'tea');
+      await focusAndType('t');
+      await keyInField('Escape');
+      expect(listbox()).toBeNull();
+      expect(field().getAttribute('aria-expanded')).toBe('false');
+      expect(field().value).toBe('t');
+
+      await type('te');
+      expect(options().map(textOf)).toEqual(['tea']);
+
+      field().blur();
+      await stable();
+      expect(listbox()).toBeNull();
+      expect(field().getAttribute('aria-expanded')).toBe('false');
+      expect(store.plan().added).toEqual([]);
+      expect(statusText()).toBe('');
+      expect(storedRecent()).toEqual(['toilet paper', 'coffee', 'tea']);
+    });
+
+    it('adds "tea" on a click on its option as Enter does, and nothing on the press before it, whose pointerdown and mousedown defaults are prevented so the field keeps the focus', async () => {
+      await openRemembering('toilet paper', 'coffee', 'tea');
+      await focusAndType('t');
+      const press = await pressOption(option('tea'));
+      const mouseDown = await pressOption(option('tea'), {}, 'mousedown');
+      expect(press.defaultPrevented, 'pointerdown').toBe(true);
+      expect(mouseDown.defaultPrevented, 'mousedown').toBe(true);
+      expect(store.plan().added, 'added on the press').toEqual([]);
+      expect(options().map(textOf), 'list gone on the press').toEqual(['toilet paper', 'tea']);
+
+      option('tea').click();
+      await stable();
+      expect(store.plan().added).toEqual(['tea']);
+      expect(labelsIn(sectionHeaded('Other'))).toContain('tea');
+      expect(statusText()).toBe('Added "tea" to Other.');
+      expect(field().value).toBe('');
+      expect(document.activeElement).toBe(field());
+      expect(listbox()).toBeNull();
+      expect(storedRecent()).toEqual(['tea', 'toilet paper', 'coffee']);
+    });
+
+    it('suggests no "milk" while it is on the list or in the cart, and labels the list "Vorschläge" in German with the options as remembered', async () => {
+      await openRemembering('milk', 'coffee');
+      store.addItem('milk');
+      await stable();
+      await focusAndType('mi');
+      expect(listbox(), 'on the list').toBeNull();
+
+      store.toggleTicked(addedKey('milk'));
+      await stable();
+      await focusAndType('m');
+      expect(listbox(), 'in the cart').toBeNull();
+
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await openRemembering('Toilet Paper', 'milk', 'Crème fraîche');
+      await focusAndType('e');
+      expect(shownListbox().getAttribute('aria-label')).toBe('Vorschläge');
+      expect(options().map(textOf)).toEqual(['Toilet Paper', 'Crème fraîche']);
+    });
+
+    it('takes the list away with a new plan started through the store, and shows none on the next accepted plan', async () => {
+      await openRemembering('toilet paper', 'coffee', 'tea');
+      await focusAndType('t');
+      expect(options().map(textOf), 'not shown').toEqual(['toilet paper', 'tea']);
+
+      store.newPlan({ ...DEFAULT_SETTINGS, days: 1 });
+      await stable();
+      expect(textOf(element)).toContain('Accept a plan to see what to buy.');
+      expect(listbox()).toBeNull();
+
+      acceptOneDayPlan(store);
+      await stable();
+      expect(field().value).toBe('');
+      expect(listbox()).toBeNull();
+      expect(field().getAttribute('aria-expanded')).toBe('false');
+    });
+
+    describe('edge cases', () => {
+      it('leaves the press of a right-click on an option to the browser, and prevents a ctrl+click press, which adds only when a click follows (Windows), not when the context menu opens instead (macOS)', async () => {
+        await openRemembering('toilet paper', 'coffee', 'tea');
+        await focusAndType('t');
+        const rightClick = await pressOption(option('tea'), { button: 2 });
+        expect(rightClick.defaultPrevented, 'right-click').toBe(false);
+        expect(store.plan().added, 'right-click').toEqual([]);
+
+        const macCtrlClick = await pressOption(option('tea'), { ctrlKey: true });
+        expect(macCtrlClick.defaultPrevented, 'ctrl+click').toBe(true);
+        expect(store.plan().added, 'ctrl+click without a click').toEqual([]);
+        expect(options().map(textOf)).toEqual(['toilet paper', 'tea']);
+
+        await pressOption(option('tea'), { ctrlKey: true });
+        option('tea').dispatchEvent(new MouseEvent('click', { bubbles: true, ctrlKey: true }));
+        await stable();
+        expect(store.plan().added, 'ctrl+click with a click').toEqual(['tea']);
+      });
+
+      it('leaves ArrowDown, Enter and Escape to an IME composition: no highlight moves, nothing is added and the list stays', async () => {
+        await openRemembering('toilet paper', 'coffee', 'tea');
+        await focusAndType('t');
+        await keyInField('ArrowDown');
+        const composing = { isComposing: true };
+        const arrow = await keyInField('ArrowDown', composing);
+        expect(arrow.defaultPrevented, 'ArrowDown').toBe(false);
+        expect(highlighted()).toEqual(['toilet paper']);
+        const enter = await keyInField('Enter', composing);
+        expect(enter.defaultPrevented, 'Enter').toBe(false);
+        expect(store.plan().added).toEqual([]);
+        await keyInField('Escape', composing);
+        expect(options().map(textOf)).toEqual(['toilet paper', 'tea']);
+      });
+
+      it('shows the list again when the field gets the focus back after Escape', async () => {
+        await openRemembering('toilet paper', 'coffee', 'tea');
+        await focusAndType('t');
+        await keyInField('Escape');
+        field().blur();
+        field().focus();
+        await stable();
+        expect(options().map(textOf)).toEqual(['toilet paper', 'tea']);
+      });
+    });
+
+    async function focusAndType(text: string) {
+      field().focus();
+      await type(text);
+      expect(document.activeElement, 'field not focused').toBe(field());
+    }
+
+    async function keyInField(key: string, init: KeyboardEventInit = {}): Promise<KeyboardEvent> {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
+      field().dispatchEvent(event);
+      field().dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true }));
+      await stable();
+      return event;
+    }
+
+    async function pressOption(
+      target: HTMLElement,
+      init: PointerEventInit = {},
+      type: 'pointerdown' | 'mousedown' = 'pointerdown',
+    ): Promise<MouseEvent> {
+      const eventInit = { bubbles: true, cancelable: true, ...init };
+      const event =
+        type === 'pointerdown'
+          ? new PointerEvent(type, eventInit)
+          : new MouseEvent(type, eventInit);
+      target.dispatchEvent(event);
+      await stable();
+      return event;
+    }
+
+    function highlighted(): string[] {
+      return options()
+        .filter((option) => option.getAttribute('aria-selected') === 'true')
+        .map(textOf);
+    }
+
+    function option(text: string): HTMLElement {
+      const found = options().find((candidate) => textOf(candidate) === text);
+      expect(found, `no suggestion "${text}"`).toBeDefined();
+      return found!;
+    }
+
+    function options(): HTMLElement[] {
+      return Array.from(shownListbox().querySelectorAll('li[role="option"]'));
+    }
+
+    function shownListbox(): HTMLElement {
+      const found = listbox();
+      expect(found, 'no list of suggestions').not.toBeNull();
+      return found!;
+    }
+
+    function listbox(): HTMLElement | null {
+      return element.querySelector('ul[role="listbox"]');
     }
   });
 
@@ -2249,6 +2537,16 @@ describe('GroceryList', () => {
     configure();
     store = await loadStores();
     expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+    await open();
+  }
+
+  // A fresh app remembering these items, on a new accepted one-day plan for 2
+  async function openRemembering(...items: string[]) {
+    localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(items));
+    TestBed.resetTestingModule();
+    configure();
+    store = await loadStores();
+    acceptOneDayPlan(store);
     await open();
   }
 
@@ -2399,6 +2697,10 @@ describe('GroceryList', () => {
 
   function labelsIn(section: HTMLElement): string[] {
     return listedIn(section).map(labelOf);
+  }
+
+  function storedRecent(): unknown {
+    return JSON.parse(localStorage.getItem(RECENT_ITEMS_KEY) ?? 'null');
   }
 
   // Only the label: an added item's line also holds its "Remove" button
