@@ -1620,13 +1620,6 @@ describe('GroceryList', () => {
       );
     }
 
-    async function reload() {
-      TestBed.resetTestingModule();
-      configure();
-      store = await loadStores();
-      await open();
-    }
-
     async function wait(ms: number) {
       vi.advanceTimersByTime(ms);
       await stable();
@@ -1895,113 +1888,32 @@ describe('GroceryList', () => {
     });
   });
 
-  describe('"Add again" (#42)', () => {
-    it('shows no group "Add again" with nothing remembered, and remembers "toilet paper" added with Enter without offering it, and "milk" added next before it', async () => {
-      await openRemembering();
-      expect(element.querySelector('.recent')).toBeNull();
-
-      await add('toilet paper');
-      expect(storedRecent()).toEqual(['toilet paper']);
-      expect(element.querySelector('.recent'), 'on the list').toBeNull();
-
-      await add('milk');
-      expect(storedRecent()).toEqual(['milk', 'toilet paper']);
-    });
-
-    it('puts the group "Add again" right after the field, ending the form, offering "milk" and "toilet paper" in remembered order, only "milk" once "toilet paper" is added and ticked, and the 10 most recent of 12', async () => {
-      await openRemembering('milk', 'toilet paper');
-      const form = element.querySelector('form.field');
-      const group = form?.lastElementChild ?? null;
-      expect(group?.matches('div.recent[role="group"]'), 'last child of the form').toBe(true);
-      expect(Array.from(form!.children)).toEqual([
-        form!.querySelector('label[for="new-item"]'),
-        form!.querySelector('div.suggestions'),
-        group,
-      ]);
-      const label = group!.firstElementChild;
-      expect(label?.matches('span#recent-label.recent-label'), 'label first in the group').toBe(
-        true,
-      );
-      expect(group!.getAttribute('aria-labelledby')).toBe('recent-label');
-      expect(textOf(label)).toBe('Add again');
-      expect(recentButtons().map(textOf)).toEqual(['milk', 'toilet paper']);
-      expect(Array.from(group!.children).slice(1)).toEqual(recentButtons());
-      for (const button of recentButtons()) {
-        expect(button.type, textOf(button)).toBe('button');
-      }
-
-      store.addItem('toilet paper');
-      store.toggleTicked(addedKey('toilet paper'));
-      await stable();
-      expect(recentButtons().map(textOf)).toEqual(['milk']);
-
-      const twelve = Array.from({ length: 12 }, (_, i) => `item ${i + 1}`);
-      await openRemembering(...twelve);
-      expect(recentButtons().map(textOf)).toEqual(twelve.slice(0, 10));
-    });
-
-    it('adds "toilet paper" under "Other" unticked with a click on its button, says so, offers only "coffee" then, leaves the field alone and remembers it first; says Added "milk" to Dairy & eggs. for "milk", leaving "tea" in the field', async () => {
-      await openRemembering('coffee', 'toilet paper');
-      await click(recentButton('toilet paper'));
-      expect(labelsIn(sectionHeaded('Other'))).toContain('toilet paper');
-      expect(checkboxOf(line('toilet paper')).checked).toBe(false);
-      expect(statusText()).toBe('Added "toilet paper" to Other.');
-      expect(recentButtons().map(textOf)).toEqual(['coffee']);
-      expect(field().value).toBe('');
-      expect(storedRecent()).toEqual(['toilet paper', 'coffee']);
-
-      await openRemembering('milk');
-      await type('tea');
-      await click(recentButton('milk'));
-      expect(statusText()).toBe('Added "milk" to Dairy & eggs.');
-      expect(field().value).toBe('tea');
-    });
-
-    it('takes the group away and leaves the focus on nothing after a click on the only button', async () => {
-      await openRemembering('milk');
-      await click(recentButton('milk'));
-      expect(element.querySelector('.recent')).toBeNull();
-      expect(document.activeElement).toBe(document.body);
-    });
-
-    it('moves the focus to the next button after Enter on one, else to the previous one, else to the field', async () => {
-      await openRemembering('milk', 'coffee', 'tea');
-      await pressButton(recentButton('coffee'), 'Enter');
-      expect(recentButtons().map(textOf), '"coffee" not added').toEqual(['milk', 'tea']);
-      expect(document.activeElement).toBe(recentButton('tea'));
-
-      await openRemembering('milk', 'coffee', 'tea');
-      await pressButton(recentButton('tea'), 'Enter');
-      expect(recentButtons().map(textOf), '"tea" not added').toEqual(['milk', 'coffee']);
-      expect(document.activeElement).toBe(recentButton('coffee'));
-
-      await openRemembering('milk');
-      await pressButton(recentButton('milk'), 'Enter');
-      expect(element.querySelector('.recent'), '"milk" not added').toBeNull();
-      expect(document.activeElement).toBe(field());
-    });
-
-    it('forgets "milk" removed in its section and in the cart, without offering it, and remembers it again when added again', async () => {
+  describe('remembered items (#42)', () => {
+    it('forgets "milk" removed in its section and in the cart, without suggesting it, and remembers it again when added again', async () => {
       await openRemembering();
       await add('milk');
       expect(storedRecent(), 'not remembered').toEqual(['milk']);
 
       await click(removeButtonOf(line('milk')));
       expect(storedRecent(), 'removed in its section').toEqual([]);
-      expect(element.querySelector('.recent')).toBeNull();
+      expect(store.plan().added, 'still on the list').toEqual([]);
+      await focusAndType('mi');
+      expect(listbox(), 'suggested after "Remove" in its section').toBeNull();
+      expect(field().getAttribute('aria-expanded')).toBe('false');
 
       await add('milk');
       await tick('milk');
       cart()!.open = true;
       await click(removeButtonOf(cartLine('milk')));
       expect(storedRecent(), 'removed in the cart').toEqual([]);
-      expect(element.querySelector('.recent')).toBeNull();
+      await focusAndType('mi');
+      expect(listbox(), 'suggested after "Remove" in the cart').toBeNull();
 
       await add('milk');
       expect(storedRecent(), 'added again').toEqual(['milk']);
     });
 
-    it('keeps the remembered items when an added one is ticked, unticked, ticked and put back with "Undo", and across a switch to German and back, and labels the group "Nochmal hinzufügen" in German with the buttons as typed', async () => {
+    it('keeps the remembered items when an added one is ticked, unticked, ticked and put back with "Undo", and across a switch to German and back', async () => {
       await openRemembering('Toilet Paper');
       await add('milk');
       const remembered = ['milk', 'Toilet Paper'];
@@ -2020,26 +1932,24 @@ describe('GroceryList', () => {
       const language = TestBed.inject(LanguageStore);
       language.set('de');
       await stable();
-      expect(textOf(element.querySelector('#recent-label'))).toBe('Nochmal hinzufügen');
-      expect(recentButtons().map(textOf)).toEqual(['Toilet Paper']);
       language.set('en');
       await stable();
       expect(storedRecent(), 'after German and back').toEqual(remembered);
     });
 
-    it('offers "milk" again on the next accepted plan, and offers no "coffee" added to a plan saved before items were remembered', async () => {
+    it('suggests "milk" again on the next accepted plan, and remembers no "coffee" added to a plan saved before items were remembered', async () => {
       await openRemembering();
       await add('milk');
-      expect(element.querySelector('.recent'), 'on the list').toBeNull();
       acceptOneDayPlan(store);
       await stable();
       expect(store.plan().added, 'new plan').toEqual([]);
-      expect(recentButtons().map(textOf)).toEqual(['milk']);
+      await focusAndType('mi');
+      expect(options().map(textOf)).toEqual(['milk']);
 
       localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(['milk']));
       await openAcceptedWith(['coffee']);
       expect(labelsIn(sectionHeaded('Other')), '"coffee" not listed').toContain('coffee');
-      expect(recentButtons().map(textOf)).toEqual(['milk']);
+      expect(storedRecent()).toEqual(['milk']);
     });
 
     describe('edge cases', () => {
@@ -2062,114 +1972,15 @@ describe('GroceryList', () => {
         expect(storedRecent()).toEqual(['bread', 'milk', 'coffee']);
       });
 
-      it('shows no group while the plan is not accepted, and offers the remembered items once it is', async () => {
-        localStorage.setItem(RECENT_ITEMS_KEY, JSON.stringify(['milk']));
-        await open();
-        expect(element.querySelector('.recent')).toBeNull();
-        expect(textOf(element)).not.toContain('Add again');
-
-        acceptOneDayPlan(store);
-        await stable();
-        expect(recentButtons().map(textOf)).toEqual(['milk']);
-      });
-
-      it('shows no group, nor its label alone, when every remembered item is on the list ignoring case', async () => {
-        await openRemembering('Milk', 'tea');
-        store.addItem('MILK');
-        await stable();
-        expect(recentButtons().map(textOf), 'only "tea"').toEqual(['tea']);
-
-        store.addItem('TEA');
-        await stable();
-        expect(element.querySelector('.recent')).toBeNull();
-        expect(textOf(element)).not.toContain('Add again');
-      });
-
-      it('offers the first 10 remembered items not on the list, skipping one that is', async () => {
-        const twelve = Array.from({ length: 12 }, (_, i) => `item ${i + 1}`);
-        await openRemembering(...twelve);
-        store.addItem('item 2');
-        await stable();
-        expect(recentButtons().map(textOf)).toEqual(['item 1', ...twelve.slice(2, 11)]);
-      });
-
-      it('puts the buttons right after the field and before the first checkbox in the tab order, without a tabindex', async () => {
-        await openRemembering('milk', 'coffee');
-        const tabbable = Array.from(element.querySelectorAll<HTMLElement>(TABBABLE));
-        expect(tabbable.slice(0, 4)).toEqual([
-          field(),
-          recentButton('milk'),
-          recentButton('coffee'),
-          checkboxOf(listed()[0]),
-        ]);
-        for (const button of recentButtons()) {
-          expect(button.hasAttribute('tabindex'), textOf(button)).toBe(false);
-        }
-      });
-
       // A button without a type submits its form, so it would add the field's text as well
-      it('holds no submit control in the form, with or without the group: no submit or image input, and only buttons of type "button"', async () => {
+      it('holds no submit control in the form, with or without remembered items: no button and only the one field', async () => {
         for (const remembered of [[], ['milk', 'coffee']]) {
           await openRemembering(...remembered);
           const form = element.querySelector('form.field')!;
-          expect(recentButtons(), 'offered buttons').toHaveLength(remembered.length);
           // Implicit submission on Enter needs a single field
           expect(form.querySelectorAll('input')).toHaveLength(1);
-          expect(
-            form.querySelectorAll(
-              'button:not([type=button]):not([type=reset]), input[type=submit], input[type=image]',
-            ),
-          ).toHaveLength(0);
-          for (const button of buttonsIn(form)) {
-            expect(button.getAttribute('type'), textOf(button)).toBe('button');
-          }
+          expect(buttonsIn(form), `buttons for [${remembered}]`).toEqual([]);
         }
-      });
-
-      it('adds the remembered item as remembered, "Toilet  Paper" with its case and spaces, and not what is in the field', async () => {
-        await openRemembering('Toilet  Paper');
-        await type('tea');
-        await click(recentButton('Toilet Paper'));
-        expect(store.plan().added).toEqual(['Toilet  Paper']);
-        expect(statusText()).toBe('Added "Toilet  Paper" to Other.');
-        expect(storedRecent()).toEqual(['Toilet  Paper']);
-      });
-
-      it('adds the item with a mouse click, whose detail is 1 unlike the 0 of click() and of a key press', async () => {
-        await openRemembering('milk', 'coffee');
-        recentButton('milk').dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
-        await stable();
-        expect(store.plan().added).toEqual(['milk']);
-        expect(recentButtons().map(textOf)).toEqual(['coffee']);
-      });
-
-      it("adds nothing with the second click of a double-click, which lands on the button that took the clicked one's place", async () => {
-        await openRemembering('milk', 'coffee');
-        await click(recentButton('milk'));
-        expect(store.plan().added, '"milk" not added').toEqual(['milk']);
-
-        recentButton('coffee').dispatchEvent(
-          new MouseEvent('click', { bubbles: true, cancelable: true, detail: 2 }),
-        );
-        await stable();
-        expect(store.plan().added).toEqual(['milk']);
-        expect(recentButtons().map(textOf)).toEqual(['coffee']);
-        expect(statusText()).toBe('Added "milk" to Dairy & eggs.');
-        expect(storedRecent()).toEqual(['milk', 'coffee']);
-      });
-
-      it('leaves the focus on nothing after a click on a button next to another one', async () => {
-        await openRemembering('milk', 'coffee');
-        await click(recentButton('milk'));
-        expect(recentButtons().map(textOf), '"milk" not added').toEqual(['coffee']);
-        expect(document.activeElement).toBe(document.body);
-      });
-
-      it('moves the focus to the next button after Space on the first one', async () => {
-        await openRemembering('milk', 'coffee', 'tea');
-        await pressButton(recentButton('milk'), ' ');
-        expect(recentButtons().map(textOf), '"milk" not added').toEqual(['coffee', 'tea']);
-        expect(document.activeElement).toBe(recentButton('coffee'));
       });
 
       it('keeps the remembered items when an item that was never remembered is removed', async () => {
@@ -2178,7 +1989,6 @@ describe('GroceryList', () => {
         await stable();
         await click(removeButtonOf(line('coffee')));
         expect(storedRecent()).toEqual(['milk']);
-        expect(recentButtons().map(textOf)).toEqual(['milk']);
       });
 
       it('forgets "milk" when "MILK" is removed', async () => {
@@ -2187,7 +1997,6 @@ describe('GroceryList', () => {
         await stable();
         await click(removeButtonOf(line('MILK')));
         expect(storedRecent()).toEqual(['coffee']);
-        expect(recentButtons().map(textOf)).toEqual(['coffee']);
       });
     });
 
@@ -2212,16 +2021,6 @@ describe('GroceryList', () => {
       store = await loadStores();
       expect(store.plan(), 'saved plan not loaded').toEqual(saved);
       await open();
-    }
-
-    function recentButton(text: string): HTMLButtonElement {
-      const button = recentButtons().find((candidate) => textOf(candidate) === text);
-      expect(button, `no "Add again" button "${text}"`).toBeDefined();
-      return button!;
-    }
-
-    function recentButtons(): HTMLButtonElement[] {
-      return Array.from(element.querySelectorAll('div.recent button.recent-item'));
     }
   });
 
@@ -2255,7 +2054,7 @@ describe('GroceryList', () => {
       expect(field().getAttribute('aria-expanded')).toBe('false');
     });
 
-    it('shows no list for text typed while the field does not have the focus, and holds the field and the shown list in div.suggestions between the label and the "Add again" group', async () => {
+    it('shows no list for text typed while the field does not have the focus, and holds the field and the shown list in div.suggestions after the label, the only children of the form', async () => {
       await openRemembering('toilet paper', 'coffee', 'tea');
       await type('t');
       expect(document.activeElement).not.toBe(field());
@@ -2265,19 +2064,12 @@ describe('GroceryList', () => {
       const form = element.querySelector('form.field')!;
       const box = form.querySelector('div.suggestions');
       const label = form.querySelector('label[for="new-item"]');
-      expect(Array.from(form.children)).toEqual([label, box, form.querySelector('div.recent')]);
+      expect(Array.from(form.children)).toEqual([label, box]);
       expect(Array.from(box!.children)).toEqual([field()]);
 
       field().focus();
       await stable();
       expect(Array.from(box!.children)).toEqual([field(), shownListbox()]);
-
-      await openRemembering();
-      const emptyForm = element.querySelector('form.field')!;
-      expect(Array.from(emptyForm.children)).toEqual([
-        emptyForm.querySelector('label[for="new-item"]'),
-        emptyForm.querySelector('div.suggestions'),
-      ]);
     });
 
     it('highlights "toilet paper" and then "tea" with ArrowDown, stays on "tea", goes back to no highlight with ArrowUp twice, and clears the highlight on typing', async () => {
@@ -2469,12 +2261,6 @@ describe('GroceryList', () => {
       });
     });
 
-    async function focusAndType(text: string) {
-      field().focus();
-      await type(text);
-      expect(document.activeElement, 'field not focused').toBe(field());
-    }
-
     async function keyInField(key: string, init: KeyboardEventInit = {}): Promise<KeyboardEvent> {
       const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
       field().dispatchEvent(event);
@@ -2509,20 +2295,6 @@ describe('GroceryList', () => {
       expect(found, `no suggestion "${text}"`).toBeDefined();
       return found!;
     }
-
-    function options(): HTMLElement[] {
-      return Array.from(shownListbox().querySelectorAll('li[role="option"]'));
-    }
-
-    function shownListbox(): HTMLElement {
-      const found = listbox();
-      expect(found, 'no list of suggestions').not.toBeNull();
-      return found!;
-    }
-
-    function listbox(): HTMLElement | null {
-      return element.querySelector('ul[role="listbox"]');
-    }
   });
 
   describe('"Add an item" block (#48)', () => {
@@ -2536,10 +2308,6 @@ describe('GroceryList', () => {
         element.querySelector('form.field'),
         statusElement(),
       ]);
-      expect(
-        block.querySelector('form.field div.recent'),
-        '"Add again" not in the form',
-      ).not.toBeNull();
       expect(block.nextElementSibling?.matches('div.sections'), 'sections after div.add').toBe(
         true,
       );
@@ -2551,24 +2319,67 @@ describe('GroceryList', () => {
       expect(element.querySelector('.sections'), 'sections left').toBeNull();
       expect(block.nextElementSibling).toBe(cart());
     });
+  });
 
-    it('scrolls a focused "Add again" pill into view within its row, to the nearest edge', async () => {
-      await openRemembering('milk', 'eggs', 'coffee');
-      const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
-      restores.push(() => scrollIntoView.mockRestore());
-      const pill = Array.from(
-        element.querySelectorAll<HTMLButtonElement>('div.recent button.recent-item'),
-      ).find((button) => textOf(button) === 'eggs');
-      expect(pill, 'no "eggs" pill').toBeDefined();
+  describe('without "Add again" (#50)', () => {
+    it('shows no "Add again" group, label or pill with "milk", "coffee" and "toilet paper" remembered and none on the list, the form holding only the label and div.suggestions, also after a reload, on the next accepted plan and in German', async () => {
+      await openRemembering('milk', 'coffee', 'toilet paper');
+      expectNoAddAgain('on opening', 'Add again');
 
-      pill!.focus();
+      await reload();
+      expect(store.plan().accepted, 'plan not accepted after the reload').toBe(true);
+      expectNoAddAgain('after a reload', 'Add again');
 
-      expect(scrollIntoView).toHaveBeenCalledExactlyOnceWith({
-        block: 'nearest',
-        inline: 'nearest',
-      });
-      expect(scrollIntoView.mock.contexts).toEqual([pill]);
+      acceptOneDayPlan(store);
+      await stable();
+      expectNoAddAgain('on the next accepted plan', 'Add again');
+
+      TestBed.inject(LanguageStore).set('de');
+      await stable();
+      expectNoAddAgain('in German', 'Nochmal hinzufügen');
     });
+
+    it('suggests "coffee" for "co", remembers "toilet paper" and then "milk" first when they are typed and added with Enter, and forgets "milk" on "Remove"', async () => {
+      await openRemembering('coffee');
+      await focusAndType('co');
+      expect(options().map(textOf)).toEqual(['coffee']);
+
+      await add('toilet paper');
+      expect(storedRecent()).toEqual(['toilet paper', 'coffee']);
+
+      await add('milk');
+      expect(store.plan().added, '"milk" not added').toEqual(['toilet paper', 'milk']);
+      expect(storedRecent()).toEqual(['milk', 'toilet paper', 'coffee']);
+
+      await click(removeButtonOf(line('milk')));
+      expect(storedRecent()).toEqual(['toilet paper', 'coffee']);
+    });
+
+    it('puts the first line\'s checkbox right after the field in the tab order with "milk", "coffee" and "toilet paper" remembered, and no pill anywhere in it', async () => {
+      await openRemembering('milk', 'coffee', 'toilet paper');
+      const tabbable = Array.from(element.querySelectorAll<HTMLElement>(TABBABLE));
+      expect(tabbable.slice(0, 2)).toEqual([field(), checkboxOf(listed()[0])]);
+      for (const item of ['milk', 'coffee', 'toilet paper']) {
+        expect(tabbable.map(textOf), item).not.toContain(item);
+      }
+    });
+
+    function expectNoAddAgain(when: string, name: string) {
+      const form = element.querySelector('form.field');
+      expect(form, `no form ${when}`).not.toBeNull();
+      expect(Array.from(form!.children), `children of the form ${when}`).toEqual([
+        form!.querySelector('label[for="new-item"]'),
+        form!.querySelector('div.suggestions'),
+      ]);
+      expect(form!.querySelector('div.recent'), `div.recent ${when}`).toBeNull();
+      expect(form!.querySelector('button.recent-item'), `pill ${when}`).toBeNull();
+      expect(form!.querySelector('[role="group"]'), `group ${when}`).toBeNull();
+      const labels = Array.from(element.querySelectorAll('[aria-label]')).map((labelled) =>
+        labelled.getAttribute('aria-label'),
+      );
+      expect(labels, `aria-label ${when}`).not.toContain(name);
+      expect(textOf(element), `text ${when}`).not.toContain(name);
+    }
   });
 
   function configure() {
@@ -2599,6 +2410,14 @@ describe('GroceryList', () => {
     configure();
     store = await loadStores();
     acceptOneDayPlan(store);
+    await open();
+  }
+
+  // A fresh app on this localStorage, as a reload makes
+  async function reload() {
+    TestBed.resetTestingModule();
+    configure();
+    store = await loadStores();
     await open();
   }
 
@@ -2669,6 +2488,12 @@ describe('GroceryList', () => {
     await pressEnter();
   }
 
+  async function focusAndType(text: string) {
+    field().focus();
+    await type(text);
+    expect(document.activeElement, 'field not focused').toBe(field());
+  }
+
   async function type(text: string) {
     field().value = text;
     field().dispatchEvent(new Event('input', { bubbles: true }));
@@ -2689,6 +2514,20 @@ describe('GroceryList', () => {
     const input = element.querySelector<HTMLInputElement>('input:not([type="checkbox"])');
     expect(input, 'no field to add items').not.toBeNull();
     return input!;
+  }
+
+  function options(): HTMLElement[] {
+    return Array.from(shownListbox().querySelectorAll('li[role="option"]'));
+  }
+
+  function shownListbox(): HTMLElement {
+    const found = listbox();
+    expect(found, 'no list of suggestions').not.toBeNull();
+    return found!;
+  }
+
+  function listbox(): HTMLElement | null {
+    return element.querySelector('ul[role="listbox"]');
   }
 
   async function pressRemove(item: HTMLElement) {

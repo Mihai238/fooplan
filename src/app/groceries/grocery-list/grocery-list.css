@@ -108,49 +108,6 @@ button {
   text-decoration: underline;
 }
 
-/* One line, so the sticky block stays low; it scrolls sideways when the items don't fit. Its
-   scrolling would clip a focused pill's outline, so the padding makes room for it, the negative
-   margin keeps the row in its place and the scroll padding keeps that room when a pill is
-   scrolled into view */
-.recent {
-  flex-basis: 100%;
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin: -4px;
-  padding: 4px;
-  overflow-x: auto;
-  scroll-padding-inline: 4px;
-  scrollbar-width: thin;
-}
-
-.recent-label {
-  flex-shrink: 0;
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-/* A long item without spaces wraps inside its pill instead of widening the page on a phone. The
-   items don't shrink in their one line, where the wrapping would squeeze them to a letter wide */
-.recent-item {
-  flex-shrink: 0;
-  max-width: 100%;
-  min-height: max(2.75rem, 44px);
-  padding: 0.25rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0.875rem;
-  overflow-wrap: anywhere;
-}
-
-.recent-item:hover {
-  border-color: var(--accent);
-  background: var(--hover);
-}
-
 .status {
   margin: 0;
   color: var(--muted);
@@ -293,8 +250,8 @@ summary {
 
 /* focus() scrolls an element above the screen to its top edge, under the sticky block, as when the
    focus moves on after a tick or Shift+Tab goes up the lines. CSS can't refer to the block's height,
-   so this is fixed: the block on a phone with "Add again" and a status of up to two lines, plus the
-   focus ring */
+   so this is fixed: it leaves room for the sticky block with a status of up to two lines, plus the
+   focus ring, with some to spare */
 .items input,
 .items button,
 summary {

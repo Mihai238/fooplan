@@ -45,11 +45,8 @@ export function suggestions(
   if (typed === '') {
     return [];
   }
-  return notOnList(items, added)
+  return items
+    .filter((item) => !added.some((other) => sameItem(other, item)))
     .filter((item) => normalize(item).includes(typed))
     .slice(0, MAX_SUGGESTED);
-}
-
-export function notOnList(items: readonly string[], added: readonly string[]): readonly string[] {
-  return items.filter((item) => !added.some((other) => sameItem(other, item)));
 }

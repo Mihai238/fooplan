@@ -24,11 +24,10 @@ import {
   listItems,
   shoppingView,
 } from '../groceries';
-import { notOnList, suggestions } from '../recent-items';
+import { suggestions } from '../recent-items';
 import { RecentItemsStore } from '../recent-items-store';
 
 const UNDO_SECONDS = 5;
-const MAX_OFFERED = 10;
 // A line leaving its list stays in the page until its fade ends, but is no longer on the list
 const LISTED_CHECKBOX = 'li:not(.leaving) input[type="checkbox"]';
 
@@ -59,9 +58,6 @@ export class GroceryList {
       this.plan().ticked,
       byShownName((item) => this.nameOf(item), this.language.language()),
     ),
-  );
-  protected readonly offered = computed(() =>
-    notOnList(this.recentItems.items(), this.plan().added).slice(0, MAX_OFFERED),
   );
   private readonly typed = signal('');
   private readonly fieldFocused = signal(false);
@@ -168,31 +164,6 @@ export class GroceryList {
     if (event.button === 0) {
       event.preventDefault();
     }
-  }
-
-  // Browsers don't scroll a partly visible element into view when it is focused
-  protected revealPill(event: FocusEvent): void {
-    (event.target as HTMLElement).scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }
-
-  // Like remove: the button goes with the render. A click or tap leaves the focus alone, as a
-  // focused field would open the keyboard on a phone
-  protected addAgain(event: MouseEvent, item: string, button: HTMLButtonElement): void {
-    // The next button slides under the pointer at once, so the second click of a double-click
-    // would add an item the user never chose
-    if (event.detail > 1) {
-      return;
-    }
-    this.addItem(item);
-    if (!button.matches(':focus-visible')) {
-      return;
-    }
-    const buttons = Array.from(
-      button.parentElement?.querySelectorAll<HTMLButtonElement>('.recent-item') ?? [],
-    );
-    const index = buttons.indexOf(button);
-    const sibling: HTMLElement | undefined = buttons[index + 1] ?? buttons[index - 1];
-    afterNextRender(() => (sibling ?? this.addField())?.focus(), { injector: this.injector });
   }
 
   // Toggling moves the item's row to the other list, which drops the focus to <body> and sends

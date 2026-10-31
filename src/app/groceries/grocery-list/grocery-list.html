@@ -46,26 +46,6 @@
           </ul>
         }
       </div>
-      @if (offered().length > 0) {
-        <div
-          class="recent"
-          role="group"
-          aria-labelledby="recent-label"
-          (focusin)="revealPill($event)"
-        >
-          <span id="recent-label" class="recent-label">{{ language.t('groceries.addAgain') }}</span>
-          @for (item of offered(); track item) {
-            <button
-              #recentButton
-              type="button"
-              class="recent-item"
-              (click)="addAgain($event, item, recentButton)"
-            >
-              {{ item }}
-            </button>
-          }
-        </div>
-      }
     </form>
     <!-- Screen readers announce changes inside a live region already on the page, not a region
          added along with its text, so this one stays, empty until the first entry -->
