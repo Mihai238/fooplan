@@ -7,8 +7,7 @@
 } @else {
   <form class="field" (submit)="add($event, itemInput)">
     <label for="new-item">{{ language.t('groceries.addItem') }}</label>
-    <input #itemInput type="text" id="new-item" autocomplete="off" />
-    <button type="submit" class="primary">{{ language.t('groceries.add') }}</button>
+    <input #itemInput type="text" id="new-item" autocomplete="off" enterkeyhint="done" />
     @if (offered().length > 0) {
       <div class="recent" role="group" aria-labelledby="recent-label">
         <span id="recent-label" class="recent-label">{{ language.t('groceries.addAgain') }}</span>
@@ -26,7 +25,7 @@
     }
   </form>
   <!-- Screen readers announce changes inside a live region already on the page, not a region
-       added along with its text, so this one stays, empty until the first "Add" -->
+       added along with its text, so this one stays, empty until the first entry -->
   <p class="status" role="status">{{ feedbackText() }}</p>
   @if (view().sections.length > 0) {
     <div class="sections">

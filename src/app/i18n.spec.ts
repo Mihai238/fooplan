@@ -30,6 +30,11 @@ describe('MESSAGES', () => {
     );
   });
 
+  it('has no id "groceries.add" in English or German, as Enter adds the item', () => {
+    expect(Object.keys(MESSAGES.en)).not.toContain('groceries.add');
+    expect(Object.keys(MESSAGES.de)).not.toContain('groceries.add');
+  });
+
   describe('edge cases', () => {
     it("follows the current language in t(), filling in every placeholder, numbers too: English, German after set('de') and English again after set('en')", () => {
       const store = TestBed.inject(LanguageStore);

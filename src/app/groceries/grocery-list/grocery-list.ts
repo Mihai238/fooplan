@@ -98,8 +98,8 @@ export class GroceryList {
     inject(DestroyRef).onDestroy(() => clearTimeout(this.undoTimer));
   }
 
-  // Without preventDefault the browser would submit the form and reload the page. The focus goes
-  // back to the field after a click on "Add", so several items can be added in a row
+  // Without preventDefault the browser would submit the form and reload the page. Assistive
+  // technology can submit it from elsewhere, so the focus goes back to the field for the next item
   protected add(event: SubmitEvent, input: HTMLInputElement): void {
     event.preventDefault();
     this.addItem(input.value);

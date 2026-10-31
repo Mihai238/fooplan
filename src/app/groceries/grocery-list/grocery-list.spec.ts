@@ -302,7 +302,7 @@ describe('GroceryList', () => {
     expect(listed().map(textOf)).toContain('25 ml white wine');
   });
 
-  it('adds what the user types under "Other" on "Add" and on Enter, and empties the field', async () => {
+  it('adds what the user types under "Other" on Enter, and empties the field', async () => {
     acceptOneDayPlan(store);
     await open();
 
@@ -310,7 +310,7 @@ describe('GroceryList', () => {
       labelsIn(sectionHeaded('Other')).filter((line) => ['coffee', 'toilet paper'].includes(line));
 
     await type('toilet paper');
-    await click(addButton());
+    await pressEnter();
     expect(added()).toEqual(['toilet paper']);
     expect(field().value).toBe('');
 
@@ -321,16 +321,16 @@ describe('GroceryList', () => {
     expect(store.plan().added).toEqual(['toilet paper', 'coffee']);
   });
 
-  it('moves the focus back to the field after adding with "Add", and keeps it there on Enter', async () => {
+  it('keeps the focus in the field after adding with Enter', async () => {
     acceptOneDayPlan(store);
     await open();
 
     await type('toilet paper');
-    await click(addButton());
+    await pressEnter();
     expect(store.plan().added, 'item not added').toEqual(['toilet paper']);
     expect(document.activeElement).toBe(field());
 
-    field().focus();
+    field().blur();
     await type('coffee');
     await pressEnter();
     expect(store.plan().added, 'item not added').toEqual(['toilet paper', 'coffee']);
@@ -343,8 +343,7 @@ describe('GroceryList', () => {
     expect(first, 'empty grocery list').toBeDefined();
     await open();
 
-    await type(first.name);
-    await click(addButton());
+    await add(first.name);
     const lines = labelsIn(sectionHeaded(first.section)).filter(
       (line) => line === lineOf(first) || line === first.name,
     );
@@ -433,12 +432,10 @@ describe('GroceryList', () => {
     await open();
     expect(element.querySelector('p.empty'), 'no message').not.toBeNull();
     expect(element.querySelector('input')).toBeNull();
-    expect(buttonsIn(element).map(textOf)).not.toContain('Add');
 
     acceptOneDayPlan(store);
     await fixture.whenStable();
     field();
-    addButton();
   });
 
   it('shows the "Add an item" form and the status line, no section and no "Accept a plan to see what to buy." for an accepted plan whose both meals are eating out', async () => {
@@ -462,11 +459,38 @@ describe('GroceryList', () => {
 
     expect(textOf(element.querySelector('form label'))).toBe('Add an item');
     field();
-    addButton();
     expect(element.querySelector('p.status')).not.toBeNull();
     expect(element.querySelectorAll('section')).toHaveLength(0);
     expect(element.querySelector('p.empty')).toBeNull();
     expect(textOf(element)).not.toContain('Accept a plan to see what to buy.');
+  });
+
+  it('shows only the label "Add an item" and the field with enterkeyhint="done" in the form, and no "Add" or submit button on the page', async () => {
+    acceptOneDayPlan(store);
+    await open();
+    const form = element.querySelector('form.field');
+    const label = form!.querySelector('label');
+    expect(Array.from(form!.children)).toEqual([label, field()]);
+    expect(textOf(label)).toBe('Add an item');
+    expect(field().id).toBe('new-item');
+    expect(field().getAttribute('enterkeyhint')).toBe('done');
+    expect(buttonsIn(element).map(textOf)).not.toContain('Add');
+    expect(element.querySelector('button[type="submit"]')).toBeNull();
+  });
+
+  it('gives the field no placeholder and no aria-describedby, and keeps the label "Add an item"', async () => {
+    acceptOneDayPlan(store);
+    await open();
+    expect(field().hasAttribute('placeholder'), 'placeholder').toBe(false);
+    expect(field().hasAttribute('aria-describedby'), 'aria-describedby').toBe(false);
+    expect(Array.from(field().labels ?? []).map(textOf)).toEqual(['Add an item']);
+  });
+
+  it("puts the first line's checkbox right after the field in the tab order", async () => {
+    acceptOneDayPlan(store);
+    await open();
+    const tabbable = Array.from(element.querySelectorAll<HTMLElement>(TABBABLE));
+    expect(tabbable.slice(0, 2)).toEqual([field(), checkboxOf(listed()[0])]);
   });
 
   it('lists the scaled ingredients of the own recipes "Quick Dal" and "Plain Rice" of an accepted plan for 2 under their sections, and "mystery spice" under "Other"', async () => {
@@ -656,7 +680,7 @@ describe('GroceryList', () => {
     }
   });
 
-  describe('status after "Add"', () => {
+  describe('status after Enter', () => {
     it('shows one empty status element right after the form and before the sections, without tabindex or hidden, and leaves the field without aria-describedby', async () => {
       acceptOneDayPlan(store);
       await open();
@@ -686,20 +710,19 @@ describe('GroceryList', () => {
       expectStatusShownAndEmpty('after an empty entry');
     });
 
-    it('keeps the focus in the field after "Add" and on Enter, and the status element does not take it on focus()', async () => {
+    it('keeps the focus in the field after Enter, and the status element does not take it on focus()', async () => {
       acceptOneDayPlan(store);
       await open();
 
       await add('coffee');
       expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
-      expect(document.activeElement, 'focus after "Add"').toBe(field());
+      expect(document.activeElement, 'focus after Enter').toBe(field());
       statusElement().focus();
       expect(document.activeElement, 'status element took the focus').toBe(field());
 
-      await type('COFFEE');
-      await pressEnter();
+      await add('COFFEE');
       expect(statusText(), 'text not shown').toBe('"coffee" is already on the list.');
-      expect(document.activeElement, 'focus after Enter').toBe(field());
+      expect(document.activeElement, 'focus after another Enter').toBe(field());
     });
 
     it('gives the status element a class of its own, not "empty", and shows no "Accept a plan" text', async () => {
@@ -709,7 +732,7 @@ describe('GroceryList', () => {
       expect(element.querySelector('p.empty')).toBeNull();
     });
 
-    it('says "Added "toilet paper" to Other." after "Add", lists it under "Other" and empties the field', async () => {
+    it('says "Added "toilet paper" to Other." after Enter, lists it under "Other", empties the field and keeps the focus in it', async () => {
       acceptOneDayPlan(store);
       await open();
 
@@ -717,16 +740,7 @@ describe('GroceryList', () => {
       expect(statusText()).toBe('Added "toilet paper" to Other.');
       expect(labelsIn(sectionHeaded('Other'))).toContain('toilet paper');
       expect(field().value).toBe('');
-    });
-
-    it('says "Added "coffee" to Other." after Enter', async () => {
-      acceptOneDayPlan(store);
-      await open();
-
-      await type('coffee');
-      await pressEnter();
-      expect(statusText()).toBe('Added "coffee" to Other.');
-      expect(labelsIn(sectionHeaded('Other')), 'item not added').toContain('coffee');
+      expect(document.activeElement).toBe(field());
     });
 
     it('quotes the entry without its surrounding spaces and names the section the line is listed under', async () => {
@@ -1024,7 +1038,7 @@ describe('GroceryList', () => {
       expect(bar()).toBeNull();
     });
 
-    it('keeps the status text of an "Add" when a tick shows the bar', async () => {
+    it('keeps the status text after Enter in the field when a tick shows the bar', async () => {
       await openStirFryPlan();
       await add('coffee');
       expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
@@ -1056,12 +1070,12 @@ describe('GroceryList', () => {
       expect(bar()).toBeNull();
     });
 
-    it('shows no bar after "Add" or "Remove" of an added item', async () => {
+    it('shows no bar after adding an item with Enter or removing it with "Remove"', async () => {
       await openStirFryPlan();
 
       await add('toilet paper');
       expect(labelsIn(sectionHeaded('Other')), 'item not added').toEqual(['toilet paper']);
-      expect(bar(), 'after "Add"').toBeNull();
+      expect(bar(), 'after Enter').toBeNull();
       await click(removeButtonOf(line('toilet paper')));
       expect(store.plan().added, 'item not removed').toEqual([]);
       expect(bar(), 'after "Remove"').toBeNull();
@@ -1270,7 +1284,7 @@ describe('GroceryList', () => {
       expect(document.activeElement).toBe(document.body);
     });
 
-    it('leaves the status text of an "Add" as it is on "Undo"', async () => {
+    it('leaves the status text after Enter in the field as it is on "Undo"', async () => {
       await openStirFryPlan();
       await add('coffee');
       expect(statusText(), 'text not shown').toBe('Added "coffee" to Other.');
@@ -1658,14 +1672,15 @@ describe('GroceryList', () => {
   });
 
   describe('in German (#35)', () => {
-    it('heads the list "Einkaufsliste" with the field "Eintrag hinzufügen" and the button "Hinzufügen", names the sections in German, as "Obst & Gemüse" for onion, shows "1 Stk. Zwiebel", says „Klopapier“ zu Sonstiges hinzugefügt. after adding "Klopapier", heads the cart "Im Wagen (1)" after a tick, and says "Nimm einen Plan an, um zu sehen, was einzukaufen ist." with the link "Zum Plan" without an accepted plan', async () => {
+    it('heads the list "Einkaufsliste" with the field "Eintrag hinzufügen" and no button "Hinzufügen", names the sections in German, as "Obst & Gemüse" for onion, shows "1 Stk. Zwiebel", says „Klopapier“ zu Sonstiges hinzugefügt. after adding "Klopapier", heads the cart "Im Wagen (1)" after a tick, and says "Nimm einen Plan an, um zu sehen, was einzukaufen ist." with the link "Zum Plan" without an accepted plan', async () => {
       storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
       localStorage.setItem(LANGUAGE_KEY, 'de');
       await openAccepted('Quick Dal', 'Plain Rice');
       expect(textOf(element.querySelector('h1'))).toBe('Einkaufsliste');
       expect(textOf(element.querySelector('label[for="new-item"]'))).toBe('Eintrag hinzufügen');
       expect(Array.from(field().labels ?? []).map(textOf)).toEqual(['Eintrag hinzufügen']);
-      expect(buttonsIn(element.querySelector('form')).map(textOf)).toEqual(['Hinzufügen']);
+      expect(buttonsIn(element.querySelector('form')).map(textOf)).toEqual([]);
+      expect(buttonsIn(element).map(textOf)).not.toContain('Hinzufügen');
       expect(sections().map((section) => textOf(section.querySelector('h2')))).toEqual([
         'Obst & Gemüse',
         'Nudeln, Reis & Getreide',
@@ -1676,7 +1691,7 @@ describe('GroceryList', () => {
       expect(labelsIn(sectionHeaded('Nudeln, Reis & Getreide'))).toEqual(['150 g Reis']);
       expect(labelsIn(sectionHeaded('Sonstiges'))).toEqual(['1 Stk. mystery spice']);
 
-      await addInGerman('Klopapier');
+      await add('Klopapier');
       expect(statusText()).toBe('„Klopapier“ zu Sonstiges hinzugefügt.');
       expect(labelsIn(sectionHeaded('Sonstiges'))).toEqual(['Klopapier', '1 Stk. mystery spice']);
       const added = listed().find((item) => labelOf(item) === 'Klopapier')!;
@@ -1749,11 +1764,11 @@ describe('GroceryList', () => {
         storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
         localStorage.setItem(LANGUAGE_KEY, 'de');
         await openAccepted('Quick Dal', 'Plain Rice');
-        await addInGerman('Klopapier');
-        await addInGerman('klopapier');
+        await add('Klopapier');
+        await add('klopapier');
         expect(statusText()).toBe('„Klopapier“ steht schon auf der Liste.');
         await click(checkboxOf(listed().find((item) => labelOf(item) === 'Klopapier')!));
-        await addInGerman('Klopapier');
+        await add('Klopapier');
         expect(statusText()).toBe('„Klopapier“ ist schon im Wagen.');
       });
     });
@@ -1799,8 +1814,7 @@ describe('GroceryList', () => {
 
       it('shows an added "garlic clove" as typed, sorted by that text among the German lines of "Obst & Gemüse", and quotes it as typed', async () => {
         await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
-        await type('garlic clove');
-        await click(buttonsIn(element).find((candidate) => textOf(candidate) === 'Hinzufügen')!);
+        await add('garlic clove');
         expect(statusText()).toBe('„garlic clove“ zu Obst & Gemüse hinzugefügt.');
         expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual([
           '10 g Basilikum',
@@ -1839,13 +1853,13 @@ describe('GroceryList', () => {
     it('lists "Zitrone" under "Obst & Gemüse" as typed and says „Zitrone“ zu Obst & Gemüse hinzugefügt., lists "  käse  " under "Sonstiges" as "käse" and "lemon" under "Obst & Gemüse" in German, and lists "Zitrone" under "Other" saying Added "Zitrone" to Other. in English', async () => {
       localStorage.setItem(LANGUAGE_KEY, 'de');
       await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
-      await addInGerman('Zitrone');
+      await add('Zitrone');
       expect(statusText()).toBe('„Zitrone“ zu Obst & Gemüse hinzugefügt.');
       expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toContain('Zitrone');
-      await addInGerman('  käse  ');
+      await add('  käse  ');
       expect(statusText()).toBe('„käse“ zu Sonstiges hinzugefügt.');
       expect(labelsIn(sectionHeaded('Sonstiges'))).toContain('käse');
-      await addInGerman('lemon');
+      await add('lemon');
       expect(statusText()).toBe('„lemon“ zu Obst & Gemüse hinzugefügt.');
       expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toContain('lemon');
 
@@ -1861,9 +1875,9 @@ describe('GroceryList', () => {
       it('lists "ZITRONE" and "rote zwiebel" under "Obst & Gemüse" as typed in German, quoting them as typed, and not under "Sonstiges"', async () => {
         localStorage.setItem(LANGUAGE_KEY, 'de');
         await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
-        await addInGerman('ZITRONE');
+        await add('ZITRONE');
         expect(statusText()).toBe('„ZITRONE“ zu Obst & Gemüse hinzugefügt.');
-        await addInGerman('rote zwiebel');
+        await add('rote zwiebel');
         expect(statusText()).toBe('„rote zwiebel“ zu Obst & Gemüse hinzugefügt.');
         expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual(
           expect.arrayContaining(['ZITRONE', 'rote zwiebel']),
@@ -1874,29 +1888,28 @@ describe('GroceryList', () => {
   });
 
   describe('"Add again" (#42)', () => {
-    it('shows only the label, the field and "Add" in the form with nothing remembered, remembers "toilet paper" added with "Add" without offering it, and "milk" added with Enter before it', async () => {
+    it('shows no group "Add again" with nothing remembered, and remembers "toilet paper" added with Enter without offering it, and "milk" added next before it', async () => {
       await openRemembering();
-      const form = element.querySelector('form.field');
-      expect(Array.from(form?.children ?? []).map((child) => child.tagName)).toEqual([
-        'LABEL',
-        'INPUT',
-        'BUTTON',
-      ]);
       expect(element.querySelector('.recent')).toBeNull();
 
       await add('toilet paper');
       expect(storedRecent()).toEqual(['toilet paper']);
       expect(element.querySelector('.recent'), 'on the list').toBeNull();
 
-      await type('milk');
-      await pressEnter();
+      await add('milk');
       expect(storedRecent()).toEqual(['milk', 'toilet paper']);
     });
 
-    it('ends the form with the group "Add again" offering "milk" and "toilet paper" in remembered order, only "milk" once "toilet paper" is added and ticked, and the 10 most recent of 12', async () => {
+    it('puts the group "Add again" right after the field, ending the form, offering "milk" and "toilet paper" in remembered order, only "milk" once "toilet paper" is added and ticked, and the 10 most recent of 12', async () => {
       await openRemembering('milk', 'toilet paper');
-      const group = element.querySelector('form.field')?.lastElementChild ?? null;
+      const form = element.querySelector('form.field');
+      const group = form?.lastElementChild ?? null;
       expect(group?.matches('div.recent[role="group"]'), 'last child of the form').toBe(true);
+      expect(Array.from(form!.children)).toEqual([
+        form!.querySelector('label[for="new-item"]'),
+        field(),
+        group,
+      ]);
       const label = group!.firstElementChild;
       expect(label?.matches('span#recent-label.recent-label'), 'label first in the group').toBe(
         true,
@@ -2072,18 +2085,36 @@ describe('GroceryList', () => {
         expect(recentButtons().map(textOf)).toEqual(['item 1', ...twelve.slice(2, 11)]);
       });
 
-      it('puts the buttons after "Add" and before the first checkbox in the tab order, without a tabindex', async () => {
+      it('puts the buttons right after the field and before the first checkbox in the tab order, without a tabindex', async () => {
         await openRemembering('milk', 'coffee');
         const tabbable = Array.from(element.querySelectorAll<HTMLElement>(TABBABLE));
-        expect(tabbable.slice(0, 5)).toEqual([
+        expect(tabbable.slice(0, 4)).toEqual([
           field(),
-          addButton(),
           recentButton('milk'),
           recentButton('coffee'),
           checkboxOf(listed()[0]),
         ]);
         for (const button of recentButtons()) {
           expect(button.hasAttribute('tabindex'), textOf(button)).toBe(false);
+        }
+      });
+
+      // A button without a type submits its form, so it would add the field's text as well
+      it('holds no submit control in the form, with or without the group: no submit or image input, and only buttons of type "button"', async () => {
+        for (const remembered of [[], ['milk', 'coffee']]) {
+          await openRemembering(...remembered);
+          const form = element.querySelector('form.field')!;
+          expect(recentButtons(), 'offered buttons').toHaveLength(remembered.length);
+          // Implicit submission on Enter needs a single field
+          expect(form.querySelectorAll('input')).toHaveLength(1);
+          expect(
+            form.querySelectorAll(
+              'button:not([type=button]):not([type=reset]), input[type=submit], input[type=image]',
+            ),
+          ).toHaveLength(0);
+          for (const button of buttonsIn(form)) {
+            expect(button.getAttribute('type'), textOf(button)).toBe('button');
+          }
         }
       });
 
@@ -2285,20 +2316,7 @@ describe('GroceryList', () => {
 
   async function add(text: string) {
     await type(text);
-    await click(addButton());
-  }
-
-  async function addInGerman(text: string) {
-    await type(text);
-    const button = buttonsIn(element).find((candidate) => textOf(candidate) === 'Hinzufügen');
-    expect(button, 'no "Hinzufügen" button').toBeDefined();
-    await click(button!);
-  }
-
-  function addButton(): HTMLButtonElement {
-    const button = buttonsIn(element).find((candidate) => textOf(candidate) === 'Add');
-    expect(button, 'no "Add" button').toBeDefined();
-    return button!;
+    await pressEnter();
   }
 
   async function type(text: string) {
