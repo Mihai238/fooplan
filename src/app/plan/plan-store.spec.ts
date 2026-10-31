@@ -32,6 +32,7 @@ import {
 
 const STORAGE_KEY = 'fooplan.plan';
 const REMOVED_KEY = 'fooplan.removed';
+const COOKED_KEY = 'fooplan.cooked';
 const NAMES = RECIPES.map((recipe) => recipe.name);
 const EASY_RECIPES = [
   'Hummus plate with bread and vegetables',
@@ -112,7 +113,7 @@ describe('PlanStore', () => {
     today = '2026-10-26';
     seed = 1;
     store = await reload();
-    const score = scoreWith(RECIPES);
+    const score = scoreWith(RECIPES, {}, today);
     const scores: number[] = [];
 
     // shown lists the suggestions in the order they were drawn, three per meal
@@ -1803,7 +1804,7 @@ describe('PlanStore', () => {
       expect(loaded.removed()).toEqual(['Niçoise salad']);
     });
 
-    it('reads the backend once per key for two loads started before the first is done, which share one promise (#44 5)', async () => {
+    it('reads the backend once per key for two loads started before the first is done, which share one promise (#44 5, changed by #57)', async () => {
       const read = vi.spyOn(LocalStorageBackend.prototype, 'read');
       const loaded = unloaded();
 
@@ -1812,6 +1813,7 @@ describe('PlanStore', () => {
       expect(second).toBe(first);
       await Promise.all([first, second]);
       expect(read.mock.calls.map(([key]) => key).sort()).toEqual([
+        COOKED_KEY,
         STORAGE_KEY,
         RECIPES_KEY,
         REMOVED_KEY,
@@ -1913,7 +1915,7 @@ describe('PlanStore', () => {
         expect(loaded.plan().days).toHaveLength(5);
       });
 
-      it('reads again on a load() called as soon as a load has made the store ready (#44 5b)', async () => {
+      it('reads again on a load() called as soon as a load has made the store ready (#44 5b, changed by #57)', async () => {
         const read = vi.spyOn(LocalStorageBackend.prototype, 'read');
         const loaded = unloaded();
         const first = loaded.load();
@@ -1925,7 +1927,7 @@ describe('PlanStore', () => {
         const second = loaded.load();
         expect(second).not.toBe(first);
         await second;
-        expect(read).toHaveBeenCalledTimes(6);
+        expect(read).toHaveBeenCalledTimes(8);
       });
 
       it('loads the own recipes again first, so a saved plan picking one saved since keeps its pick (#44 4c)', async () => {
@@ -2040,6 +2042,308 @@ describe('PlanStore', () => {
         ],
       });
       return TestBed.inject(PlanStore);
+    }
+  });
+
+  describe('cooked history (#57)', () => {
+    const BOTH_TODAY = { 'Spaghetti carbonara': '2026-10-24', 'Potato goulash': '2026-10-24' };
+    // Base and protein "other", no minutes and no ingredient in common: every other term scores
+    // them 0 in a new plan
+    const SEVEN = ['Dal', 'Bulgur', 'Couscous', 'Farro', 'Polenta', 'Quinoa', 'Tofu'];
+    // A seed whose new 1-day plan of SEVEN suggests "Dal" when every recipe scores 0
+    const DRAWS_DAL = 1;
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('writes fooplan.cooked with "Spaghetti carbonara" and "Potato goulash" dated today on accept() of a 1-day plan from today picking them, which cooked() then holds; dates "Spaghetti carbonara", loaded as 2026-10-01, today; and keeps cooked() and writes no fooplan.cooked on newPlan after it (#57 4)', async () => {
+      await loadSaved(completePlan());
+      const write = vi.spyOn(TestBed.inject(StorageBackend), 'write');
+      store.accept();
+      expect(store.plan().accepted, 'not accepted').toBe(true);
+      expect(cookedWrites(write)).toEqual([BOTH_TODAY]);
+      expect(store.cooked()).toEqual(BOTH_TODAY);
+
+      await loadSaved(completePlan(), { 'Spaghetti carbonara': '2026-10-01' });
+      store.accept();
+      expect(store.cooked()).toEqual(BOTH_TODAY);
+
+      const later = vi.spyOn(TestBed.inject(StorageBackend), 'write');
+      expect(store.newPlan({ ...DEFAULT_SETTINGS, days: 1 }), 'no new plan').toBe(true);
+      expect(store.cooked()).toEqual(BOTH_TODAY);
+      expect(cookedWrites(later)).toEqual([]);
+    });
+
+    it('reads fooplan.cooked into cooked() without the name "Gone" of no recipe, reads it missing or "x" as {}, reads it once with the plan and the removed recipes, and moves the date of the own recipe "Quick Dal" to "Fast Dal" on recipeEdited, also after a reload (#57 5)', async () => {
+      await loadSaved(null, { 'Spaghetti carbonara': '2026-10-20', Gone: '2026-10-20' });
+      expect(store.cooked()).toEqual({ 'Spaghetti carbonara': '2026-10-20' });
+      for (const value of [undefined, 'x']) {
+        localStorage.clear();
+        if (value !== undefined) {
+          localStorage.setItem(COOKED_KEY, JSON.stringify(value));
+        }
+        store = await reload();
+        expect(store.cooked(), String(value)).toEqual({});
+      }
+
+      localStorage.clear();
+      localStorage.setItem(COOKED_KEY, JSON.stringify({ 'Spaghetti carbonara': '2026-10-20' }));
+      const read = vi.spyOn(LocalStorageBackend.prototype, 'read');
+      store = await reload();
+      const keys = read.mock.calls.map(([key]) => key);
+      for (const key of [COOKED_KEY, STORAGE_KEY, REMOVED_KEY]) {
+        expect(
+          keys.filter((other) => other === key),
+          key,
+        ).toHaveLength(1);
+      }
+      read.mockRestore();
+
+      localStorage.clear();
+      storeOwnRecipes(QUICK_DAL);
+      localStorage.setItem(COOKED_KEY, JSON.stringify({ 'Quick Dal': '2026-10-20' }));
+      store = await reload();
+      TestBed.inject(RecipeStore).replace('Quick Dal', { ...QUICK_DAL, name: 'Fast Dal' });
+      store.recipeEdited('Quick Dal', 'Fast Dal');
+      expect(store.cooked()).toEqual({ 'Fast Dal': '2026-10-20' });
+      store = await reload();
+      expect(store.cooked(), 'after a reload').toEqual({ 'Fast Dal': '2026-10-20' });
+    });
+
+    it('never suggests "Dal", cooked today, in a new 1-day plan when the only recipes are 7 of base and protein "other" without minutes; suggests it dated 20 days ago or tomorrow (#57 7)', async () => {
+      await loadOnly(SEVEN, { Dal: '2026-10-24' });
+      store.newPlan({ days: 1, people: 2, kidFriendly: false });
+      expect(suggestionsOf(store.plan()), 'cooked today').toHaveLength(6);
+      expect(suggestionsOf(store.plan()), 'cooked today').not.toContain('Dal');
+
+      for (const date of ['2026-10-04', '2026-10-25']) {
+        await loadOnly(SEVEN, { Dal: date }, DRAWS_DAL);
+        store.newPlan({ days: 1, people: 2, kidFriendly: false });
+        expect(suggestionsOf(store.plan()), date).toContain('Dal');
+      }
+    });
+
+    describe('edge cases', () => {
+      it('records and writes nothing on accept() while a meal is open, records once the plan is complete, and writes nothing on a second accept() (#57 4a)', async () => {
+        await loadSaved(
+          planOf([
+            day(
+              '2026-10-24',
+              picked('Spaghetti carbonara'),
+              open('Fish tacos', 'Bean burritos', 'Niçoise salad'),
+            ),
+          ]),
+          { 'Fish tacos': '2026-10-20' },
+        );
+        const write = vi.spyOn(TestBed.inject(StorageBackend), 'write');
+        store.accept();
+        expect(store.plan().accepted, 'accepted with an open meal').toBe(false);
+        expect(store.cooked(), 'with an open meal').toEqual({ 'Fish tacos': '2026-10-20' });
+        expect(cookedWrites(write), 'with an open meal').toEqual([]);
+
+        store.pick(DINNER, 'Fish tacos');
+        store.accept();
+        const recorded = { 'Fish tacos': '2026-10-24', 'Spaghetti carbonara': '2026-10-24' };
+        expect(store.cooked()).toEqual(recorded);
+        expect(cookedWrites(write)).toEqual([recorded]);
+
+        store.accept();
+        expect(cookedWrites(write), 'after a second accept()').toEqual([recorded]);
+      });
+
+      it('accepts a plan whose recipes are dated today or later already without writing fooplan.cooked, keeping cooked() as loaded (#57 4b)', async () => {
+        const loaded = { 'Spaghetti carbonara': '2026-10-24', 'Potato goulash': '2026-10-30' };
+        await loadSaved(completePlan(), loaded);
+        const write = vi.spyOn(TestBed.inject(StorageBackend), 'write');
+        store.accept();
+        expect(store.plan().accepted, 'not accepted').toBe(true);
+        expect(store.cooked()).toEqual(loaded);
+        expect(cookedWrites(write)).toEqual([]);
+      });
+
+      it('records nothing on a pick, "Undo", "Other suggestions", eating out, "Cook extra", a removed recipe, an added and ticked item, newPlan or a reload (#57 4c)', async () => {
+        const loaded = { 'Fish tacos': '2026-10-20' };
+        await loadSaved(null, loaded);
+        const write = vi.spyOn(TestBed.inject(StorageBackend), 'write');
+        const steps: [string, () => void][] = [
+          ['pick', () => pickFirstSuggestion(LUNCH)],
+          ['Undo', () => store.clear(LUNCH)],
+          ['Other suggestions', () => store.otherSuggestions(LUNCH)],
+          ['eat out', () => store.eatOut(LUNCH)],
+          ['dinner pick', () => pickFirstSuggestion(DINNER)],
+          ['Cook extra', () => store.setCookExtra(0, true)],
+          ['remove', () => store.removeRecipe(store.plan().days[1].dinner.suggestions[0])],
+          ['add item', () => store.addItem('tea')],
+          ['tick item', () => store.toggleTicked(addedKey('tea'))],
+          ['newPlan', () => store.newPlan({ ...DEFAULT_SETTINGS, days: 1 })],
+        ];
+        for (const [step, change] of steps) {
+          change();
+          expect(store.cooked(), step).toEqual(loaded);
+        }
+        expect(cookedWrites(write)).toEqual([]);
+        store = await reload();
+        expect(store.cooked(), 'after a reload').toEqual(loaded);
+        expect(JSON.parse(localStorage.getItem(COOKED_KEY) ?? 'null')).toEqual(loaded);
+      });
+
+      it('keeps the recorded dates in cooked() when writing fooplan.cooked rejects, reports the save as failed and leaves no rejection unhandled (#57 4d)', async () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(completePlan()));
+        const backend = new RejectingBackend();
+        await loadWith(seed++, { provide: StorageBackend, useValue: backend });
+        const unhandled = await unhandledRejections(() => store.accept());
+        expect(store.plan().accepted, 'not accepted').toBe(true);
+        expect(store.cooked()).toEqual(BOTH_TODAY);
+        expect(backend.writes.filter(([key]) => key === COOKED_KEY)).toEqual([
+          [COOKED_KEY, BOTH_TODAY],
+        ]);
+        expect(TestBed.inject(SaveStatus).failed()).toBe(true);
+        expect(unhandled).toEqual([]);
+      });
+
+      it('writes nothing back on a load that drops the name "Gone", so fooplan.cooked keeps it until the next change (#57 5a)', async () => {
+        const saved = { 'Spaghetti carbonara': '2026-10-20', Gone: '2026-10-20' };
+        const write = vi.spyOn(LocalStorageBackend.prototype, 'write');
+        await loadSaved(null, saved);
+        expect(store.cooked()).toEqual({ 'Spaghetti carbonara': '2026-10-20' });
+        expect(cookedWrites(write)).toEqual([]);
+        expect(JSON.parse(localStorage.getItem(COOKED_KEY) ?? 'null')).toEqual(saved);
+      });
+
+      it('replaces cooked() with the history saved since on reload() (#57 5b)', async () => {
+        await loadSaved(null, { 'Spaghetti carbonara': '2026-10-20' });
+        localStorage.setItem(COOKED_KEY, JSON.stringify({ 'Potato goulash': '2026-10-22' }));
+        await store.reload();
+        expect(store.cooked()).toEqual({ 'Potato goulash': '2026-10-22' });
+      });
+
+      it('drops the own recipe "Quick Dal" deleted with deleteRecipe from cooked() on the next load, keeping "Spaghetti carbonara" (#57 5c)', async () => {
+        storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+        await loadSaved(null, {
+          'Quick Dal': '2026-10-20',
+          'Spaghetti carbonara': '2026-10-20',
+        });
+        expect(store.cooked(), 'not loaded').toEqual({
+          'Quick Dal': '2026-10-20',
+          'Spaghetti carbonara': '2026-10-20',
+        });
+        store.deleteRecipe('Quick Dal');
+        expect(TestBed.inject(RecipeStore).own(), 'not deleted').toEqual([PLAIN_RICE]);
+        store = await reload();
+        expect(store.cooked()).toEqual({ 'Spaghetti carbonara': '2026-10-20' });
+      });
+
+      it('drops the date of the own recipe "Quick Dal" at once on deleteRecipe, writing fooplan.cooked once, and writes nothing on deleting the undated "Plain Rice" (#57 review 6)', async () => {
+        storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+        await loadSaved(null, { 'Quick Dal': '2026-10-20', 'Spaghetti carbonara': '2026-10-20' });
+        const write = vi.spyOn(TestBed.inject(StorageBackend), 'write');
+        store.deleteRecipe('Quick Dal');
+        expect(store.cooked()).toEqual({ 'Spaghetti carbonara': '2026-10-20' });
+        expect(cookedWrites(write)).toEqual([{ 'Spaghetti carbonara': '2026-10-20' }]);
+
+        store.deleteRecipe('Plain Rice');
+        expect(TestBed.inject(RecipeStore).own(), 'not deleted').toEqual([]);
+        expect(cookedWrites(write), 'after deleting "Plain Rice"').toHaveLength(1);
+      });
+
+      it('ranks by the day of each draw, not the day the store loaded: "Dal", cooked that day, is still left out of a new plan 7 days later and can be suggested 14 days later (#57 review 1)', async () => {
+        for (const [date, suggested] of [
+          ['2026-10-31', false],
+          ['2026-11-07', true],
+        ] as const) {
+          today = '2026-10-24';
+          await loadOnly(SEVEN, { Dal: today }, DRAWS_DAL);
+          today = date;
+          store.newPlan({ days: 1, people: 2, kidFriendly: false });
+          expect(suggestionsOf(store.plan()).includes('Dal'), date).toBe(suggested);
+        }
+      });
+
+      it('keeps cooked() and writes no fooplan.cooked on recipeEdited of the dated "Quick Dal" keeping its name, or of the undated "Plain Rice" renamed to "Brown Rice" (#57 5d)', async () => {
+        storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+        const loaded = { 'Quick Dal': '2026-10-20' };
+        await loadSaved(null, loaded);
+        const write = vi.spyOn(TestBed.inject(StorageBackend), 'write');
+        const recipes = TestBed.inject(RecipeStore);
+        recipes.replace('Quick Dal', { ...QUICK_DAL, minutes: 20 });
+        store.recipeEdited('Quick Dal', 'Quick Dal');
+        recipes.replace('Plain Rice', { ...PLAIN_RICE, name: 'Brown Rice' });
+        store.recipeEdited('Plain Rice', 'Brown Rice');
+        expect(store.cooked()).toEqual(loaded);
+        expect(cookedWrites(write)).toEqual([]);
+      });
+
+      it('leaves both recipes of a 1-day plan accepted from 8 recipes of base and protein "other" out of the next new 1-day plan, which suggests the other 6 (#57 7a)', async () => {
+        const eight = [...SEVEN, 'Barley'];
+        await loadOnly(eight);
+        store.newPlan({ days: 1, people: 2, kidFriendly: false });
+        pickFirstSuggestion(LUNCH);
+        pickFirstSuggestion(DINNER);
+        const cooked = [store.plan().days[0].lunch.recipe, store.plan().days[0].dinner.recipe];
+        store.accept();
+        expect(store.plan().accepted, 'not accepted').toBe(true);
+
+        store.newPlan({ days: 1, people: 2, kidFriendly: false });
+        expect([...suggestionsOf(store.plan())].sort()).toEqual(
+          eight.filter((name) => !cooked.includes(name)).sort(),
+        );
+      });
+    });
+
+    // Saves the plan (none: a fresh one is created) and the history, and loads them with what else
+    // is saved, as on start
+    async function loadSaved(plan: Plan | null, cooked?: Record<string, string>) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(COOKED_KEY);
+      if (plan) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(plan));
+      }
+      if (cooked) {
+        localStorage.setItem(COOKED_KEY, JSON.stringify(cooked));
+      }
+      store = await reload();
+      if (plan) {
+        expect(store.plan(), 'saved plan not loaded').toEqual(plan);
+      }
+    }
+
+    // A RecipeStore holding only these recipes, no built-in one: fewer than MIN_SUGGESTED, which
+    // removing recipes can't reach
+    async function loadOnly(
+      names: readonly string[],
+      cooked?: Record<string, string>,
+      draw = seed++,
+    ) {
+      localStorage.clear();
+      if (cooked) {
+        localStorage.setItem(COOKED_KEY, JSON.stringify(cooked));
+      }
+      const only = names.map((name) => R(name, [name.toLowerCase()]));
+      class OnlyRecipes extends RecipeStore {
+        override readonly all = computed<readonly Recipe[]>(() => only);
+      }
+      await loadWith(draw, { provide: RecipeStore, useFactory: () => new OnlyRecipes() });
+    }
+
+    async function loadWith(draw: number, ...providers: Provider[]) {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [
+          { provide: RANDOM, useValue: seededRandom(draw) },
+          { provide: TODAY, useValue: () => today },
+          ...providers,
+        ],
+      });
+      store = await loadStores();
+    }
+
+    function completePlan(): Plan {
+      return planOf([day('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'))]);
+    }
+
+    function cookedWrites(write: { mock: { calls: [string, unknown][] } }): unknown[] {
+      return write.mock.calls.filter(([key]) => key === COOKED_KEY).map(([, value]) => value);
     }
   });
 

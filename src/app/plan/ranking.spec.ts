@@ -1,6 +1,6 @@
 import { Recipe } from '../recipes/recipe';
 import { RECIPES } from '../recipes/recipes';
-import { Meal, MealRef, Plan } from './plan';
+import { Cooked, Meal, MealRef, Plan, Score } from './plan';
 import { baseOf, proteinOf, scoreWith } from './ranking';
 import { covered, day, DINNER, LUNCH, open, picked, planOf, R } from './testing';
 
@@ -45,7 +45,7 @@ describe('ranking', () => {
   });
 
   describe('scoreWith', () => {
-    const score = scoreWith(FIXTURE);
+    const score = scoreUncooked(FIXTURE);
 
     it('scores a dinner candidate on a Tuesday with the lunch picked as "pasta-chicken": "rice-chicken" -2 (same protein as the same-day meal, 30 minutes), "bread-veg" 0, "potato-fish" 2 (overlap onion, 45 minutes), and "potato-fish" 3 on a Saturday', () => {
       const plan = oneDay(
@@ -98,7 +98,7 @@ describe('ranking', () => {
 
     it('caps the overlap with picked recipes at 3 and leaves olive oil out of it, gives a recipe without minutes no fit term for lunch or dinner, and scores a name not among the recipes 0', () => {
       const shared = ['onion', 'garlic clove', 'tomato', 'olive oil', 'egg'];
-      const overlap = scoreWith([
+      const overlap = scoreUncooked([
         ...FIXTURE,
         R('picked', shared),
         R('sharer', shared),
@@ -131,7 +131,7 @@ describe('ranking', () => {
 
     describe('edge cases', () => {
       it('never counts a base or protein of "other" as the same, for the same-day meal, an adjacent meal or alongside', () => {
-        const others = scoreWith([
+        const others = scoreUncooked([
           R('other-a', ['couscous', 'feta']),
           R('other-b', ['lentil', 'halloumi']),
           R('other-c', ['quinoa'], 15),
@@ -150,7 +150,7 @@ describe('ranking', () => {
       });
 
       it('counts each ingredient name the candidate shares with the picked recipes once, however often the candidate or the picks list it', () => {
-        const repeated = scoreWith([
+        const repeated = scoreUncooked([
           R('lunch', ['onion', 'feta']),
           R('dinner', ['onion', 'couscous']),
           R('candidate', ['onion', 'onion', 'lentil']),
@@ -165,7 +165,7 @@ describe('ranking', () => {
       });
 
       it('adds 1 for a dinner of 25 minutes or more and 1 more for 35 minutes or more on a Friday, Saturday or Sunday only', () => {
-        const timed = scoreWith([
+        const timed = scoreUncooked([
           R('20', ['feta'], 20),
           R('25', ['feta'], 25),
           R('30', ['feta'], 30),
@@ -190,7 +190,7 @@ describe('ranking', () => {
       });
 
       it('adds 2 for a lunch of at most 15 minutes, 1 for 20 or 25, nothing for 30 and takes 1 off for 35 or more, on any day', () => {
-        const timed = scoreWith(
+        const timed = scoreUncooked(
           [10, 15, 20, 25, 30, 35, 45].map((minutes) => R(`${minutes}`, ['feta'], minutes)),
         );
         const expected: Record<string, number> = {
@@ -213,8 +213,95 @@ describe('ranking', () => {
       });
     });
   });
+
+  describe('recently cooked (#57)', () => {
+    const TODAY = '2026-10-31';
+    // Base and protein "other" and no minutes: every other term is 0 for them on an empty plan
+    const PLAIN = ['A', 'B', 'C', 'D', 'E'].map((name) => R(name, [`${name} only`]));
+    const EMPTY = oneDay(TODAY, open('x', 'y', 'z'), open('u', 'v', 'w'));
+
+    it('scores A cooked 6 days ago -4, B 11 days ago -2, C 21 days ago 0, D dated after today 0 and E not in the history 0, and A dated 7 days ago -2, 14 days ago 0 and today -4 (#57 3)', () => {
+      const score = scoreWith(
+        PLAIN,
+        { A: '2026-10-25', B: '2026-10-20', C: '2026-10-10', D: '2026-11-02' },
+        TODAY,
+      );
+      const expected: Record<string, number> = { A: -4, B: -2, C: 0, D: 0, E: 0 };
+      for (const [name, value] of Object.entries(expected)) {
+        for (const meal of [LUNCH, DINNER]) {
+          expect(score(name, { plan: EMPTY, meal, alongside: [] }), `${name} ${meal.kind}`).toBe(
+            value,
+          );
+        }
+      }
+      for (const [date, value] of [
+        ['2026-10-24', -2],
+        ['2026-10-17', 0],
+        ['2026-10-31', -4],
+      ] as const) {
+        expect(scoreA({ A: date }, TODAY), date).toBe(value);
+      }
+    });
+
+    describe('edge cases', () => {
+      it('scores A -4 dated 1 and 6 days ago, -2 dated 7 and 13 days ago, 0 dated 14 and 40 days ago, and 0 dated tomorrow or a year ahead (#57 3a)', () => {
+        const cases: [string, number][] = [
+          ['2026-10-30', -4],
+          ['2026-10-25', -4],
+          ['2026-10-24', -2],
+          ['2026-10-18', -2],
+          ['2026-10-17', 0],
+          ['2026-09-21', 0],
+          ['2026-11-01', 0],
+          ['2027-10-31', 0],
+        ];
+        for (const [date, value] of cases) {
+          expect(scoreA({ A: date }, TODAY), date).toBe(value);
+        }
+      });
+
+      it('counts whole calendar days across a month end and a year end: 6 days from 2026-03-25 to 2026-03-31 -4, 7 days from 2026-03-24 -2, 13 days from 2026-10-18 to 2026-10-31 -2, 6 days from 2026-12-30 to 2027-01-05 -4 and 14 days from 2026-12-22 0 (#57 3b)', () => {
+        const cases: [string, string, number][] = [
+          ['2026-03-25', '2026-03-31', -4],
+          ['2026-03-24', '2026-03-31', -2],
+          ['2026-10-18', '2026-10-31', -2],
+          ['2026-12-30', '2027-01-05', -4],
+          ['2026-12-22', '2027-01-05', 0],
+        ];
+        for (const [date, today, value] of cases) {
+          expect(scoreA({ A: date }, today), `${date} to ${today}`).toBe(value);
+        }
+      });
+
+      it('adds the recently-cooked term to the other terms: "bread-veg" for lunch (2 for 15 minutes) cooked 3 days ago 2 - 4 = -2, and "potato-fish" for a Saturday dinner (3) cooked 10 days ago 3 - 2 = 1 (#57 3c)', () => {
+        const cooked: Cooked = { 'bread-veg': '2026-10-28', 'potato-fish': '2026-10-21' };
+        const score = scoreWith(FIXTURE, cooked, TODAY);
+        const saturday = oneDay(
+          TODAY,
+          open('bread-veg', 'rice-chicken', 'x'),
+          open('potato-fish', 'bread-veg', 'y'),
+        );
+        expect(score('bread-veg', { plan: saturday, meal: LUNCH, alongside: [] })).toBe(-2);
+        const withLunch = oneDay(
+          TODAY,
+          picked('pasta-chicken'),
+          open('rice-chicken', 'bread-veg', 'potato-fish'),
+        );
+        expect(score('potato-fish', { plan: withLunch, meal: DINNER, alongside: [] })).toBe(1);
+      });
+    });
+
+    function scoreA(cooked: Cooked, today: string): number {
+      return scoreWith(PLAIN, cooked, today)('A', { plan: EMPTY, meal: LUNCH, alongside: [] });
+    }
+  });
 });
 
 function oneDay(date: string, lunch: Meal, dinner: Meal): Plan {
   return planOf([day(date, lunch, dinner)]);
+}
+
+// Nothing cooked, so the recently-cooked term is 0 whatever the day
+function scoreUncooked(recipes: readonly Recipe[]): Score {
+  return scoreWith(recipes, {}, '2026-10-24');
 }

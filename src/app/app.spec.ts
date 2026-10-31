@@ -1002,7 +1002,7 @@ describe('App', () => {
           expect(fake.tables.length, 'read again').toBe(queried);
         });
 
-        it('stays on the page of a reload while signed in, reading each key from the account once (#45 5b)', async () => {
+        it('stays on the page of a reload while signed in, reading each key from the account once (#45 5b, changed by #57)', async () => {
           const reads: string[] = [];
           fake.beforeRead = (key) => {
             reads.push(key);
@@ -1013,7 +1013,12 @@ describe('App', () => {
 
           expect(TestBed.inject(Router).url).toBe('/recipes');
           expect(compiled.querySelector('main h1')?.textContent?.trim()).toBe('Recipes');
-          expect(reads.sort()).toEqual(['fooplan.plan', 'fooplan.recipes', 'fooplan.removed']);
+          expect(reads.sort()).toEqual([
+            'fooplan.cooked',
+            'fooplan.plan',
+            'fooplan.recipes',
+            'fooplan.removed',
+          ]);
         });
 
         it('says "Deine Daten konnten nicht geladen werden. Prüf deine Verbindung und lade die Seite neu." when the load rejects in German (#45 6a)', async () => {

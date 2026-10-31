@@ -1,6 +1,6 @@
 import { PANTRY_STAPLES } from '../groceries/sections';
 import { Recipe } from '../recipes/recipe';
-import { leftoversOf, MealRef, Plan, Score } from './plan';
+import { Cooked, daysSinceCooked, leftoversOf, MealRef, Plan, Score } from './plan';
 
 export type Base = 'pasta' | 'rice' | 'potato' | 'bread' | 'other';
 
@@ -41,12 +41,14 @@ const PROTEINS: readonly [Protein, readonly string[]][] = [
 ];
 
 const MAX_OVERLAP = 3;
+const RECENT_PENALTY_WEEK = -4;
+const RECENT_PENALTY_FORTNIGHT = -2;
 // getUTCDay of Friday, Saturday and Sunday
 const WEEKEND = [5, 6, 0];
 
 type Recipes = ReadonlyMap<string, Recipe>;
 
-export function scoreWith(recipes: readonly Recipe[]): Score {
+export function scoreWith(recipes: readonly Recipe[], cooked: Cooked, today: string): Score {
   const byName: Recipes = new Map(recipes.map((recipe) => [recipe.name, recipe]));
   return (name, { plan, meal, alongside }) => {
     const candidate = byName.get(name);
@@ -57,7 +59,8 @@ export function scoreWith(recipes: readonly Recipe[]): Score {
       neighbourTerm(candidate, plan, meal, byName) +
       alongsideTerm(candidate, alongside, byName) +
       overlapTerm(candidate, plan, byName) +
-      fitTerm(candidate, plan, meal)
+      fitTerm(candidate, plan, meal) +
+      recentTerm(candidate, cooked, today)
     );
   };
 }
@@ -116,6 +119,14 @@ function fitTerm(candidate: Recipe, plan: Plan, meal: MealRef): number {
   }
   const weekday = new Date(plan.days[meal.day].date + 'T00:00:00Z').getUTCDay();
   return (minutes >= 25 ? 1 : 0) + (WEEKEND.includes(weekday) && minutes >= 35 ? 1 : 0);
+}
+
+function recentTerm(candidate: Recipe, cooked: Cooked, today: string): number {
+  const days = daysSinceCooked(cooked, candidate.name, today);
+  if (days === null || days >= 14) {
+    return 0;
+  }
+  return days < 7 ? RECENT_PENALTY_WEEK : RECENT_PENALTY_FORTNIGHT;
 }
 
 function clash(

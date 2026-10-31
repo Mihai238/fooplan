@@ -55,6 +55,7 @@ label,
 .stepper-label,
 .note,
 .minutes,
+.cooked,
 .recipe-link {
   margin: 0;
   color: var(--muted);
@@ -307,7 +308,8 @@ button {
 }
 
 .suggestion .name,
-.suggestion .minutes {
+.suggestion .minutes,
+.suggestion .cooked {
   display: block;
 }
 

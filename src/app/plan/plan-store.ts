@@ -6,12 +6,14 @@ import { isStringList, StorageBackend } from '../storage';
 import {
   acceptPlan,
   addItem,
+  Cooked,
   clearMeal,
   createPlan,
   DEFAULT_SETTINGS,
   dropSuggestion,
   dropSuggestionsOutside,
   eatOut,
+  forgetCooked,
   forgetRecipe,
   isPicked,
   MAX_DAYS,
@@ -20,13 +22,17 @@ import {
   MIN_PEOPLE,
   MIN_SUGGESTED,
   otherSuggestions,
+  parseCooked,
   parsePlan,
   pickRecipe,
   Plan,
   PlanSettings,
   Random,
+  recordCooked,
   removeItem,
+  renameCooked,
   renameRecipe,
+  Score,
   setCookExtra,
   setKidFriendly,
   toggleTicked,
@@ -50,6 +56,7 @@ export const TODAY = new InjectionToken<() => string>('TODAY', {
 
 const STORAGE_KEY = 'fooplan.plan';
 const REMOVED_KEY = 'fooplan.removed';
+const COOKED_KEY = 'fooplan.cooked';
 // Held until the first load; no page shows meanwhile
 const NO_PLAN: Plan = {
   days: [],
@@ -70,6 +77,8 @@ export class PlanStore {
   private readonly saves = inject(SaveStatus);
   private readonly removedState = signal<string[]>([]);
   readonly removed = this.removedState.asReadonly();
+  private readonly cookedState = signal<Cooked>({});
+  readonly cooked = this.cookedState.asReadonly();
   private readonly suggested = computed(() => {
     const removed = this.removed();
     return this.recipeNames().filter((name) => !removed.includes(name));
@@ -82,7 +91,6 @@ export class PlanStore {
       .map((recipe) => recipe.name);
   });
   readonly canBeKidFriendly = computed(() => this.kidFriendlySuggested().length >= MIN_SUGGESTED);
-  private readonly score = computed(() => scoreWith(this.recipes.all()));
   private readonly state = signal<Plan>(NO_PLAN);
   readonly plan = this.state.asReadonly();
   // Counts the plans started with newPlan, not those loaded: by its content, a new plan can look
@@ -136,7 +144,11 @@ export class PlanStore {
   }
 
   accept(): void {
+    const wasAccepted = this.plan().accepted;
     this.update(acceptPlan);
+    if (!wasAccepted && this.plan().accepted) {
+      this.setCooked(recordCooked(this.cooked(), this.plan()));
+    }
   }
 
   toggleTicked(key: string): void {
@@ -164,6 +176,7 @@ export class PlanStore {
     if (from !== to && this.removed().includes(from)) {
       this.setRemoved(this.removed().map((name) => (name === from ? to : name)));
     }
+    this.setCooked(renameCooked(this.cooked(), from, to));
     // An edited own recipe can stop being kid-friendly
     this.update((plan) => this.withinCandidates(renameRecipe(plan, from, to)));
   }
@@ -182,6 +195,7 @@ export class PlanStore {
     this.update((plan) => forgetRecipe(plan, name, candidates, this.random, this.score()));
     this.recipes.remove(name);
     this.restoreRecipe(name);
+    this.setCooked(forgetCooked(this.cooked(), name));
   }
 
   deleteBlock(name: string): 'picked' | 'accepted' | 'limit' | null {
@@ -219,17 +233,20 @@ export class PlanStore {
   }
 
   // The plan is validated against the recipe names, so it is parsed once the recipes are loaded,
-  // and draws from the recipes not removed, so the removed ones are set before it. The load ends in
-  // the step that makes the store ready, so a load() from then on reads again
+  // and draws from the recipes not removed, ranked by the cooked history, so the removed ones and
+  // the history are set before it. The load ends in the step that makes the store ready, so a
+  // load() from then on reads again
   private async read(load: number, again: boolean): Promise<void> {
     try {
-      const [, removed, plan] = await Promise.all([
+      const [, removed, cooked, plan] = await Promise.all([
         again ? this.recipes.reload() : this.recipes.load(),
         this.backend.read(REMOVED_KEY),
+        this.backend.read(COOKED_KEY),
         this.backend.read(STORAGE_KEY),
       ]);
       if (load === this.loads) {
         this.removedState.set(parseRemoved(removed, this.recipeNames()));
+        this.cookedState.set(parseCooked(cooked, this.recipeNames()));
         this.state.set(this.planFrom(plan));
         this.readyState.set(true);
       }
@@ -302,6 +319,11 @@ export class PlanStore {
     return kidFriendly ? this.kidFriendlySuggested() : this.suggested();
   }
 
+  // Not a computed: TODAY is no signal, and a tab left open past midnight ranks by the new day
+  private score(): Score {
+    return scoreWith(this.recipes.all(), this.cooked(), this.today());
+  }
+
   // Until a load is done, a change would be made to a state the load then replaces, or before the
   // first load saved over the saved data: it is ignored
   private update(change: (plan: Plan) => Plan): void {
@@ -321,6 +343,14 @@ export class PlanStore {
     }
     this.removedState.set(removed);
     this.save(REMOVED_KEY, removed);
+  }
+
+  private setCooked(cooked: Cooked): void {
+    if (!this.ready() || cooked === this.cooked()) {
+      return;
+    }
+    this.cookedState.set(cooked);
+    this.save(COOKED_KEY, cooked);
   }
 
   // A change that couldn't be saved stays in memory, until the page is reloaded or a later write

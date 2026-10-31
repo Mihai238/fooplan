@@ -82,6 +82,8 @@
                        break, which Angular keeps as a second space -->
                   <!-- prettier-ignore -->
                   @if (minutes(recipe); as recipeMinutes) {{{ ' ' }}<span class="minutes">{{ language.t('plan.minutes', { minutes: recipeMinutes }) }}</span>}
+                  <!-- prettier-ignore -->
+                  @if (cookedText(recipe); as cooked) {{{ ' ' }}<span class="cooked">{{ cooked }}</span>}
                 </button>
                 <a
                   class="recipe-link"

@@ -62,6 +62,9 @@ export interface ScoreContext {
 
 export type Score = (recipe: string, context: ScoreContext) => number;
 
+// Recipe name to the ISO date (YYYY-MM-DD) of the day it was last cooked
+export type Cooked = Readonly<Record<string, string>>;
+
 export const NO_SCORE: Score = () => 0;
 
 export const MIN_DAYS = 1;
@@ -69,6 +72,7 @@ export const MAX_DAYS = 5;
 export const MIN_PEOPLE = 1;
 export const MIN_SUGGESTED = 15;
 const SUGGESTIONS = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const DEFAULT_SETTINGS: Readonly<PlanSettings> = { days: 5, people: 2, kidFriendly: false };
 
@@ -280,6 +284,31 @@ export function acceptPlan(plan: Plan): Plan {
   return { ...plan, accepted: true };
 }
 
+// A lunch covered by leftovers has no recipe, so a dinner cooked extra counts once, on its own day
+export function recordCooked(cooked: Cooked, plan: Plan): Cooked {
+  const later = plan.days.flatMap((day) =>
+    [day.lunch.recipe, day.dinner.recipe].flatMap((name) =>
+      name === null || (cookedOn(cooked, name) ?? '') >= day.date ? [] : [[name, day.date]],
+    ),
+  );
+  return later.length === 0 ? cooked : { ...cooked, ...Object.fromEntries(later) };
+}
+
+export function renameCooked(cooked: Cooked, from: string, to: string): Cooked {
+  const date = cookedOn(cooked, from);
+  if (from === to || date === undefined) {
+    return cooked;
+  }
+  return { ...forgetCooked(cooked, from), [to]: date };
+}
+
+export function forgetCooked(cooked: Cooked, name: string): Cooked {
+  if (cookedOn(cooked, name) === undefined) {
+    return cooked;
+  }
+  return Object.fromEntries(Object.entries(cooked).filter(([other]) => other !== name));
+}
+
 export function toggleTicked(plan: Plan, key: string): Plan {
   const ticked = plan.ticked.includes(key)
     ? plan.ticked.filter((other) => other !== key)
@@ -375,6 +404,17 @@ export function parsePlan(value: unknown, recipes: readonly string[]): Plan | nu
   return valid ? plan : null;
 }
 
+export function parseCooked(value: unknown, recipes: readonly string[]): Cooked {
+  if (!isRecord(value)) {
+    return {};
+  }
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => recipes.includes(entry[0]) && isCalendarDate(entry[1]),
+    ),
+  );
+}
+
 export function isComplete(plan: Plan): boolean {
   return plan.days.every(
     (day, i) => isFilled(day.dinner) && (isFilled(day.lunch) || isLunchCovered(plan, i)),
@@ -417,6 +457,21 @@ export function sameItem(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();
 }
 
+// A date after today is a day of a plan still to come: the recipe isn't cooked yet
+export function daysSinceCooked(cooked: Cooked, name: string, today: string): number | null {
+  const date = cookedOn(cooked, name);
+  if (date === undefined) {
+    return null;
+  }
+  const days = daysBetween(date, today);
+  return days < 0 ? null : days;
+}
+
+// A date-only ISO string is read as midnight UTC, so a daylight saving change can't shorten a day
+export function daysBetween(from: string, to: string): number {
+  return (Date.parse(to) - Date.parse(from)) / DAY_MS;
+}
+
 // addItem only keeps trimmed, non-blank text, once ignoring case
 function isItemList(value: unknown): value is string[] {
   return (
@@ -440,7 +495,7 @@ function parseDay(value: unknown, recipes: readonly string[]): PlanDay | null {
   }
   // Plans saved before "Cook extra" existed have no such field
   const { date, cookExtra = false } = value;
-  if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  if (!isCalendarDate(date)) {
     return null;
   }
   if (typeof cookExtra !== 'boolean') {
@@ -498,9 +553,20 @@ function isOfferedSet(value: unknown, recipes: readonly string[]): value is stri
   return isRecipeList(value, recipes) && value.length === SUGGESTIONS;
 }
 
-// Comparing each date with the one computed from the first also rejects dates like 2026-02-31
 function hasConsecutiveDates(plan: Plan): boolean {
   return plan.days.every((day, i) => day.date === addDays(plan.days[0].date, i));
+}
+
+// Comparing the date with the one computed from it rejects one that rolls over, like 2026-02-30
+function isCalendarDate(value: unknown): value is string {
+  return (
+    typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && addDays(value, 0) === value
+  );
+}
+
+// Own entries only: a recipe can be named like a member of every object, "constructor" say
+function cookedOn(cooked: Cooked, name: string): string | undefined {
+  return Object.hasOwn(cooked, name) ? cooked[name] : undefined;
 }
 
 function usesRecipesOnce(plan: Plan): boolean {

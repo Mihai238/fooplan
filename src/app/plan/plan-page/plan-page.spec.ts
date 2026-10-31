@@ -3881,6 +3881,217 @@ describe('PlanPage', () => {
     });
   });
 
+  describe('when a suggestion was last cooked (#57)', () => {
+    const COOKED_KEY = 'fooplan.cooked';
+    // 35, 30, 30, 35, 30 and 45 minutes
+    const LUNCH_ROW = ['Mac and cheese', 'Shakshuka with bread', 'Niçoise salad'];
+    const DINNER_ROW = ['Bean burritos', 'Fish tacos', 'Potato goulash'];
+    const HISTORY = {
+      'Mac and cheese': '2026-10-22',
+      'Shakshuka with bread': '2026-10-30',
+      'Niçoise salad': '2026-10-31',
+      'Bean burritos': '2026-11-03',
+    };
+
+    beforeEach(() => {
+      today = '2026-10-31';
+    });
+
+    it('reads "Mac and cheese 35 minutes Cooked 9 days ago" with span.cooked "Cooked 9 days ago" on 2026-10-31 for a recipe cooked 2026-10-22, "Cooked yesterday" and "Cooked today" for 2026-10-30 and 2026-10-31, no span.cooked for 2026-11-03 or a recipe never cooked, and "Vor 9 Tagen gekocht", "Gestern gekocht" and "Heute gekocht" in German (#57 6)', async () => {
+      await openWithHistory(HISTORY, rowsPlan());
+      const lunch = suggestionsOf(meal(0));
+      expect(lunch.map(textOf)).toEqual([
+        'Mac and cheese 35 minutes Cooked 9 days ago',
+        'Shakshuka with bread 30 minutes Cooked yesterday',
+        'Niçoise salad 30 minutes Cooked today',
+      ]);
+      expect(lunch.map((row) => textOf(row.querySelector('span.cooked')))).toEqual([
+        'Cooked 9 days ago',
+        'Cooked yesterday',
+        'Cooked today',
+      ]);
+      const dinner = suggestionsOf(meal(1));
+      expect(dinner.map(textOf)).toEqual([
+        'Bean burritos 35 minutes',
+        'Fish tacos 30 minutes',
+        'Potato goulash 45 minutes',
+      ]);
+      expect(element.querySelectorAll('span.cooked'), 'span.cooked on the page').toHaveLength(3);
+
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await reload();
+      expect(suggestionsOf(meal(0)).map((row) => textOf(row.querySelector('span.cooked')))).toEqual(
+        ['Vor 9 Tagen gekocht', 'Gestern gekocht', 'Heute gekocht'],
+      );
+      expect(suggestionsOf(meal(0)).map(textOf)[0]).toBe(
+        'Mac and Cheese 35 Minuten Vor 9 Tagen gekocht',
+      );
+      expect(element.querySelectorAll('span.cooked'), 'span.cooked in German').toHaveLength(3);
+    });
+
+    describe('edge cases', () => {
+      it('shows span.cooked right after span.name, after a space, for the own recipe "Quick Dal", which has no minutes: "Quick Dal Cooked 3 days ago" (#57 6a)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        await openWithHistory(
+          { 'Quick Dal': '2026-10-28' },
+          rowsPlan(['Quick Dal', 'Shakshuka with bread', 'Niçoise salad']),
+        );
+        const dal = suggestionsOf(meal(0))[0];
+        expect(
+          Array.from(dal.children).map((child) => [
+            `${child.tagName.toLowerCase()}.${child.className}`,
+            textOf(child),
+          ]),
+        ).toEqual([
+          ['span.name', 'Quick Dal'],
+          ['span.cooked', 'Cooked 3 days ago'],
+        ]);
+        expect(textOf(dal)).toBe('Quick Dal Cooked 3 days ago');
+      });
+
+      it('shows no span.cooked for the undated own recipe "constructor", named like a member of every object (#57 review 2)', async () => {
+        storeOwnRecipes({ ...QUICK_DAL, name: 'constructor' });
+        await openWithHistory(
+          {},
+          rowsPlan(['constructor', 'Shakshuka with bread', 'Niçoise salad']),
+        );
+        const row = suggestionsOf(meal(0))[0];
+        expect(textOf(row)).toBe('constructor');
+        expect(row.querySelector('.cooked')).toBeNull();
+      });
+
+      it('says "Cooked 2 days ago" for 2 days and "Cooked 40 days ago" for 40, never "1 days"; "Vor 2 Tagen gekocht" and "Vor 40 Tagen gekocht" in German (#57 6b)', async () => {
+        const history = {
+          'Mac and cheese': '2026-10-29',
+          'Shakshuka with bread': '2026-09-21',
+          'Niçoise salad': '2026-10-30',
+        };
+        await openWithHistory(history, rowsPlan());
+        expect(cookedTexts(meal(0))).toEqual([
+          'Cooked 2 days ago',
+          'Cooked 40 days ago',
+          'Cooked yesterday',
+        ]);
+
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await reload();
+        expect(cookedTexts(meal(0))).toEqual([
+          'Vor 2 Tagen gekocht',
+          'Vor 40 Tagen gekocht',
+          'Gestern gekocht',
+        ]);
+      });
+
+      it('shows nothing new on a picked meal, a dinner cooked extra or its leftovers lunch, all cooked yesterday, while a suggestion cooked yesterday says so (#57 6c)', async () => {
+        await openWithHistory(
+          {
+            'Spaghetti carbonara': '2026-10-30',
+            'Potato goulash': '2026-10-30',
+            'Shakshuka with bread': '2026-10-30',
+          },
+          planOf([
+            planDay('2026-10-31', picked('Spaghetti carbonara'), picked('Potato goulash'), true),
+            planDay(
+              '2026-11-01',
+              covered(),
+              open('Shakshuka with bread', 'Niçoise salad', 'Fish tacos'),
+            ),
+          ]),
+        );
+        const cooked = Array.from(element.querySelectorAll('.cooked'));
+        expect(cooked.map(textOf)).toEqual(['Cooked yesterday']);
+        expect(cooked[0].closest('button.suggestion')).toBe(suggestionsOf(meal(3))[0]);
+        expect(textOf(meal(0))).not.toMatch(/Cooked/);
+        expect(textOf(meal(1))).not.toMatch(/Cooked/);
+        expect(textOf(meal(2))).not.toMatch(/Cooked/);
+      });
+
+      it('counts the days to the date the page opened on, not to the first day of an older plan or a later TODAY, until a new plan starts: "Cooked yesterday" for every row after midnight and "Other suggestions", then "Cooked 3 days ago" on the new plan (#57 6d)', async () => {
+        const all = Object.fromEntries(RECIPES.map((recipe) => [recipe.name, '2026-10-30']));
+        await openWithHistory(
+          all,
+          planOf([
+            planDay('2026-10-29', picked('Spaghetti carbonara'), picked('Potato goulash')),
+            planDay('2026-10-30', picked('Fish tacos'), picked('Bean burritos')),
+            planDay(
+              '2026-10-31',
+              open(...LUNCH_ROW),
+              open('Pizza toast', 'Tuna pasta bake', 'Spaghetti pomodoro'),
+            ),
+          ]),
+        );
+        expect(cookedTexts(meal(4)), 'on 2026-10-31').toEqual([
+          'Cooked yesterday',
+          'Cooked yesterday',
+          'Cooked yesterday',
+        ]);
+
+        today = '2026-11-02';
+        await click(button(meal(4), 'Other suggestions'));
+        expect(cookedTexts(meal(4)), 'after midnight').toEqual([
+          'Cooked yesterday',
+          'Cooked yesterday',
+          'Cooked yesterday',
+        ]);
+
+        await startNewPlanWithDays(1);
+        expect(cookedTexts(meal(0)), 'new plan from 2026-11-02').toEqual([
+          'Cooked 3 days ago',
+          'Cooked 3 days ago',
+          'Cooked 3 days ago',
+        ]);
+      });
+
+      it('keeps span.cooked inside button.suggestion, named with it and without an aria-label, out of the "Recipe" link, and picks "Mac and cheese" on a click on it (#57 6e)', async () => {
+        await openWithHistory(HISTORY, rowsPlan());
+        const row = suggestionsOf(meal(0))[0];
+        const cooked = row.querySelector<HTMLElement>('span.cooked');
+        expect(cooked, 'no span.cooked in the "Mac and cheese" row').not.toBeNull();
+        expect(nameOf(row)).toBe('Mac and cheese 35 minutes Cooked 9 days ago');
+        expect(row.hasAttribute('aria-label')).toBe(false);
+        const option = row.closest<HTMLElement>('.option')!;
+        expect(recipeLinksOf(option)[0].querySelector('.cooked')).toBeNull();
+        expect(nameOf(recipeLinksOf(option)[0])).toBe('Recipe for Mac and cheese');
+
+        await click(cooked!);
+        expect(store.plan().days[0].lunch.recipe).toBe('Mac and cheese');
+      });
+
+      it('gives span.cooked the color and the 14px font size of span.minutes, var(--muted), in the "Mac and cheese" row and in the "Quick Dal" row without minutes (#57 6f)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        await openWithHistory(
+          { ...HISTORY, 'Quick Dal': '2026-10-28' },
+          rowsPlan(['Mac and cheese', 'Quick Dal', 'Niçoise salad']),
+        );
+        const [mac, dal] = suggestionsOf(meal(0));
+        const minutes = getComputedStyle(mac.querySelector('span.minutes')!);
+        expect([minutes.color, minutes.fontSize], 'span.minutes').toEqual(['var(--muted)', '14px']);
+        for (const row of [mac, dal]) {
+          const cooked = row.querySelector('span.cooked');
+          expect(cooked, `no span.cooked in "${recipeOf(row)}"`).not.toBeNull();
+          const style = getComputedStyle(cooked!);
+          expect([style.color, style.fontSize], recipeOf(row)).toEqual([
+            minutes.color,
+            minutes.fontSize,
+          ]);
+        }
+      });
+    });
+
+    async function openWithHistory(history: Record<string, string>, plan: Plan) {
+      localStorage.setItem(COOKED_KEY, JSON.stringify(history));
+      await openWith(plan);
+    }
+
+    function rowsPlan(lunch: string[] = LUNCH_ROW): Plan {
+      return planOf([planDay('2026-10-31', open(...lunch), open(...DINNER_ROW))]);
+    }
+
+    function cookedTexts(article: HTMLElement): string[] {
+      return suggestionsOf(article).map((row) => textOf(row.querySelector('span.cooked')));
+    }
+  });
+
   // What the browser does on Escape and Tab when the page's keydown handlers let it: Escape
   // cancels the modal dialog, and Tab moves through the dialog only, since the page behind is
   // inert, leaving the page for the browser's toolbar after the last button. Resolves to whether

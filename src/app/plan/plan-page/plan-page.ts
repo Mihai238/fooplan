@@ -15,6 +15,7 @@ import { Language, LanguageStore } from '../../language-store';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RecipeStore } from '../../recipes/recipe-store';
 import {
+  daysSinceCooked,
   DEFAULT_SETTINGS,
   filledMeals,
   isComplete,
@@ -128,6 +129,19 @@ export class PlanPage {
 
   protected minutes(recipe: string): number | undefined {
     return this.recipesByName().get(recipe)?.minutes;
+  }
+
+  protected cookedText(recipe: string): string | null {
+    const days = daysSinceCooked(this.store.cooked(), recipe, this.today());
+    if (days === null) {
+      return null;
+    }
+    if (days === 0) {
+      return this.language.t('plan.cookedToday');
+    }
+    return days === 1
+      ? this.language.t('plan.cookedYesterday')
+      : this.language.t('plan.cookedDaysAgo', { days });
   }
 
   // The focus moves whether or not the click focused the button (Safari and Firefox on macOS don't),

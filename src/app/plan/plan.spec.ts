@@ -3,13 +3,17 @@ import {
   addedKey,
   addItem,
   clearMeal,
+  Cooked,
   cookedMeals,
   createPlan,
+  daysBetween,
+  daysSinceCooked,
   DEFAULT_SETTINGS,
   dropSuggestion,
   dropSuggestionsOutside,
   eatOut,
   filledMeals,
+  forgetCooked,
   forgetRecipe,
   isComplete,
   leftoversOf,
@@ -17,11 +21,14 @@ import {
   MealRef,
   NO_SCORE,
   otherSuggestions,
+  parseCooked,
   parsePlan,
   pickRecipe,
   Plan,
   Random,
+  recordCooked,
   removeItem,
+  renameCooked,
   renameRecipe,
   sameItem,
   Score,
@@ -2187,6 +2194,190 @@ describe('plan', () => {
       const removed = removeItem(withTea, 'tea');
       expect(removed.added).toEqual([]);
       expect(removed.ticked).toEqual([]);
+    });
+  });
+
+  describe('recordCooked (#57)', () => {
+    it('dates "Lasagne" for lunch and "Chicken curry" cooked extra for dinner on day 1 of a 2-day plan from 2026-10-27 with that day, recording nothing for the leftovers lunch and the dinner eaten out on day 2; keeps the later 2026-11-05 of "Lasagne"; and returns the same object for a plan with no recipe (#57 1)', () => {
+      const plan = planOf([
+        day('2026-10-27', picked('Lasagne'), picked('Chicken curry'), true),
+        day('2026-10-28', covered(), eatingOut(['Chili', 'Dal', 'Pesto'])),
+      ]);
+      expect(recordCooked({ Lasagne: '2026-10-01' }, plan)).toEqual({
+        Lasagne: '2026-10-27',
+        'Chicken curry': '2026-10-27',
+      });
+      expect(recordCooked({ Lasagne: '2026-11-05' }, plan)).toEqual({
+        Lasagne: '2026-11-05',
+        'Chicken curry': '2026-10-27',
+      });
+
+      const none = planOf([
+        day('2026-10-27', eatingOut(['Chili', 'Dal', 'Pesto']), open('Curry', 'Tacos', 'Quiche')),
+      ]);
+      const cooked: Cooked = { Lasagne: '2026-10-01' };
+      expect(recordCooked(cooked, none)).toBe(cooked);
+    });
+
+    describe('edge cases', () => {
+      it('records only the picked recipes, never the suggestions of an open meal or the offered of a picked meal or a meal eaten out (#57 1a)', () => {
+        const plan = planOf([
+          day(
+            '2026-10-27',
+            picked('Chili', ['Chili', 'Curry', 'Dal']),
+            eatingOut(['Fajitas', 'Goulash', 'Lasagne']),
+          ),
+          day('2026-10-28', open('Minestrone', 'Pesto', 'Quiche'), picked('Risotto')),
+        ]);
+        expect(recordCooked({}, plan)).toEqual({ Chili: '2026-10-27', Risotto: '2026-10-28' });
+      });
+
+      it('keeps the entries of recipes the plan does not pick, and leaves the given object as it was (#57 1b)', () => {
+        const cooked: Cooked = { Tacos: '2026-09-01', Chili: '2026-10-01' };
+        const before = structuredClone(cooked);
+        const plan = planOf([day('2026-10-27', picked('Chili'), eatingOut())]);
+        expect(recordCooked(cooked, plan)).toEqual({ Tacos: '2026-09-01', Chili: '2026-10-27' });
+        expect(cooked, 'the given object was modified').toEqual(before);
+      });
+
+      it('dates each recipe of a 3-day plan from 2026-10-30 across the month end with its own day: 2026-10-30, 2026-10-31 and 2026-11-01 (#57 1c)', () => {
+        const plan = planOf([
+          day('2026-10-30', picked('Chili'), picked('Curry')),
+          day('2026-10-31', picked('Dal'), picked('Fajitas')),
+          day('2026-11-01', picked('Goulash'), picked('Lasagne')),
+        ]);
+        expect(recordCooked({}, plan)).toEqual({
+          Chili: '2026-10-30',
+          Curry: '2026-10-30',
+          Dal: '2026-10-31',
+          Fajitas: '2026-10-31',
+          Goulash: '2026-11-01',
+          Lasagne: '2026-11-01',
+        });
+      });
+
+      it('returns the same object when every picked recipe already has the same or a later date (#57 1d, guards: passes before the change)', () => {
+        const cooked: Cooked = { Chili: '2026-10-27', Curry: '2026-10-30' };
+        const plan = planOf([day('2026-10-27', picked('Chili'), picked('Curry'))]);
+        expect(recordCooked(cooked, plan)).toBe(cooked);
+      });
+
+      it('dates recipes named "constructor" and "toString" like any other, not taking them for dated by every object (#57 review 2)', () => {
+        const plan = planOf([day('2026-10-27', picked('constructor'), picked('toString'))]);
+        expect(recordCooked({}, plan)).toEqual({
+          constructor: '2026-10-27',
+          toString: '2026-10-27',
+        });
+      });
+    });
+  });
+
+  describe('renameCooked and forgetCooked (#57)', () => {
+    it('moves the date of "Quick Dal" to "Fast Dal" and drops it, keeping "Chili" (#57 5, review 6)', () => {
+      const cooked: Cooked = { 'Quick Dal': '2026-10-20', Chili: '2026-10-22' };
+      expect(renameCooked(cooked, 'Quick Dal', 'Fast Dal')).toEqual({
+        'Fast Dal': '2026-10-20',
+        Chili: '2026-10-22',
+      });
+      expect(forgetCooked(cooked, 'Quick Dal')).toEqual({ Chili: '2026-10-22' });
+    });
+
+    describe('edge cases', () => {
+      it('returns the same object for a name kept, an undated recipe and an undated "constructor" (#57 5d, review 2)', () => {
+        const cooked: Cooked = { 'Quick Dal': '2026-10-20' };
+        expect(renameCooked(cooked, 'Quick Dal', 'Quick Dal')).toBe(cooked);
+        expect(renameCooked(cooked, 'Plain Rice', 'Brown Rice')).toBe(cooked);
+        expect(renameCooked(cooked, 'constructor', 'Builder')).toBe(cooked);
+        expect(forgetCooked(cooked, 'Plain Rice')).toBe(cooked);
+        expect(forgetCooked(cooked, 'constructor')).toBe(cooked);
+      });
+    });
+  });
+
+  describe('daysSinceCooked (#57)', () => {
+    it('counts 9 days from 2026-10-22 to 2026-10-31, 1 from the day before and 0 from the same day, and gives null for a date after today and a recipe not in the history (#57 3, 6)', () => {
+      const cooked: Cooked = {
+        A: '2026-10-22',
+        B: '2026-10-30',
+        C: '2026-10-31',
+        D: '2026-11-01',
+      };
+      expect(
+        ['A', 'B', 'C', 'D', 'E'].map((name) => daysSinceCooked(cooked, name, '2026-10-31')),
+      ).toEqual([9, 1, 0, null, null]);
+    });
+
+    describe('edge cases', () => {
+      it('gives null for an undated "constructor" and counts a dated one (#57 review 2)', () => {
+        expect(daysSinceCooked({}, 'constructor', '2026-10-31')).toBeNull();
+        expect(daysSinceCooked({ constructor: '2026-10-29' }, 'constructor', '2026-10-31')).toBe(2);
+      });
+    });
+  });
+
+  describe('daysBetween (#57)', () => {
+    it('counts whole calendar days, across a month end and a year end, negative backwards (#57 review 11)', () => {
+      expect(daysBetween('2026-10-31', '2026-10-31')).toBe(0);
+      expect(daysBetween('2026-10-30', '2026-11-02')).toBe(3);
+      expect(daysBetween('2026-02-27', '2026-03-01')).toBe(2);
+      expect(daysBetween('2028-02-27', '2028-03-01')).toBe(3);
+      expect(daysBetween('2026-12-30', '2027-01-02')).toBe(3);
+      expect(daysBetween('2026-11-02', '2026-10-30')).toBe(-3);
+    });
+  });
+
+  describe('parseCooked (#57)', () => {
+    it('keeps "Lasagne" dated 2026-10-27, drops a name that is no recipe and a value that is no date, and reads null, [], "x" and 42 as {} (#57 2)', () => {
+      expect(
+        parseCooked({ Lasagne: '2026-10-27', Unknown: '2026-10-27', Pizza: 'soon' }, [
+          'Lasagne',
+          'Pizza',
+        ]),
+      ).toEqual({ Lasagne: '2026-10-27' });
+      for (const value of [null, [], 'x', 42]) {
+        expect(parseCooked(value, ['Lasagne', 'Pizza']), JSON.stringify(value)).toEqual({});
+      }
+    });
+
+    describe('edge cases', () => {
+      it('drops a value not of the form YYYY-MM-DD: 2026-1-5, 26-10-27, 2026-10-27T10:00, " 2026-10-27", "2026-10-27\\n", 20261027 and null, keeping "Chili" dated 2026-10-24 (#57 2a)', () => {
+        const value = {
+          Chili: '2026-10-24',
+          Curry: '2026-1-5',
+          Dal: '26-10-27',
+          Fajitas: '2026-10-27T10:00',
+          Goulash: ' 2026-10-27',
+          Lasagne: '2026-10-27\n',
+          Minestrone: 20261027,
+          Pesto: null,
+        };
+        expect(parseCooked(value, RECIPES)).toEqual({ Chili: '2026-10-24' });
+      });
+
+      it('keeps a name only as the recipe is named: "lasagne" and "Lasagne " are dropped, "Lasagne" kept (#57 2b)', () => {
+        expect(
+          parseCooked(
+            { lasagne: '2026-10-20', 'Lasagne ': '2026-10-21', Lasagne: '2026-10-22' },
+            RECIPES,
+          ),
+        ).toEqual({ Lasagne: '2026-10-22' });
+      });
+
+      it('reads a missing value (undefined) and an object with no known name as {} (#57 2c, guards: passes before the change)', () => {
+        expect(parseCooked(undefined, RECIPES)).toEqual({});
+        expect(parseCooked({ Unknown: '2026-10-27' }, RECIPES)).toEqual({});
+        expect(parseCooked({ Chili: '2026-10-27' }, [])).toEqual({});
+      });
+
+      it('drops a value of the form YYYY-MM-DD that is no calendar date: 2026-02-30, 2026-13-45 and 2026-02-29, keeping "Chili" dated 2028-02-29 (#57 2d)', () => {
+        const value = {
+          Chili: '2028-02-29',
+          Curry: '2026-02-30',
+          Dal: '2026-13-45',
+          Fajitas: '2026-02-29',
+        };
+        expect(parseCooked(value, RECIPES)).toEqual({ Chili: '2028-02-29' });
+      });
     });
   });
 
