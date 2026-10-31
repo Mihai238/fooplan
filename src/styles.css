@@ -35,3 +35,18 @@ body {
   color: var(--text);
   background: var(--background);
 }
+
+/* A recipe's picture: fills the box its page's `.picture` rule sizes. Without height: auto the height
+   attribute would fix the img at 534px rather than the ratio */
+img.picture {
+  display: block;
+  height: auto;
+  object-fit: cover;
+}
+
+/* Toned down a little so the bright photos don't glare on the dark background, as the home page's */
+@media (prefers-color-scheme: dark) {
+  img.picture {
+    filter: brightness(0.85);
+  }
+}

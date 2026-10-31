@@ -20,7 +20,9 @@ import { PlanStore } from '../../plan/plan-store';
 import { WakeLock } from '../../wake-lock';
 import { scaleIngredients } from '../amount';
 import { nutritionMessage } from '../nutrition';
+import { PicturePlaceholder } from '../picture-placeholder';
 import { servingsMessage } from '../recipe';
+import { pictureOf, RECIPE_IMAGES } from '../recipe-images';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
 import { stepParts } from '../step-amounts';
@@ -29,7 +31,7 @@ import { StepsView, StepsViewStore } from '../steps-view-store';
 const FORM_URL = /^\/(add-recipe|recipes\/[^/]+\/edit)$/;
 
 @Component({
-  imports: [NgTemplateOutlet, RouterLink],
+  imports: [NgTemplateOutlet, PicturePlaceholder, RouterLink],
   selector: 'app-recipe-page',
   styleUrl: './recipe-page.css',
   templateUrl: './recipe-page.html',
@@ -41,6 +43,7 @@ export class RecipePage {
   private readonly recipes = inject(RecipeStore);
   private readonly stepsView = inject(StepsViewStore);
   protected readonly language = inject(LanguageStore);
+  protected readonly images = inject(RECIPE_IMAGES);
   // The router reuses this page for another slug. The route's guard lets in only a known one, unless
   // loading the recipes failed
   protected readonly page = toSignal(
@@ -134,6 +137,7 @@ export class RecipePage {
   protected readonly last = computed(() => this.step() === (this.steps()?.length ?? 0) - 1);
   protected readonly minSuggested = MIN_SUGGESTED;
   protected readonly recipeSlug = recipeSlug;
+  protected readonly pictureOf = pictureOf;
   private readonly nextButton = viewChild<ElementRef<HTMLButtonElement>>('nextButton');
   private readonly doneLink = viewChild<ElementRef<HTMLAnchorElement>>('doneLink');
   private readonly dontSuggestButton =

@@ -138,6 +138,22 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+/* In the column of the meal, which fits its other lines to their text, so that the picture gets
+   the meal's full width */
+.recipe:has(> .picture) {
+  align-self: stretch;
+}
+
+/* A block above the name, as wide as the suggestion or the meal; a wide button on a phone shows
+   a wider crop rather than a taller picture */
+.picture {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  max-height: 6rem;
+  margin-bottom: 0.5rem;
+  border-radius: 0.25rem;
+}
+
 a.name {
   color: inherit;
   text-decoration-color: var(--muted);

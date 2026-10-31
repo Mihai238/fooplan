@@ -1,4 +1,6 @@
+import { Provider } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
@@ -27,11 +29,17 @@ import {
   unhandledRejections,
 } from '../../testing';
 import { displayAmount } from '../amount';
+import { PicturePlaceholder } from '../picture-placeholder';
 import { Recipe } from '../recipe';
+import { RECIPE_IMAGES } from '../recipe-images';
 import { RecipeStore } from '../recipe-store';
 import { RECIPES } from '../recipes';
 import {
+  LISTED_IMAGES,
   ownRecipe,
+  picture,
+  pictureShape,
+  PLACEHOLDER,
   QUICK_DAL,
   RECIPES_KEY,
   shownStep,
@@ -2223,12 +2231,112 @@ describe('RecipePage', () => {
     }
   });
 
-  function configure() {
+  describe('pictures (#63)', () => {
+    it('starts the article of "Spaghetti pomodoro", which the list holds, with img.picture of images/recipes/spaghetti-pomodoro.webp, alt "", 800 × 534 and no loading attribute, then the h1, and that of "Penne arrabbiata", which it doesn\'t, with div.picture.placeholder holding one svg[aria-hidden="true"] and no text, then the h1 (#63 1)', async () => {
+      await openWithImages('/recipes/spaghetti-pomodoro', LISTED_IMAGES);
+      expect(pictureShape(firstInArticle())).toEqual(picture('spaghetti-pomodoro', null));
+      expectHeadingAfterPicture('Spaghetti pomodoro');
+
+      await harness.navigateByUrl('/recipes/penne-arrabbiata');
+      expect(pictureShape(firstInArticle())).toEqual(PLACEHOLDER);
+      expectHeadingAfterPicture('Penne arrabbiata');
+
+      await harness.navigateByUrl('/recipes/pizza-toast');
+      expect(pictureShape(firstInArticle()), 'back on a listed recipe').toEqual(
+        picture('pizza-toast', null),
+      );
+      expectHeadingAfterPicture('Pizza toast');
+    });
+
+    it('starts the article of the own recipe "Quick Dal" with div.picture.placeholder, with no img on the page (#63 2)', async () => {
+      await openWithImages('/recipes/quick-dal', LISTED_IMAGES, [QUICK_DAL]);
+      expect(pictureShape(firstInArticle())).toEqual(PLACEHOLDER);
+      expectHeadingAfterPicture('Quick Dal');
+      expect(page().querySelectorAll('img'), 'img elements').toHaveLength(0);
+    });
+
+    describe('edge cases', () => {
+      it('shows no img at all on the page of "Penne arrabbiata", which the list doesn\'t hold, so that no picture is requested for it, and exactly one on that of "Spaghetti pomodoro" (#63 1a)', async () => {
+        await openWithImages('/recipes/penne-arrabbiata', LISTED_IMAGES);
+        expect(headings().map(textOf), 'page not shown').toEqual(['Penne arrabbiata']);
+        expect(page().querySelectorAll('img'), 'img elements').toHaveLength(0);
+        await harness.navigateByUrl('/recipes/spaghetti-pomodoro');
+        expect(
+          Array.from(page().querySelectorAll('img')).map((img) => img.getAttribute('src')),
+        ).toEqual(['images/recipes/spaghetti-pomodoro.webp']);
+      });
+
+      it('shows the shared picture placeholder on the page of "Penne arrabbiata", which the list doesn\'t hold: its div.picture.placeholder is the PicturePlaceholder holding its svg (#63 1b)', async () => {
+        await openWithImages('/recipes/penne-arrabbiata', LISTED_IMAGES);
+        const placeholder = firstInArticle();
+        expect(pictureShape(placeholder)).toEqual(PLACEHOLDER);
+        const shown = harness.routeDebugElement!.queryAll(By.directive(PicturePlaceholder));
+        expect(shown).toHaveLength(1);
+        expect(shown[0].nativeElement).toBe(placeholder);
+      });
+
+      it('shows the picture of "Niçoise salad" from its slug, images/recipes/nicoise-salad.webp, when the list holds "nicoise-salad" (#63 1c)', async () => {
+        await openWithImages('/recipes/nicoise-salad', ['nicoise-salad']);
+        expect(pictureShape(firstInArticle())).toEqual(picture('nicoise-salad', null));
+        expectHeadingAfterPicture('Niçoise salad');
+      });
+
+      it('shows the placeholder and no img on the page of "Spaghetti pomodoro" when the list is empty (#63 1d)', async () => {
+        await openWithImages('/recipes/spaghetti-pomodoro', []);
+        expect(pictureShape(firstInArticle())).toEqual(PLACEHOLDER);
+        expectHeadingAfterPicture('Spaghetti pomodoro');
+        expect(page().querySelectorAll('img'), 'img elements').toHaveLength(0);
+      });
+
+      it('shows the same picture, from the slug of the English name, on the German page "Spaghetti Pomodoro" (#63 1e)', async () => {
+        await openWithImages('/recipes/spaghetti-pomodoro', LISTED_IMAGES, [], 'de');
+        expect(pictureShape(firstInArticle())).toEqual(picture('spaghetti-pomodoro', null));
+        expectHeadingAfterPicture('Spaghetti Pomodoro');
+      });
+    });
+
+    // A fresh app on the given list of pictures and what is saved, as a reload makes
+    async function openWithImages(
+      url: string,
+      images: readonly string[],
+      own: Recipe[] = [],
+      language?: 'en' | 'de',
+    ) {
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      configure([{ provide: RECIPE_IMAGES, useValue: images }]);
+      if (own.length > 0) {
+        storeOwnRecipes(...own);
+      }
+      if (language) {
+        localStorage.setItem(LANGUAGE_KEY, language);
+      }
+      harness = await createHarness(url);
+      expect(router().url, 'page not shown').toBe(url);
+    }
+
+    function firstInArticle(): Element {
+      const articles = page().querySelectorAll('article');
+      expect(articles, 'articles').toHaveLength(1);
+      const first = articles[0].firstElementChild;
+      expect(first, 'first element of the article').not.toBeNull();
+      return first!;
+    }
+
+    function expectHeadingAfterPicture(name: string) {
+      const next = firstInArticle().nextElementSibling;
+      expect(next?.tagName, 'element after the picture').toBe('H1');
+      expect(textOf(next), 'heading after the picture').toBe(name);
+    }
+  });
+
+  function configure(providers: Provider[] = []) {
     TestBed.configureTestingModule({
       providers: [
         provideRouter(routes),
         { provide: RANDOM, useValue: seededRandom(1) },
         { provide: TODAY, useValue: () => '2026-10-24' },
+        ...providers,
       ],
     });
   }

@@ -1,3 +1,4 @@
+import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { groceryList, itemKey } from '../groceries/groceries';
@@ -16,7 +17,8 @@ import {
   seededRandom,
 } from '../plan/testing';
 import { RECIPES } from '../recipes/recipes';
-import { PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../recipes/testing';
+import { RECIPE_IMAGES } from '../recipes/recipe-images';
+import { LISTED_IMAGES, PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../recipes/testing';
 import { LANGUAGE_KEY } from '../testing';
 import { Home } from './home';
 
@@ -128,6 +130,31 @@ describe('Home', () => {
         "Your plan doesn't include today. Go to the plan",
       );
       expect(todayLinks()).toEqual([['Go to the plan', '/plan']]);
+    });
+
+    it('shows no img and no .placeholder for "Spaghetti pomodoro" as today\'s lunch, though the list holds it, nor for leftovers or eating out (#63 5)', async () => {
+      const listed = [{ provide: RECIPE_IMAGES, useValue: LISTED_IMAGES }];
+      await openHome(
+        planOf([day(TODAY_DATE, picked('Spaghetti pomodoro'), picked('Chicken curry with rice'))]),
+        listed,
+      );
+      expect(todayRows()[0]).toEqual(['Lunch', 'Spaghetti pomodoro 25 minutes']);
+      expect(element.querySelectorAll('.today img, .today .placeholder')).toHaveLength(0);
+
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      await openHome(
+        planOf([
+          day('2026-10-28', picked('Pizza toast'), picked('Spaghetti pomodoro'), true),
+          day(TODAY_DATE, covered(), eatingOut()),
+        ]),
+        listed,
+      );
+      expect(todayRows()).toEqual([
+        ['Lunch', 'Leftovers: Spaghetti pomodoro'],
+        ['Dinner', 'Eating out'],
+      ]);
+      expect(element.querySelectorAll('.today img, .today .placeholder')).toHaveLength(0);
     });
   });
 
@@ -266,7 +293,7 @@ describe('Home', () => {
   });
 
   // A fresh app on the saved plan, as a reload makes, or on a new one without
-  async function openHome(saved?: Plan) {
+  async function openHome(saved?: Plan, providers: Provider[] = []) {
     if (saved) {
       localStorage.setItem('fooplan.plan', JSON.stringify(saved));
     }
@@ -275,6 +302,7 @@ describe('Home', () => {
         provideRouter([]),
         { provide: RANDOM, useValue: seededRandom(1) },
         { provide: TODAY, useValue: () => TODAY_DATE },
+        ...providers,
       ],
     });
     store = await loadStores();

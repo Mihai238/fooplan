@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
@@ -13,10 +13,20 @@ import {
 } from '../../plan/testing';
 import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
+import { RECIPE_IMAGES } from '../recipe-images';
 import { RecipeStore } from '../recipe-store';
 import { RECIPES } from '../recipes';
-import { LANGUAGE_KEY } from '../../testing';
-import { ownRecipe, PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../testing';
+import { LANGUAGE_KEY, TABBABLE } from '../../testing';
+import {
+  LISTED_IMAGES,
+  ownRecipe,
+  picture,
+  pictureShape,
+  PLACEHOLDER,
+  PLAIN_RICE,
+  QUICK_DAL,
+  storeOwnRecipes,
+} from '../testing';
 import { RecipeList } from './recipe-list';
 
 const LIMIT_NOTE = 'At least 15 recipes stay suggested, so no more can be removed.';
@@ -974,7 +984,7 @@ describe('RecipeList', () => {
       ingredients: [{ name: 'lentils', amount: 200, unit: 'g' }, ...QUICK_DAL.ingredients],
     };
 
-    it('shows no ul or li on any of the 84 cards and "200 g spaghetti" nowhere on the page, and on the card of "Spaghetti pomodoro", in order, only the link "Spaghetti pomodoro" to /recipes/spaghetti-pomodoro, "2 servings", its p.nutrition and the button "Don\'t suggest" named "Don\'t suggest Spaghetti pomodoro", with nothing after the button (#62 1)', () => {
+    it('shows no ul or li on any of the 84 cards and "200 g spaghetti" nowhere on the page, and on the card of "Spaghetti pomodoro", in order, only its picture placeholder, the link "Spaghetti pomodoro" to /recipes/spaghetti-pomodoro, "2 servings", its p.nutrition and the button "Don\'t suggest" named "Don\'t suggest Spaghetti pomodoro", with nothing after the button (#62 1, changed by #63)', () => {
       expectAllRecipesRendered();
       for (const article of articles()) {
         expectNoList(article);
@@ -983,6 +993,7 @@ describe('RecipeList', () => {
 
       const card = cardOf('Spaghetti pomodoro');
       expect(partsOf(card)).toEqual([
+        ['div.picture.placeholder', ''],
         ['h2', 'Spaghetti pomodoro'],
         ['p.servings', '2 servings'],
         ['p.nutrition', POMODORO_LINE],
@@ -1011,14 +1022,16 @@ describe('RecipeList', () => {
         });
       });
 
-      it('puts no element on any of the 84 cards but the h2 with its link, p.servings, p.nutrition and p.suggest with its button, of which only the link and the button are focusable: no "Show ingredients" control (#62 1b)', () => {
+      it('puts no element on any of the 84 cards but its picture placeholder, the h2 with its link, p.servings, p.nutrition and p.suggest with its button, of which only the link and the button are focusable: no "Show ingredients" control (#62 1b, changed by #63)', () => {
         expectAllRecipesRendered();
         for (const article of articles()) {
           const name = textOf(article.querySelector('h2')!);
           expect(
-            Array.from(article.querySelectorAll('*')).map((node) => node.tagName),
-            `elements of "${name}"`,
-          ).toEqual(['H2', 'A', 'P', 'P', 'P', 'BUTTON']);
+            Array.from(article.querySelectorAll('*'))
+              .filter((node) => !node.parentElement?.closest('.picture'))
+              .map((node) => node.tagName),
+            `elements of "${name}" but the placeholder's plate`,
+          ).toEqual(['DIV', 'H2', 'A', 'P', 'P', 'P', 'BUTTON']);
           expect(Array.from(article.querySelectorAll(FOCUSABLE)), `focusable on "${name}"`).toEqual(
             [article.querySelector('h2 a'), article.querySelector('p.suggest button')],
           );
@@ -1064,11 +1077,12 @@ describe('RecipeList', () => {
       });
     });
 
-    it('shows on the cards of the own "Grandma\'s Soup" and "Quick Dal", the latter with "200 g lentils", the name link, the servings, a p.nutrition only on "Grandma\'s Soup", "Your recipe" and "Don\'t suggest", in that order, and no ul or li, and "200 g lentils" nowhere on the page (#62 2)', async () => {
+    it('shows on the cards of the own "Grandma\'s Soup" and "Quick Dal", the latter with "200 g lentils", the name link, the servings, a p.nutrition only on "Grandma\'s Soup", "Your recipe" and "Don\'t suggest", in that order, after the picture placeholder, and no ul or li, and "200 g lentils" nowhere on the page (#62 2, changed by #63)', async () => {
       storeOwnRecipes(ownRecipe("Grandma's Soup"), DAL_WITH_LENTILS);
       await reload();
 
       expect(partsOf(cardOf("Grandma's Soup")).map(([selector]) => selector)).toEqual([
+        'div.picture.placeholder',
         'h2',
         'p.servings',
         'p.nutrition',
@@ -1076,6 +1090,7 @@ describe('RecipeList', () => {
         'p.suggest',
       ]);
       expect(partsOf(cardOf('Quick Dal'))).toEqual([
+        ['div.picture.placeholder', ''],
         ['h2', 'Quick Dal'],
         ['p.servings', '4 servings'],
         ['p.own', 'Your recipe'],
@@ -1147,11 +1162,12 @@ describe('RecipeList', () => {
       }
     });
 
-    it('shows on the card of "Spaghetti Pomodoro" in German, in order, the name link, "2 Portionen", its p.nutrition and "Nicht vorschlagen" named "Spaghetti Pomodoro nicht vorschlagen", no ul or li on any card, and "Dosentomaten" nowhere on the page (#62 4)', async () => {
+    it('shows on the card of "Spaghetti Pomodoro" in German, in order, the picture placeholder, the name link, "2 Portionen", its p.nutrition and "Nicht vorschlagen" named "Spaghetti Pomodoro nicht vorschlagen", no ul or li on any card, and "Dosentomaten" nowhere on the page (#62 4, changed by #63)', async () => {
       localStorage.setItem(LANGUAGE_KEY, 'de');
       await reload();
       const card = cardOf('Spaghetti Pomodoro');
       expect(partsOf(card)).toEqual([
+        ['div.picture.placeholder', ''],
         ['h2', 'Spaghetti Pomodoro'],
         ['p.servings', '2 Portionen'],
         ['p.nutrition', 'Pro Portion: 615 kcal · 21 g Eiweiß · 85 g Kohlenhydrate · 20 g Fett'],
@@ -1170,12 +1186,13 @@ describe('RecipeList', () => {
     });
 
     describe('edge cases', () => {
-      it('shows no ul or li and no "200 g lentils" on the card of the own "Quick Dal" in German, which holds the name link, "4 Portionen", "Dein Rezept" and "Nicht vorschlagen" (#62 4a)', async () => {
+      it('shows no ul or li and no "200 g lentils" on the card of the own "Quick Dal" in German, which holds the picture placeholder, the name link, "4 Portionen", "Dein Rezept" and "Nicht vorschlagen" (#62 4a, changed by #63)', async () => {
         storeOwnRecipes(DAL_WITH_LENTILS);
         localStorage.setItem(LANGUAGE_KEY, 'de');
         await reload();
         const card = cardOf('Quick Dal');
         expect(partsOf(card)).toEqual([
+          ['div.picture.placeholder', ''],
           ['h2', 'Quick Dal'],
           ['p.servings', '4 Portionen'],
           ['p.own', 'Dein Rezept'],
@@ -1243,12 +1260,118 @@ describe('RecipeList', () => {
     }
   });
 
-  function configure() {
+  describe('pictures (#63)', () => {
+    const PICTURE = 'img.picture, div.picture.placeholder';
+
+    it('starts the card of "Spaghetti pomodoro", which the list holds, with img.picture of images/recipes/spaghetti-pomodoro.webp, alt "" and loading="lazy" before its h2, those of "Penne arrabbiata" and the own "Quick Dal" with div.picture.placeholder, and every card with its picture or placeholder (#63 3)', async () => {
+      await reloadWithImages(LISTED_IMAGES, [QUICK_DAL]);
+      expect(articles()).toHaveLength(RECIPES.length + 1);
+      expect(pictureShape(cardOf('Spaghetti pomodoro').firstElementChild)).toEqual(
+        picture('spaghetti-pomodoro', 'lazy'),
+      );
+      expect(pictureShape(cardOf('Penne arrabbiata').firstElementChild)).toEqual(PLACEHOLDER);
+      expect(pictureShape(cardOf('Quick Dal').firstElementChild)).toEqual(PLACEHOLDER);
+      for (const article of articles()) {
+        const name = textOf(article.querySelector('h2')!);
+        expect(article.firstElementChild?.matches(PICTURE), `first element of "${name}"`).toBe(
+          true,
+        );
+        expect(article.children[1]?.tagName, `element after the picture of "${name}"`).toBe('H2');
+      }
+    });
+
+    describe('edge cases', () => {
+      it('shows an img only on the cards of "Pizza toast" and "Spaghetti pomodoro", the two the list holds, so no picture is requested for any other recipe, and a placeholder on the other 83 cards (#63 3a)', async () => {
+        await reloadWithImages(LISTED_IMAGES, [QUICK_DAL]);
+        const images = Array.from(element.querySelectorAll('img'));
+        expect(
+          images.map((img) => [
+            textOf(img.closest('article')!.querySelector('h2')!),
+            img.getAttribute('src'),
+          ]),
+        ).toEqual([
+          ['Spaghetti pomodoro', 'images/recipes/spaghetti-pomodoro.webp'],
+          ['Pizza toast', 'images/recipes/pizza-toast.webp'],
+        ]);
+        expect(element.querySelectorAll('article > div.picture.placeholder')).toHaveLength(
+          RECIPES.length + 1 - 2,
+        );
+      });
+
+      it('makes nothing tabbable with the picture: the card of "Spaghetti pomodoro" still holds only its name link and "Don\'t suggest", and its picture is in no link (#63 3b)', async () => {
+        await reloadWithImages(LISTED_IMAGES);
+        const card = cardOf('Spaghetti pomodoro');
+        expect(pictureShape(card.firstElementChild)).toEqual(picture('spaghetti-pomodoro', 'lazy'));
+        expect(card.firstElementChild!.closest('a'), 'link around the picture').toBeNull();
+        expect(
+          Array.from(card.querySelectorAll(TABBABLE)).map(
+            (tabbable) => `${tabbable.tagName.toLowerCase()} "${textOf(tabbable)}"`,
+          ),
+        ).toEqual(['a "Spaghetti pomodoro"', 'button "Don\'t suggest"']);
+        const placeholder = cardOf('Penne arrabbiata').firstElementChild!;
+        expect(pictureShape(placeholder)).toEqual(PLACEHOLDER);
+        expect(placeholder.querySelectorAll(TABBABLE), 'tabbable in the placeholder').toHaveLength(
+          0,
+        );
+      });
+
+      it('shows the picture of "Niçoise salad" from its slug, images/recipes/nicoise-salad.webp, when the list holds "nicoise-salad" (#63 3c)', async () => {
+        await reloadWithImages(['nicoise-salad']);
+        expect(pictureShape(cardOf('Niçoise salad').firstElementChild)).toEqual(
+          picture('nicoise-salad', 'lazy'),
+        );
+        expect(element.querySelectorAll('img'), 'img elements').toHaveLength(1);
+      });
+
+      it('shows no img and a placeholder first on each of the 84 cards when the list is empty (#63 3d)', async () => {
+        await reloadWithImages([]);
+        expectAllRecipesRendered();
+        expect(element.querySelectorAll('img'), 'img elements').toHaveLength(0);
+        for (const article of articles()) {
+          expect(
+            pictureShape(article.firstElementChild),
+            `first element of "${textOf(article.querySelector('h2')!)}"`,
+          ).toEqual(PLACEHOLDER);
+        }
+      });
+
+      it('shows the same picture, from the slug of the English name, on the German card "Spaghetti Pomodoro" (#63 3e)', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await reloadWithImages(LISTED_IMAGES);
+        const card = cardOf('Spaghetti Pomodoro');
+        expect(pictureShape(card.firstElementChild)).toEqual(picture('spaghetti-pomodoro', 'lazy'));
+      });
+
+      it('keeps each card\'s picture on the cards a search leaves: "Spaghetti pomodoro" with its img and "Spaghetti carbonara" with a placeholder for "spaghetti" (#63 3f)', async () => {
+        await reloadWithImages(LISTED_IMAGES);
+        await search('spaghetti');
+        expect(pictureShape(cardOf('Spaghetti pomodoro').firstElementChild)).toEqual(
+          picture('spaghetti-pomodoro', 'lazy'),
+        );
+        expect(pictureShape(cardOf('Spaghetti carbonara').firstElementChild)).toEqual(PLACEHOLDER);
+        expect(element.querySelectorAll('img'), 'img elements').toHaveLength(1);
+      });
+    });
+
+    // A fresh app on the given list of pictures and the saved own recipes, as a reload makes
+    async function reloadWithImages(images: readonly string[], own: Recipe[] = []) {
+      if (own.length > 0) {
+        storeOwnRecipes(...own);
+      }
+      fixture.destroy();
+      TestBed.resetTestingModule();
+      configure([{ provide: RECIPE_IMAGES, useValue: images }]);
+      await openPage();
+    }
+  });
+
+  function configure(providers: Provider[] = []) {
     TestBed.configureTestingModule({
       providers: [
         provideRouter([{ path: '**', component: Blank }]),
         { provide: RANDOM, useValue: seededRandom(1) },
         { provide: TODAY, useValue: () => '2026-10-24' },
+        ...providers,
       ],
     });
   }

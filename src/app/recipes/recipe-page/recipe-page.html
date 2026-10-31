@@ -1,6 +1,11 @@
 @if (page().recipe; as recipe) {
   <a class="back" [routerLink]="page().back">{{ language.t('recipe.back') }}</a>
   <article>
+    @if (pictureOf(recipe, images); as src) {
+      <img class="picture" [src]="src" alt="" width="800" height="534" />
+    } @else {
+      <div appPicturePlaceholder></div>
+    }
     <h1>{{ name() }}</h1>
     <p class="servings">{{ servingsLine() }}</p>
     <p class="nutrition">{{ nutritionLine() }}</p>

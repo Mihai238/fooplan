@@ -2,10 +2,18 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { groceryList, itemKey } from '../../groceries/groceries';
+import { RECIPE_IMAGES } from '../../recipes/recipe-images';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RECIPES } from '../../recipes/recipes';
 import germanRecipes from '../../recipes/recipes.de.json';
-import { QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
+import {
+  LISTED_IMAGES,
+  picture,
+  pictureShape,
+  PLACEHOLDER,
+  QUICK_DAL,
+  storeOwnRecipes,
+} from '../../recipes/testing';
 import { App } from '../../app';
 import { LanguageStore } from '../../language-store';
 import { installDialog, LANGUAGE_KEY, modalDialogs, TABBABLE } from '../../testing';
@@ -39,6 +47,8 @@ describe('PlanPage', () => {
   let element: HTMLElement;
   let store: PlanStore;
   let today: string;
+  // What RECIPE_IMAGES gives the page; null keeps the committed list
+  let images: readonly string[] | null;
   let uninstallDialog: () => void;
 
   beforeAll(() => {
@@ -53,6 +63,7 @@ describe('PlanPage', () => {
     localStorage.clear();
     // A Saturday
     today = '2026-10-24';
+    images = null;
     await createPage();
   });
 
@@ -615,12 +626,13 @@ describe('PlanPage', () => {
       'Oven-baked salmon with potatoes and green beans',
     );
 
-    it('shows a suggestion as a span.name with the recipe and a span.minutes with its time, read as "Shakshuka with bread 30 minutes" without an aria-label', async () => {
+    it('shows a suggestion as a span.name with the recipe and a span.minutes with its time, read as "Shakshuka with bread 30 minutes" without an aria-label, after its picture (changed by #63)', async () => {
       await openWith(
         planOf([planDay('2026-10-24', OPEN_SHAKSHUKA, picked('Spaghetti carbonara'))]),
       );
       const shakshuka = suggestionsOf(meal(0))[0];
       expect(Array.from(shakshuka.children).map(partOf)).toEqual([
+        ['div.picture.placeholder', ''],
         ['span.name', 'Shakshuka with bread'],
         ['span.minutes', '30 minutes'],
       ]);
@@ -818,7 +830,7 @@ describe('PlanPage', () => {
       expect(localStorage.getItem('fooplan.plan')).not.toMatch(/"minutes"/);
     });
 
-    it('shows a suggestion of the own recipe "Quick Dal" as its span.name alone, read as "Quick Dal", and no time once picked', async () => {
+    it('shows a suggestion of the own recipe "Quick Dal" as its placeholder and span.name alone, read as "Quick Dal", and no time once picked (changed by #63)', async () => {
       storeOwnRecipes(QUICK_DAL);
       await openWith(
         planOf([
@@ -830,7 +842,10 @@ describe('PlanPage', () => {
         ]),
       );
       const dal = suggestionsOf(meal(0))[0];
-      expect(Array.from(dal.children).map(partOf)).toEqual([['span.name', 'Quick Dal']]);
+      expect(Array.from(dal.children).map(partOf)).toEqual([
+        ['div.picture.placeholder', ''],
+        ['span.name', 'Quick Dal'],
+      ]);
       expect(dal.textContent).toBe('Quick Dal');
 
       await click(dal);
@@ -3930,7 +3945,7 @@ describe('PlanPage', () => {
     });
 
     describe('edge cases', () => {
-      it('shows span.cooked right after span.name, after a space, for the own recipe "Quick Dal", which has no minutes: "Quick Dal Cooked 3 days ago" (#57 6a)', async () => {
+      it('shows span.cooked right after span.name, after a space, for the own recipe "Quick Dal", which has no minutes: "Quick Dal Cooked 3 days ago" (#57 6a, changed by #63)', async () => {
         storeOwnRecipes(QUICK_DAL);
         await openWithHistory(
           { 'Quick Dal': '2026-10-28' },
@@ -3943,6 +3958,7 @@ describe('PlanPage', () => {
             textOf(child),
           ]),
         ).toEqual([
+          ['div.picture placeholder', ''],
           ['span.name', 'Quick Dal'],
           ['span.cooked', 'Cooked 3 days ago'],
         ]);
@@ -4092,6 +4108,221 @@ describe('PlanPage', () => {
     }
   });
 
+  describe('pictures (#63)', () => {
+    const POMODORO_ROW = ['Spaghetti pomodoro', 'Penne arrabbiata', 'Quick Dal'];
+
+    beforeEach(() => {
+      images = LISTED_IMAGES;
+      storeOwnRecipes(QUICK_DAL);
+    });
+
+    it('starts the suggestion "Spaghetti pomodoro", which the list holds, with img.picture of images/recipes/spaghetti-pomodoro.webp and loading="lazy" before its span.name, and "Penne arrabbiata" and the own "Quick Dal" with div.picture.placeholder; once picked, starts the p.recipe of "Spaghetti pomodoro" with its img.picture before the link, and that of a picked "Quick Dal" with div.picture.placeholder (#63 4)', async () => {
+      await openWith(pomodoroPlan());
+      const suggestions = suggestionsOf(meal(0));
+      expect(suggestions.map(recipeOf)).toEqual(POMODORO_ROW);
+      expect(pictureShape(suggestions[0].firstElementChild)).toEqual(
+        picture('spaghetti-pomodoro', 'lazy'),
+      );
+      expect(pictureShape(suggestions[1].firstElementChild)).toEqual(PLACEHOLDER);
+      expect(pictureShape(suggestions[2].firstElementChild)).toEqual(PLACEHOLDER);
+      for (const suggestion of suggestions) {
+        const next = suggestion.children[1];
+        expect(next?.matches('span.name'), `after the picture of "${recipeOf(suggestion)}"`).toBe(
+          true,
+        );
+      }
+
+      await click(suggestions[0]);
+      const pomodoro = recipeLine(meal(0));
+      expect(pictureShape(pomodoro.firstElementChild)).toEqual(
+        picture('spaghetti-pomodoro', 'lazy'),
+      );
+      expectLinkAfterPicture(pomodoro, 'Spaghetti pomodoro');
+
+      await openWith(
+        planOf([planDay('2026-10-24', picked('Quick Dal'), picked('Spaghetti carbonara'))]),
+      );
+      const dal = recipeLine(meal(0));
+      expect(pictureShape(dal.firstElementChild)).toEqual(PLACEHOLDER);
+      expectLinkAfterPicture(dal, 'Quick Dal');
+    });
+
+    it('shows no img and no .placeholder in "Leftovers: Spaghetti pomodoro" or "Eating out", while the picked "Spaghetti pomodoro" they follow shows its picture (#63 5)', async () => {
+      await openWith(
+        planOf([
+          planDay('2026-10-24', picked('Penne arrabbiata'), picked('Spaghetti pomodoro'), true),
+          planDay('2026-10-25', covered(), eatingOut()),
+        ]),
+      );
+      expect(pictureShape(recipeLine(meal(1)).firstElementChild), 'picked dinner').toEqual(
+        picture('spaghetti-pomodoro', 'lazy'),
+      );
+      expect(textOf(meal(2).querySelector('p.recipe'))).toBe('Leftovers: Spaghetti pomodoro');
+      expect(textOf(meal(3).querySelector('p.recipe'))).toBe('Eating out');
+      for (const index of [2, 3]) {
+        expect(meal(index).querySelectorAll('img, .placeholder'), `meal ${index}`).toHaveLength(0);
+      }
+    });
+
+    describe('edge cases', () => {
+      it('shows an img only for "Spaghetti pomodoro", the one recipe on the page the list holds, so no picture is requested for any other, and after "Other suggestions" one for each listed recipe only (#63 4a)', async () => {
+        await openWith(pomodoroPlan());
+        expect(imageSources()).toEqual(['images/recipes/spaghetti-pomodoro.webp']);
+        expectPictureOnEverySuggestion('on open');
+
+        await click(button(meal(3), 'Other suggestions'));
+        expectPictureOnEverySuggestion('after "Other suggestions"');
+      });
+
+      it('makes nothing tabbable with the picture: no tabbable element inside a suggestion, the row still holding the suggestion, "Recipe" and "×", and the suggestion read as before, "Spaghetti pomodoro 25 minutes" (#63 4b)', async () => {
+        await openWith(pomodoroPlan());
+        for (const suggestion of suggestionsOf(meal(0))) {
+          expect(
+            suggestion.querySelectorAll(TABBABLE),
+            `tabbable in "${recipeOf(suggestion)}"`,
+          ).toHaveLength(0);
+          expect(
+            Array.from(suggestion.parentElement!.querySelectorAll(TABBABLE)).map((tabbable) =>
+              tabbable.matches('button.suggestion') ? 'suggestion' : nameOf(tabbable),
+            ),
+          ).toEqual([
+            'suggestion',
+            `Recipe for ${recipeOf(suggestion)}`,
+            `Don't suggest ${recipeOf(suggestion)}`,
+          ]);
+        }
+        const [pomodoro, penne] = suggestionsOf(meal(0));
+        expect(nameOf(pomodoro)).toBe('Spaghetti pomodoro 25 minutes');
+        expect(textOf(penne.firstElementChild), 'text of the placeholder').toBe('');
+        expect(pictureShape(recipeLine(meal(2)).firstElementChild)).toEqual(PLACEHOLDER);
+        expect(recipeLine(meal(2)).querySelectorAll(TABBABLE)).toHaveLength(1);
+      });
+
+      it('picks "Spaghetti pomodoro" on a click on its picture and "Fish tacos" on a click on its placeholder\'s plate, as part of the suggestion\'s click area (#63 4c)', async () => {
+        await openWith(pomodoroPlan());
+        await clickInside(suggestionsOf(meal(0))[0], 'img.picture');
+        expect(store.plan().days[0].lunch.recipe).toBe('Spaghetti pomodoro');
+
+        const tacos = suggestionsOf(meal(3))[0];
+        expect(recipeOf(tacos)).toBe('Fish tacos');
+        await clickInside(tacos, 'div.picture.placeholder svg');
+        expect(store.plan().days[1].dinner.recipe).toBe('Fish tacos');
+      });
+
+      it('makes the picture in a suggestion not draggable, since a press that moves a little would start dragging the image instead of picking the suggestion (#63)', async () => {
+        await openWith(pomodoroPlan());
+        const img = suggestionsOf(meal(0))[0].querySelector('img.picture');
+        expect(img?.getAttribute('draggable')).toBe('false');
+      });
+
+      it('shows the picture of "Niçoise salad" from its slug, images/recipes/nicoise-salad.webp, on its suggestion and once picked, when the list holds "nicoise-salad" (#63 4d)', async () => {
+        images = ['nicoise-salad'];
+        await openWith(
+          planOf([
+            planDay(
+              '2026-10-24',
+              open('Niçoise salad', 'Fish tacos', 'Potato goulash'),
+              picked('Spaghetti carbonara'),
+            ),
+          ]),
+        );
+        const salad = suggestionsOf(meal(0))[0];
+        expect(pictureShape(salad.firstElementChild)).toEqual(picture('nicoise-salad', 'lazy'));
+        await click(salad);
+        expect(pictureShape(recipeLine(meal(0)).firstElementChild)).toEqual(
+          picture('nicoise-salad', 'lazy'),
+        );
+      });
+
+      it('shows no img and starts every suggestion and picked meal with a placeholder when the list is empty (#63 4e)', async () => {
+        images = [];
+        await openWith(pomodoroPlan());
+        expect(imageSources()).toEqual([]);
+        for (const suggestion of suggestionsOf(element)) {
+          expect(pictureShape(suggestion.firstElementChild), recipeOf(suggestion)).toEqual(
+            PLACEHOLDER,
+          );
+        }
+        for (const index of [1, 2]) {
+          expect(pictureShape(recipeLine(meal(index)).firstElementChild), `meal ${index}`).toEqual(
+            PLACEHOLDER,
+          );
+        }
+      });
+
+      it('keeps the pictures of the picked meals in the accepted plan (#63 4f)', async () => {
+        await openWith(
+          planOf(
+            [planDay('2026-10-24', picked('Spaghetti pomodoro'), picked('Penne arrabbiata'))],
+            { accepted: true },
+          ),
+        );
+        expect(pictureShape(recipeLine(meal(0)).firstElementChild)).toEqual(
+          picture('spaghetti-pomodoro', 'lazy'),
+        );
+        expect(pictureShape(recipeLine(meal(1)).firstElementChild)).toEqual(PLACEHOLDER);
+      });
+
+      it('shows the same picture, from the slug of the English name, on the German suggestion "Spaghetti Pomodoro" (#63 4g)', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await openWith(pomodoroPlan());
+        const pomodoro = suggestionsOf(meal(0))[0];
+        expect(recipeOf(pomodoro)).toBe('Spaghetti Pomodoro');
+        expect(pictureShape(pomodoro.firstElementChild)).toEqual(
+          picture('spaghetti-pomodoro', 'lazy'),
+        );
+      });
+    });
+
+    // Day 1's lunch suggests POMODORO_ROW; day 2's lunch is picked, its dinner open
+    function pomodoroPlan(): Plan {
+      return planOf([
+        planDay('2026-10-24', open(...POMODORO_ROW), picked('Chicken curry with rice')),
+        planDay(
+          '2026-10-25',
+          picked('Mac and cheese'),
+          open('Fish tacos', 'Potato goulash', 'Beef tacos'),
+        ),
+      ]);
+    }
+
+    function recipeLine(article: HTMLElement): HTMLElement {
+      const lines = article.querySelectorAll<HTMLElement>('p.recipe');
+      expect(lines, 'p.recipe').toHaveLength(1);
+      return lines[0];
+    }
+
+    function expectLinkAfterPicture(line: HTMLElement, name: string) {
+      const next = line.children[1];
+      expect(next?.matches('a.name'), `link after the picture of "${name}"`).toBe(true);
+      expect(textOf(next)).toBe(name);
+    }
+
+    function expectPictureOnEverySuggestion(when: string) {
+      const suggestions = suggestionsOf(element);
+      expect(suggestions.length, `suggestions ${when}`).toBeGreaterThan(0);
+      for (const suggestion of suggestions) {
+        const name = recipeOf(suggestion);
+        const slug = recipeSlug(name);
+        expect(pictureShape(suggestion.firstElementChild), `"${name}" ${when}`).toEqual(
+          images!.includes(slug) ? picture(slug, 'lazy') : PLACEHOLDER,
+        );
+      }
+    }
+
+    function imageSources(): (string | null)[] {
+      return Array.from(element.querySelectorAll('img')).map((img) => img.getAttribute('src'));
+    }
+
+    // A click on an element inside the suggestion, which bubbles to it as in the browser
+    async function clickInside(suggestion: HTMLButtonElement, selector: string) {
+      const target = suggestion.querySelector(selector);
+      expect(target, `${selector} in "${recipeOf(suggestion)}"`).not.toBeNull();
+      target!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      await fixture.whenStable();
+    }
+  });
+
   // What the browser does on Escape and Tab when the page's keydown handlers let it: Escape
   // cancels the modal dialog, and Tab moves through the dialog only, since the page behind is
   // inert, leaving the page for the browser's toolbar after the last button. Resolves to whether
@@ -4184,6 +4415,7 @@ describe('PlanPage', () => {
         provideRouter([{ path: '**', component: Blank }]),
         { provide: RANDOM, useValue: seededRandom(1) },
         { provide: TODAY, useValue: () => today },
+        ...(images === null ? [] : [{ provide: RECIPE_IMAGES, useValue: images }]),
       ],
     });
     store = await loadStores();

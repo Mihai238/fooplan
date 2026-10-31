@@ -15,6 +15,11 @@
     @for (recipe of recipes(); track recipe.name) {
       @let name = recipeStore.displayName(recipe);
       <article>
+        @if (pictureOf(recipe, images); as src) {
+          <img class="picture" [src]="src" alt="" width="800" height="534" loading="lazy" />
+        } @else {
+          <div appPicturePlaceholder></div>
+        }
         <h2>
           <a [routerLink]="['/recipes', recipeSlug(recipe.name)]">{{ name }}</a>
         </h2>

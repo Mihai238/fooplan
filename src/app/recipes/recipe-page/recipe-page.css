@@ -31,6 +31,13 @@ article {
   background: var(--surface);
 }
 
+.picture {
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+}
+
 h1 {
   margin: 0;
   font-size: 1.75rem;

@@ -12,6 +12,8 @@ import {
 import { RouterLink } from '@angular/router';
 import { MessageId } from '../../i18n';
 import { Language, LanguageStore } from '../../language-store';
+import { PicturePlaceholder } from '../../recipes/picture-placeholder';
+import { pictureOf, RECIPE_IMAGES } from '../../recipes/recipe-images';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RecipeStore } from '../../recipes/recipe-store';
 import {
@@ -38,7 +40,7 @@ interface RemovalRow {
 }
 
 @Component({
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe, PicturePlaceholder, RouterLink],
   selector: 'app-plan-page',
   styleUrl: './plan-page.css',
   templateUrl: './plan-page.html',
@@ -47,6 +49,7 @@ export class PlanPage {
   protected readonly store = inject(PlanStore);
   protected readonly language = inject(LanguageStore);
   private readonly recipes = inject(RecipeStore);
+  private readonly images = inject(RECIPE_IMAGES);
   private readonly readToday = inject(TODAY);
   private readonly injector = inject(Injector);
   protected readonly plan = this.store.plan;
@@ -129,6 +132,10 @@ export class PlanPage {
 
   protected minutes(recipe: string): number | undefined {
     return this.recipesByName().get(recipe)?.minutes;
+  }
+
+  protected picture(recipe: string): string | undefined {
+    return pictureOf(this.recipesByName().get(recipe), this.images);
   }
 
   protected cookedText(recipe: string): string | null {

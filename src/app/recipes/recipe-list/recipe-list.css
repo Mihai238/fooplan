@@ -84,6 +84,16 @@ article {
   background: var(--surface);
 }
 
+/* Edge to edge across the card: the negative margins undo the card's padding. The radius is the
+   card's inner corner, inside its 1px border; the card's own 0.75rem would leave a gap at the
+   corners */
+.picture {
+  width: calc(100% + 2.5rem);
+  aspect-ratio: 2 / 1;
+  margin: -1rem -1.25rem 1rem;
+  border-radius: calc(0.75rem - 1px) calc(0.75rem - 1px) 0 0;
+}
+
 h2 {
   margin: 0;
   font-size: 1.125rem;

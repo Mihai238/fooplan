@@ -4,13 +4,15 @@ import { LanguageStore } from '../../language-store';
 import { MIN_SUGGESTED } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
 import { nutritionMessage } from '../nutrition';
+import { PicturePlaceholder } from '../picture-placeholder';
 import { Recipe, servingsMessage } from '../recipe';
+import { pictureOf, RECIPE_IMAGES } from '../recipe-images';
 import { searchRecipes } from '../recipe-search';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
 
 @Component({
-  imports: [RouterLink],
+  imports: [PicturePlaceholder, RouterLink],
   selector: 'app-recipe-list',
   styleUrl: './recipe-list.css',
   templateUrl: './recipe-list.html',
@@ -20,6 +22,7 @@ export class RecipeList {
   private readonly injector = inject(Injector);
   protected readonly recipeStore = inject(RecipeStore);
   protected readonly language = inject(LanguageStore);
+  protected readonly images = inject(RECIPE_IMAGES);
   protected readonly query = signal('');
   private readonly search = computed(() => this.query().trim());
   protected readonly recipes = computed(() =>
@@ -31,6 +34,7 @@ export class RecipeList {
       new Map(this.recipeStore.all().map((recipe) => [recipe.name, this.nutritionLine(recipe)])),
   );
   protected readonly recipeSlug = recipeSlug;
+  protected readonly pictureOf = pictureOf;
   protected readonly minSuggested = MIN_SUGGESTED;
 
   protected servingsText(servings: number): string {

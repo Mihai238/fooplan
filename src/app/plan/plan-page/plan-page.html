@@ -28,6 +28,11 @@
           @if (current.recipe || current.eatOut) {
             @if (current.recipe) {
               <p class="recipe">
+                @if (picture(current.recipe); as src) {
+                  <img class="picture" [src]="src" alt="" width="800" height="534" loading="lazy" />
+                } @else {
+                  <div appPicturePlaceholder></div>
+                }
                 <a class="name" [routerLink]="['/recipes', recipeSlug(current.recipe)]">
                   {{ displayName(current.recipe) }}
                 </a>
@@ -77,6 +82,19 @@
                   class="suggestion"
                   (click)="store.pick(ref, recipe)"
                 >
+                  @if (picture(recipe); as src) {
+                    <img
+                      class="picture"
+                      [src]="src"
+                      alt=""
+                      width="800"
+                      height="534"
+                      loading="lazy"
+                      draggable="false"
+                    />
+                  } @else {
+                    <div appPicturePlaceholder></div>
+                  }
                   <span class="name">{{ displayName(recipe) }}</span>
                   <!-- On a line of its own, as Prettier would put it, the space would follow the line
                        break, which Angular keeps as a second space -->
