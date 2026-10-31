@@ -428,17 +428,19 @@ describe('GroceryList', () => {
     }
   });
 
-  it('shows no field to add items while the plan is not accepted', async () => {
+  it('shows no div.add and no field to add items while the plan is not accepted, and both once it is', async () => {
     await open();
     expect(element.querySelector('p.empty'), 'no message').not.toBeNull();
+    expect(element.querySelector('.add')).toBeNull();
     expect(element.querySelector('input')).toBeNull();
 
     acceptOneDayPlan(store);
     await fixture.whenStable();
+    shownBlock();
     field();
   });
 
-  it('shows the "Add an item" form and the status line, no section and no "Accept a plan to see what to buy." for an accepted plan whose both meals are eating out', async () => {
+  it('shows the "Add an item" form and the status line in div.add, no section and no "Accept a plan to see what to buy." for an accepted plan whose both meals are eating out', async () => {
     const saved = planOf(
       [
         day(
@@ -459,7 +461,12 @@ describe('GroceryList', () => {
 
     expect(textOf(element.querySelector('form label'))).toBe('Add an item');
     field();
-    expect(element.querySelector('p.status')).not.toBeNull();
+    const block = shownBlock();
+    expect(element.querySelector('h1')?.nextElementSibling).toBe(block);
+    expect(Array.from(block.children)).toEqual([
+      element.querySelector('form.field'),
+      statusElement(),
+    ]);
     expect(element.querySelectorAll('section')).toHaveLength(0);
     expect(element.querySelector('p.empty')).toBeNull();
     expect(textOf(element)).not.toContain('Accept a plan to see what to buy.');
@@ -683,18 +690,17 @@ describe('GroceryList', () => {
   });
 
   describe('status after Enter', () => {
-    it('shows one empty status element right after the form and before the sections, without tabindex or hidden, and leaves the field without aria-describedby', async () => {
+    it('shows one empty status element right after the form inside div.add, which the sections follow, without tabindex or hidden, and leaves the field without aria-describedby', async () => {
       acceptOneDayPlan(store);
       await open();
       expect(element.querySelectorAll('[role="status"]'), 'status elements').toHaveLength(1);
       const status = statusElement();
       expect(field().form?.nextElementSibling, "the form's next sibling").toBe(status);
+      const block = status.parentElement;
+      expect(block?.matches('div.add'), 'status not inside div.add').toBe(true);
       const grid = element.querySelector('.sections');
       expect(grid, 'no sections grid').not.toBeNull();
-      expect(
-        status.compareDocumentPosition(grid!) & Node.DOCUMENT_POSITION_FOLLOWING,
-        'status not before the sections grid',
-      ).toBeTruthy();
+      expect(block?.nextElementSibling, 'the sections grid not right after div.add').toBe(grid);
       expect(statusText()).toBe('');
       expect(status.hasAttribute('tabindex'), 'tabindex').toBe(false);
       expect(status.hasAttribute('hidden'), 'hidden attribute').toBe(false);
@@ -2519,6 +2525,52 @@ describe('GroceryList', () => {
     }
   });
 
+  describe('"Add an item" block (#48)', () => {
+    it('puts div.add right after the heading, holding only the form and then the status, with the sections and then the cart after it', async () => {
+      await openRemembering('milk');
+      const block = shownBlock();
+      expect(element.querySelector('h1')?.nextElementSibling, "the heading's next sibling").toBe(
+        block,
+      );
+      expect(Array.from(block.children)).toEqual([
+        element.querySelector('form.field'),
+        statusElement(),
+      ]);
+      expect(
+        block.querySelector('form.field div.recent'),
+        '"Add again" not in the form',
+      ).not.toBeNull();
+      expect(block.nextElementSibling?.matches('div.sections'), 'sections after div.add').toBe(
+        true,
+      );
+
+      for (const item of groceryList(store.plan(), RECIPES)) {
+        store.toggleTicked(itemKey(item));
+      }
+      await stable();
+      expect(element.querySelector('.sections'), 'sections left').toBeNull();
+      expect(block.nextElementSibling).toBe(cart());
+    });
+
+    it('scrolls a focused "Add again" pill into view within its row, to the nearest edge', async () => {
+      await openRemembering('milk', 'eggs', 'coffee');
+      const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+      restores.push(() => scrollIntoView.mockRestore());
+      const pill = Array.from(
+        element.querySelectorAll<HTMLButtonElement>('div.recent button.recent-item'),
+      ).find((button) => textOf(button) === 'eggs');
+      expect(pill, 'no "eggs" pill').toBeDefined();
+
+      pill!.focus();
+
+      expect(scrollIntoView).toHaveBeenCalledExactlyOnceWith({
+        block: 'nearest',
+        inline: 'nearest',
+      });
+      expect(scrollIntoView.mock.contexts).toEqual([pill]);
+    });
+  });
+
   function configure() {
     TestBed.configureTestingModule({
       providers: [
@@ -2678,6 +2730,12 @@ describe('GroceryList', () => {
   // Trimmed only, unlike textOf: the inner spaces of an entry are part of the text
   function statusText(): string {
     return (statusElement().textContent ?? '').trim();
+  }
+
+  function shownBlock(): HTMLElement {
+    const found = element.querySelectorAll<HTMLElement>('div.add');
+    expect(found, 'div.add elements').toHaveLength(1);
+    return found[0];
   }
 
   function statusElement(): HTMLElement {

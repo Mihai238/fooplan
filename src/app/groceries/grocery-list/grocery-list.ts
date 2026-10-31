@@ -170,6 +170,11 @@ export class GroceryList {
     }
   }
 
+  // Browsers don't scroll a partly visible element into view when it is focused
+  protected revealPill(event: FocusEvent): void {
+    (event.target as HTMLElement).scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
   // Like remove: the button goes with the render. A click or tap leaves the focus alone, as a
   // focused field would open the keyboard on a phone
   protected addAgain(event: MouseEvent, item: string, button: HTMLButtonElement): void {
