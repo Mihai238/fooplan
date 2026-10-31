@@ -53,11 +53,6 @@
             }
           </p>
         }
-        <ul>
-          @for (ingredient of recipeStore.displayIngredients(recipe); track ingredient.name) {
-            <li>{{ language.amount(ingredient) }} {{ ingredient.name }}</li>
-          }
-        </ul>
       </article>
     }
   </div>

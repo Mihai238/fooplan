@@ -121,6 +121,10 @@ h2 a:focus-visible {
   font-size: 0.875rem;
 }
 
+article > :last-child {
+  margin-bottom: 0;
+}
+
 .suggest span {
   margin-right: 0.5rem;
 }
@@ -140,12 +144,4 @@ button {
 
 .link:hover {
   text-decoration: underline;
-}
-
-ul {
-  margin: 0;
-  padding-left: 1.25rem;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
 }

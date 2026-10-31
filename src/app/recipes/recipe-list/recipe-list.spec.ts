@@ -95,36 +95,7 @@ describe('RecipeList', () => {
     await openPage();
   });
 
-  it('shows each recipe with its name, servings and every ingredient with its displayed amount and name', () => {
-    expectAllRecipesRendered();
-    articles().forEach((article, i) => {
-      const recipe = RECIPES[i];
-      expect(textOf(article.querySelector('h2')!), `name of article ${i}`).toBe(recipe.name);
-      expect(textOf(article), `servings of "${recipe.name}"`).toContain(
-        `${recipe.servings} servings`,
-      );
-      expect(
-        Array.from(article.querySelectorAll('li')).map(textOf),
-        `ingredients of "${recipe.name}"`,
-      ).toEqual(
-        recipe.ingredients.map((ingredient) => {
-          const shown = displayAmount(ingredient);
-          return `${shown.amount} ${shown.unit} ${ingredient.name}`;
-        }),
-      );
-    });
-  });
-
-  it('lists exactly as many ingredients per article as the recipe has', () => {
-    expectAllRecipesRendered();
-    articles().forEach((article, i) => {
-      expect(article.querySelectorAll('li').length, `ingredients of "${RECIPES[i].name}"`).toBe(
-        RECIPES[i].ingredients.length,
-      );
-    });
-  });
-
-  it('shows the card of "Spaghetti pomodoro" with "2 servings" and its own amounts while it is picked in a plan for 3, whose recipe page is scaled (#55 2a)', async () => {
+  it('keeps "2 servings" on the card of "Spaghetti pomodoro" while it is picked in a saved plan for 3 (#55 2a)', async () => {
     const plan = planOf(
       [
         day(
@@ -138,18 +109,7 @@ describe('RecipeList', () => {
     localStorage.setItem('fooplan.plan', JSON.stringify(plan));
     await reload();
     expect(TestBed.inject(PlanStore).plan(), 'saved plan not loaded').toEqual(plan);
-    const card = articles().find(
-      (article) => textOf(article.querySelector('h2')!) === 'Spaghetti pomodoro',
-    );
-    expect(textOf(card!.querySelector('p.servings')!)).toBe('2 servings');
-    expect(ingredientLinesOf('Spaghetti pomodoro')).toEqual([
-      '200 g spaghetti',
-      '400 g canned tomatoes',
-      '2 pc garlic clove',
-      '2 tbsp olive oil',
-      '10 g basil',
-      '30 g parmesan',
-    ]);
+    expect(textOf(cardOf('Spaghetti pomodoro').querySelector('p.servings')!)).toBe('2 servings');
   });
 
   it('shows the recipes in RECIPES order', () => {
@@ -209,17 +169,6 @@ describe('RecipeList', () => {
     await search('');
     expect(textOf(element)).not.toMatch(/no recipe matches/i);
     expectAllRecipesRendered();
-  });
-
-  it('shows the 15 ml vegetable oil of "Teriyaki chicken with rice" as "1 tbsp vegetable oil"', () => {
-    const lines = ingredientLinesOf('Teriyaki chicken with rice');
-    expect(lines).toContain('1 tbsp vegetable oil');
-    expect(lines).not.toContain('15 ml vegetable oil');
-  });
-
-  it('keeps 700 ml milk of "Mac and cheese" and 250 ml beef stock of "Beef stroganoff with rice" in ml', () => {
-    expect(ingredientLinesOf('Mac and cheese')).toContain('700 ml milk');
-    expect(ingredientLinesOf('Beef stroganoff with rice')).toContain('250 ml beef stock');
   });
 
   it("links each recipe's name to its recipe page, which a click opens", async () => {
@@ -314,11 +263,8 @@ describe('RecipeList', () => {
     expect(servingsOf('Family Stew')).toBe('4 servings');
 
     function servingsOf(name: string): string {
-      const article = articles().find(
-        (candidate) => textOf(candidate.querySelector('h2')!) === name,
-      );
-      expect(article, `"${name}" not shown`).toBeDefined();
-      return textOf(article!.querySelector('p.servings') ?? article!);
+      const card = cardOf(name);
+      return textOf(card.querySelector('p.servings') ?? card);
     }
   });
 
@@ -440,7 +386,7 @@ describe('RecipeList', () => {
       expect(statusText()).toBe('84 recipes match "s".');
     });
 
-    it('lists 84 cards on open, the 35th to 44th the 10 family recipes of #32 in their order and the 45th to 84th the 40 recipes of #58 in theirs, says "84 recipes match "s"." for "s", and "3 recipes match "broccoli"." with "Pasta with broccoli and parmesan", "Beef and broccoli stir-fry with rice" and "Salmon teriyaki with rice and broccoli", the first with "2 servings" and its 6 ingredient lines, for "broccoli"', async () => {
+    it('lists 84 cards on open, the 35th to 44th the 10 family recipes of #32 in their order and the 45th to 84th the 40 recipes of #58 in theirs, says "84 recipes match "s"." for "s", and "3 recipes match "broccoli"." with "Pasta with broccoli and parmesan", "Beef and broccoli stir-fry with rice" and "Salmon teriyaki with rice and broccoli", the first with "2 servings", for "broccoli"', async () => {
       expect(articles()).toHaveLength(84);
       expect(listedNames().slice(34, 44)).toEqual(FAMILY_RECIPES);
       expect(listedNames().slice(44, 84)).toEqual(ADDED_RECIPES);
@@ -454,31 +400,13 @@ describe('RecipeList', () => {
         'Salmon teriyaki with rice and broccoli',
       ]);
       expect(textOf(articles()[0])).toContain('2 servings');
-      expect(ingredientLinesOf('Pasta with broccoli and parmesan')).toEqual([
-        '200 g penne',
-        '400 g broccoli',
-        '2 pc garlic clove',
-        '3 tbsp olive oil',
-        '20 g butter',
-        '50 g parmesan',
-      ]);
     });
 
-    it('says "1 recipe matches "hummus"." and lists only "Hummus plate with bread and vegetables" with "2 servings" and its 8 ingredient lines when the user types "hummus"', async () => {
+    it('says "1 recipe matches "hummus"." and lists only "Hummus plate with bread and vegetables" with "2 servings" when the user types "hummus"', async () => {
       await search('hummus');
       expect(statusText()).toBe('1 recipe matches "hummus".');
       expect(listedNames()).toEqual(['Hummus plate with bread and vegetables']);
       expect(textOf(articles()[0])).toContain('2 servings');
-      expect(ingredientLinesOf('Hummus plate with bread and vegetables')).toEqual([
-        '200 g hummus',
-        '200 g bread',
-        '1 pc cucumber',
-        '2 pc carrot',
-        '150 g cherry tomato',
-        '0.5 pc lemon',
-        '1 tbsp olive oil',
-        '1 tsp paprika',
-      ]);
     });
 
     it('says "22 recipes match "bread"." and lists the 4 recipes with bread or breadcrumbs, the 4 easy ones with bread, the 4 family ones with bread or breadcrumbs and the 10 of #58 with bread, breadcrumbs or pita bread in RECIPES order when the user types "bread"', async () => {
@@ -619,7 +547,7 @@ describe('RecipeList', () => {
       expect(statusText()).toBe('');
     });
 
-    it('says "8 recipes match "spa"." with the 7 spaghetti recipes and then "Spätzle with creamy mushroom sauce", "6 recipes match "salmon"." with the 6 salmon recipes in their order, and "1 recipe matches "tuna melts"." with only "Tuna melts", "2 servings" and its 7 ingredient lines (#58 7)', async () => {
+    it('says "8 recipes match "spa"." with the 7 spaghetti recipes and then "Spätzle with creamy mushroom sauce", "6 recipes match "salmon"." with the 6 salmon recipes in their order, and "1 recipe matches "tuna melts"." with only "Tuna melts" and "2 servings" (#58 7)', async () => {
       await search('spa');
       expect(statusText()).toBe('8 recipes match "spa".');
       expect(listedNames().at(-1)).toBe('Spätzle with creamy mushroom sauce');
@@ -642,15 +570,6 @@ describe('RecipeList', () => {
       expect(statusText()).toBe('1 recipe matches "tuna melts".');
       expect(listedNames()).toEqual(['Tuna melts']);
       expect(textOf(articles()[0].querySelector('p.servings')!)).toBe('2 servings');
-      expect(ingredientLinesOf('Tuna melts')).toEqual([
-        '300 g canned tuna',
-        '3 tbsp mayonnaise',
-        '2 pc spring onion',
-        '0.5 pc lemon',
-        '200 g bread',
-        '1 pc tomato',
-        '100 g cheddar',
-      ]);
     });
 
     it('lists the own recipes "Grandma\'s Soup" and "Quick Dal" as the 85th and 86th cards, right after the 84 built-in recipes in RECIPES order, "Salmon with couscous and roasted vegetables" the 84th (#58 7a)', async () => {
@@ -665,7 +584,7 @@ describe('RecipeList', () => {
   });
 
   describe('"Don\'t suggest" and "Suggest again"', () => {
-    it('shows a "Don\'t suggest <recipe>" button in a p.suggest between the servings and the ingredients of every card, which turns into "Not suggested" and a focused "Suggest again: Shakshuka with bread", and back into a focused "Don\'t suggest", on clicks, removing the recipe at once without a dialog (changed by #60)', async () => {
+    it('shows a "Don\'t suggest <recipe>" button in a p.suggest after p.nutrition, as the last element of every card, which turns into "Not suggested" and a focused "Suggest again: Shakshuka with bread", and back into a focused "Don\'t suggest", on clicks, removing the recipe at once without a dialog (changed by #60, #62)', async () => {
       expectAllRecipesRendered();
       articles().forEach((article, i) => {
         const name = RECIPES[i].name;
@@ -678,7 +597,7 @@ describe('RecipeList', () => {
         expect(suggest?.matches('p.suggest'), `p.suggest after p.nutrition of "${name}"`).toBe(
           true,
         );
-        expect(suggest!.nextElementSibling?.tagName, `after p.suggest of "${name}"`).toBe('UL');
+        expect(suggest!.nextElementSibling, `after p.suggest of "${name}"`).toBeNull();
         expect(suggestButtons(article).map((b) => [textOf(b), nameOf(b)])).toEqual([
           ["Don't suggest", `Don't suggest ${name}`],
         ]);
@@ -817,14 +736,6 @@ describe('RecipeList', () => {
       return Array.from(article.querySelectorAll('p.suggest button'));
     }
 
-    function cardOf(name: string): HTMLElement {
-      const article = articles().find(
-        (candidate) => textOf(candidate.querySelector('h2')!) === name,
-      );
-      expect(article, `"${name}" not shown`).toBeDefined();
-      return article!;
-    }
-
     function nameOf(node: Element): string {
       return node.getAttribute('aria-label')?.trim() || textOf(node);
     }
@@ -944,14 +855,6 @@ describe('RecipeList', () => {
       expect(lines, `p.nutrition of "${name}"`).toHaveLength(1);
       return textOf(lines[0]);
     }
-
-    function cardOf(name: string): HTMLElement {
-      const article = articles().find(
-        (candidate) => textOf(candidate.querySelector('h2')!) === name,
-      );
-      expect(article, `"${name}" not shown`).toBeDefined();
-      return article!;
-    }
   });
 
   describe('in German (#35)', () => {
@@ -960,7 +863,7 @@ describe('RecipeList', () => {
       await reload();
     });
 
-    it('heads the page "Rezepte" with the link "Rezept hinzufügen" and the field "Rezepte suchen"; says 84 Rezepte passen zu „s“. for "s", 1 Rezept passt zu „carbonara“., 3 Rezepte passen zu „kase“. and Kein Rezept passt zu „kaese“.; shows "2 Portionen" and "200 g Spaghetti" on the card of "Spaghetti Pomodoro", whose "Nicht vorschlagen" is named "Spaghetti Pomodoro nicht vorschlagen" and turns into "Nicht vorgeschlagen" and "Wieder vorschlagen" on a click (changed by #58)', async () => {
+    it('heads the page "Rezepte" with the link "Rezept hinzufügen" and the field "Rezepte suchen"; says 84 Rezepte passen zu „s“. for "s", 1 Rezept passt zu „carbonara“., 3 Rezepte passen zu „kase“. and Kein Rezept passt zu „kaese“.; shows "2 Portionen" on the card of "Spaghetti Pomodoro", whose "Nicht vorschlagen" is named "Spaghetti Pomodoro nicht vorschlagen" and turns into "Nicht vorgeschlagen" and "Wieder vorschlagen" on a click (changed by #58)', async () => {
       expect(textOf(element.querySelector('h1')!)).toBe('Rezepte');
       const add = element.querySelector<HTMLAnchorElement>('a.add');
       expect(textOf(add!)).toBe('Rezept hinzufügen');
@@ -979,7 +882,6 @@ describe('RecipeList', () => {
 
       const card = cardOf('Spaghetti Pomodoro');
       expect(textOf(card.querySelector('p.servings')!)).toBe('2 Portionen');
-      expect(ingredientLinesOf('Spaghetti Pomodoro')).toContain('200 g Spaghetti');
       const dontSuggest = card.querySelector<HTMLButtonElement>('p.suggest button')!;
       expect(textOf(dontSuggest)).toBe('Nicht vorschlagen');
       expect(dontSuggest.getAttribute('aria-label')).toBe('Spaghetti Pomodoro nicht vorschlagen');
@@ -1002,21 +904,6 @@ describe('RecipeList', () => {
         }
       });
 
-      it('shows decimal amounts with a comma and the units pc, tbsp and tsp as "Stk.", "EL" and "TL" on the cards: "0,5 Stk. rote Zwiebel", "0,5 TL Chiliflocken", "0,25 TL Muskatnuss", "1 EL Pflanzenöl" and "400 g weiße Bohnen"', async () => {
-        expect(ingredientLinesOf('Thunfisch-Bohnen-Salat mit Brot')).toEqual(
-          expect.arrayContaining(['0,5 Stk. rote Zwiebel', '400 g weiße Bohnen']),
-        );
-        expect(ingredientLinesOf('Spaghetti Aglio e Olio')).toContain('0,5 TL Chiliflocken');
-        expect(ingredientLinesOf('Bratwurst mit Sauerkraut und Kartoffelpüree')).toContain(
-          '0,25 TL Muskatnuss',
-        );
-        expect(ingredientLinesOf('Teriyaki-Hähnchen mit Reis')).toContain('1 EL Pflanzenöl');
-        const lines = articles().flatMap((article) =>
-          Array.from(article.querySelectorAll('li')).map(textOf),
-        );
-        expect(lines.filter((line) => /\b(pc|tbsp|tsp)\b|\d\.\d/.test(line))).toEqual([]);
-      });
-
       it('says "Mindestens 15 Rezepte bleiben vorgeschlagen, mehr können nicht entfernt werden." while exactly 15 recipes are suggested', async () => {
         leaveSuggested(TestBed.inject(PlanStore), 15);
         await fixture.whenStable();
@@ -1025,14 +912,6 @@ describe('RecipeList', () => {
         );
       });
     });
-
-    function cardOf(name: string): HTMLElement {
-      const article = articles().find(
-        (candidate) => textOf(candidate.querySelector('h2')!) === name,
-      );
-      expect(article, `"${name}" not shown`).toBeDefined();
-      return article!;
-    }
   });
 
   describe('German recipes (#36)', () => {
@@ -1068,38 +947,300 @@ describe('RecipeList', () => {
       expect(statusText()).toBe('No recipe matches "knoblauch".');
     });
 
-    it('shows the own recipe "Omas Eintopf" with "200 g linsen" as typed next to the German "Spaghetti Pomodoro" in German, and finds it by "linsen", in German and in English', async () => {
+    it('lists the own recipe "Omas Eintopf" next to the German "Spaghetti Pomodoro" in German, and finds it by "linsen", in German and in English', async () => {
       storeOwnRecipes(OMAS_EINTOPF);
       localStorage.setItem(LANGUAGE_KEY, 'de');
       await reload();
       expect(listedNames()).toEqual(expect.arrayContaining(['Spaghetti Pomodoro', 'Omas Eintopf']));
-      expect(ingredientLinesOf('Omas Eintopf')).toEqual(['200 g linsen']);
       await search('linsen', 'Rezepte suchen');
       expect(listedNames()).toEqual(['Omas Eintopf']);
       expect(statusText()).toBe('1 Rezept passt zu „linsen“.');
 
       localStorage.setItem(LANGUAGE_KEY, 'en');
       await reload();
-      expect(ingredientLinesOf('Omas Eintopf')).toEqual(['200 g linsen']);
       await search('linsen');
       expect(listedNames()).toEqual(['Omas Eintopf']);
       expect(statusText()).toBe('1 recipe matches "linsen".');
     });
+  });
+
+  describe('cards without ingredients (#62)', () => {
+    const POMODORO_LINE = 'Per serving: 615 kcal · 21 g protein · 85 g carbs · 20 g fat';
+    const FOCUSABLE =
+      'a[href], button, input, select, textarea, summary, [tabindex], [contenteditable]';
+    // The criteria's "Quick Dal" holds "200 g lentils", which QUICK_DAL doesn't
+    const DAL_WITH_LENTILS: Recipe = {
+      ...QUICK_DAL,
+      ingredients: [{ name: 'lentils', amount: 200, unit: 'g' }, ...QUICK_DAL.ingredients],
+    };
+
+    it('shows no ul or li on any of the 84 cards and "200 g spaghetti" nowhere on the page, and on the card of "Spaghetti pomodoro", in order, only the link "Spaghetti pomodoro" to /recipes/spaghetti-pomodoro, "2 servings", its p.nutrition and the button "Don\'t suggest" named "Don\'t suggest Spaghetti pomodoro", with nothing after the button (#62 1)', () => {
+      expectAllRecipesRendered();
+      for (const article of articles()) {
+        expectNoList(article);
+      }
+      expect(textOf(element)).not.toContain('200 g spaghetti');
+
+      const card = cardOf('Spaghetti pomodoro');
+      expect(partsOf(card)).toEqual([
+        ['h2', 'Spaghetti pomodoro'],
+        ['p.servings', '2 servings'],
+        ['p.nutrition', POMODORO_LINE],
+        ['p.suggest', "Don't suggest"],
+      ]);
+      expect(card.querySelector('h2 > a')?.getAttribute('href')).toBe(
+        '/recipes/spaghetti-pomodoro',
+      );
+      const suggest = card.querySelector('p.suggest')!;
+      expect(Array.from(suggest.children).map((child) => child.tagName)).toEqual(['BUTTON']);
+      expect(suggest.children[0].getAttribute('aria-label')).toBe(
+        "Don't suggest Spaghetti pomodoro",
+      );
+    });
 
     describe('edge cases', () => {
-      it('shows the German ingredient lines "200 g Spaghetti", "400 g Dosentomaten", "2 Stk. Knoblauchzehe", "2 EL Olivenöl", "10 g Basilikum" and "30 g Parmesan" on the card of "Spaghetti Pomodoro" in German', async () => {
-        localStorage.setItem(LANGUAGE_KEY, 'de');
-        await reload();
-        expect(ingredientLinesOf('Spaghetti Pomodoro')).toEqual([
-          '200 g Spaghetti',
-          '400 g Dosentomaten',
-          '2 Stk. Knoblauchzehe',
-          '2 EL Olivenöl',
-          '10 g Basilikum',
-          '30 g Parmesan',
-        ]);
+      it('shows none of its ingredient lines on any of the 84 cards (#62 1a)', () => {
+        expectAllRecipesRendered();
+        articles().forEach((article, i) => {
+          const text = textOf(article);
+          for (const ingredient of RECIPES[i].ingredients) {
+            const shown = displayAmount(ingredient);
+            const line = `${shown.amount} ${shown.unit} ${ingredient.name}`;
+            expect(text, `card of "${RECIPES[i].name}"`).not.toContain(line);
+          }
+        });
+      });
+
+      it('puts no element on any of the 84 cards but the h2 with its link, p.servings, p.nutrition and p.suggest with its button, of which only the link and the button are focusable: no "Show ingredients" control (#62 1b)', () => {
+        expectAllRecipesRendered();
+        for (const article of articles()) {
+          const name = textOf(article.querySelector('h2')!);
+          expect(
+            Array.from(article.querySelectorAll('*')).map((node) => node.tagName),
+            `elements of "${name}"`,
+          ).toEqual(['H2', 'A', 'P', 'P', 'P', 'BUTTON']);
+          expect(Array.from(article.querySelectorAll(FOCUSABLE)), `focusable on "${name}"`).toEqual(
+            [article.querySelector('h2 a'), article.querySelector('p.suggest button')],
+          );
+        }
+      });
+
+      it('holds no text on any of the 84 cards but its name, servings, nutrition line and "Don\'t suggest", so no ingredient count, cooking time or summary: "Spaghetti pomodoro 2 servings Per serving: … Don\'t suggest" (#62 1c)', () => {
+        expectAllRecipesRendered();
+        expect(squashed(cardOf('Spaghetti pomodoro'))).toBe(
+          `Spaghetti pomodoro 2 servings ${POMODORO_LINE} Don't suggest`.replace(/\s+/g, ''),
+        );
+        articles().forEach((article, i) => {
+          const parts = ['h2', 'p.servings', 'p.nutrition', 'p.suggest'].map((selector) =>
+            squashed(article.querySelector(selector)!),
+          );
+          expect(squashed(article), `text of "${RECIPES[i].name}"`).toBe(parts.join(''));
+          expect(
+            textOf(article.querySelector('p.servings')!),
+            `servings of "${RECIPES[i].name}"`,
+          ).toBe(`${RECIPES[i].servings} servings`);
+        });
+
+        // Angular drops the whitespace between the card's elements, so their texts run together
+        function squashed(node: Element): string {
+          return (node.textContent ?? '').replace(/\s+/g, '');
+        }
+      });
+
+      it('gives the last element of the card, p.suggest of "Spaghetti pomodoro" with "Don\'t suggest" and with "Not suggested", margin-bottom 0 (0px), while p.nutrition above it keeps its 12px (#62 1d)', async () => {
+        const card = cardOf('Spaghetti pomodoro');
+        expect(card.lastElementChild?.matches('p.suggest'), 'p.suggest last').toBe(true);
+        expect(getComputedStyle(card.lastElementChild!).marginBottom).toBe('0px');
+        expect(getComputedStyle(card.querySelector('p.nutrition')!).marginBottom).toBe('12px');
+
+        await click(card.querySelector<HTMLButtonElement>('p.suggest button')!);
+        expect(textOf(card.querySelector('p.suggest')!), 'not removed').toBe(
+          'Not suggested Suggest again',
+        );
+        expect(card.lastElementChild?.matches('p.suggest'), 'p.suggest last when removed').toBe(
+          true,
+        );
+        expect(getComputedStyle(card.lastElementChild!).marginBottom).toBe('0px');
       });
     });
+
+    it('shows on the cards of the own "Grandma\'s Soup" and "Quick Dal", the latter with "200 g lentils", the name link, the servings, a p.nutrition only on "Grandma\'s Soup", "Your recipe" and "Don\'t suggest", in that order, and no ul or li, and "200 g lentils" nowhere on the page (#62 2)', async () => {
+      storeOwnRecipes(ownRecipe("Grandma's Soup"), DAL_WITH_LENTILS);
+      await reload();
+
+      expect(partsOf(cardOf("Grandma's Soup")).map(([selector]) => selector)).toEqual([
+        'h2',
+        'p.servings',
+        'p.nutrition',
+        'p.own',
+        'p.suggest',
+      ]);
+      expect(partsOf(cardOf('Quick Dal'))).toEqual([
+        ['h2', 'Quick Dal'],
+        ['p.servings', '4 servings'],
+        ['p.own', 'Your recipe'],
+        ['p.suggest', "Don't suggest"],
+      ]);
+      for (const name of ["Grandma's Soup", 'Quick Dal']) {
+        const card = cardOf(name);
+        expect(textOf(card.querySelector('h2 > a')!), `link of "${name}"`).toBe(name);
+        expect(textOf(card.querySelector('p.own')!), `p.own of "${name}"`).toBe('Your recipe');
+        expectNoList(card);
+      }
+      expect(textOf(element)).not.toContain('200 g lentils');
+    });
+
+    describe('edge cases', () => {
+      it('ends the card of the own "Quick Dal", which has no p.nutrition, with its p.suggest, whose button is its last element (#62 2a)', async () => {
+        storeOwnRecipes(DAL_WITH_LENTILS);
+        await reload();
+        const card = cardOf('Quick Dal');
+        expect(card.querySelector('p.nutrition'), 'p.nutrition of "Quick Dal"').toBeNull();
+        expect(card.lastElementChild?.matches('p.suggest'), 'last element').toBe(true);
+        expect(card.lastElementChild!.lastElementChild?.tagName).toBe('BUTTON');
+      });
+
+      it('ends a card without p.suggest, while exactly 15 recipes are suggested, with its last line at margin-bottom 0 (0px): p.own on the own "Quick Dal", p.nutrition on a suggested built-in recipe (#62 2b)', async () => {
+        recipeStore().add(DAL_WITH_LENTILS);
+        const suggested = leaveSuggested(TestBed.inject(PlanStore), 15, 'Quick Dal');
+        await reopenPage();
+        const builtIn = suggested.find((name) => name !== 'Quick Dal')!;
+
+        for (const [name, selector] of [
+          ['Quick Dal', 'p.own'],
+          [builtIn, 'p.nutrition'],
+        ]) {
+          const card = cardOf(name);
+          expect(card.querySelector('p.suggest'), `p.suggest of "${name}"`).toBeNull();
+          expect(card.lastElementChild?.matches(selector), `${selector} last on "${name}"`).toBe(
+            true,
+          );
+          expect(getComputedStyle(card.lastElementChild!).marginBottom, name).toBe('0px');
+        }
+      });
+    });
+
+    it('says "5 recipes match "chili flakes"." with "Penne arrabbiata", "Spaghetti aglio e olio", "Pad thai with chicken", "Avocado toast with fried egg" and "Spaghetti puttanesca" in this order and "chili flakes" on the page only in the status line, and "3 recipes match "broccoli"." with "Pasta with broccoli and parmesan", "Beef and broccoli stir-fry with rice" and "Salmon teriyaki with rice and broccoli", none with an li (#62 3)', async () => {
+      await search('chili flakes');
+      expect(statusText()).toBe('5 recipes match "chili flakes".');
+      expect(listedNames()).toEqual([
+        'Penne arrabbiata',
+        'Spaghetti aglio e olio',
+        'Pad thai with chicken',
+        'Avocado toast with fried egg',
+        'Spaghetti puttanesca',
+      ]);
+      expect(
+        textOf(element).split('chili flakes').length - 1,
+        'occurrences of "chili flakes"',
+      ).toBe(1);
+
+      await search('broccoli');
+      expect(statusText()).toBe('3 recipes match "broccoli".');
+      expect(listedNames()).toEqual([
+        'Pasta with broccoli and parmesan',
+        'Beef and broccoli stir-fry with rice',
+        'Salmon teriyaki with rice and broccoli',
+      ]);
+      for (const article of articles()) {
+        expectNoList(article);
+      }
+    });
+
+    it('shows on the card of "Spaghetti Pomodoro" in German, in order, the name link, "2 Portionen", its p.nutrition and "Nicht vorschlagen" named "Spaghetti Pomodoro nicht vorschlagen", no ul or li on any card, and "Dosentomaten" nowhere on the page (#62 4)', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await reload();
+      const card = cardOf('Spaghetti Pomodoro');
+      expect(partsOf(card)).toEqual([
+        ['h2', 'Spaghetti Pomodoro'],
+        ['p.servings', '2 Portionen'],
+        ['p.nutrition', 'Pro Portion: 615 kcal · 21 g Eiweiß · 85 g Kohlenhydrate · 20 g Fett'],
+        ['p.suggest', 'Nicht vorschlagen'],
+      ]);
+      expect(card.querySelector('h2 > a')?.getAttribute('href')).toBe(
+        '/recipes/spaghetti-pomodoro',
+      );
+      expect(card.querySelector('p.suggest button')?.getAttribute('aria-label')).toBe(
+        'Spaghetti Pomodoro nicht vorschlagen',
+      );
+      for (const article of articles()) {
+        expectNoList(article);
+      }
+      expect(textOf(element)).not.toContain('Dosentomaten');
+    });
+
+    describe('edge cases', () => {
+      it('shows no ul or li and no "200 g lentils" on the card of the own "Quick Dal" in German, which holds the name link, "4 Portionen", "Dein Rezept" and "Nicht vorschlagen" (#62 4a)', async () => {
+        storeOwnRecipes(DAL_WITH_LENTILS);
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await reload();
+        const card = cardOf('Quick Dal');
+        expect(partsOf(card)).toEqual([
+          ['h2', 'Quick Dal'],
+          ['p.servings', '4 Portionen'],
+          ['p.own', 'Dein Rezept'],
+          ['p.suggest', 'Nicht vorschlagen'],
+        ]);
+        expectNoList(card);
+        expect(textOf(element)).not.toContain('200 g lentils');
+      });
+    });
+
+    it('shows "Not suggested" and a focused "Suggest again" named "Suggest again: Spaghetti pomodoro", with no ul or li, on a click on the focused "Don\'t suggest" of "Spaghetti pomodoro", and a focused "Don\'t suggest" again, with no ul or li, on a click on "Suggest again" (#62 5)', async () => {
+      const card = cardOf('Spaghetti pomodoro');
+      const dontSuggest = card.querySelector<HTMLButtonElement>('p.suggest button')!;
+      dontSuggest.focus();
+      await click(dontSuggest);
+      const suggest = card.querySelector('p.suggest')!;
+      expect(Array.from(suggest.children).map((child) => [child.tagName, textOf(child)])).toEqual([
+        ['SPAN', 'Not suggested'],
+        ['BUTTON', 'Suggest again'],
+      ]);
+      const again = suggest.querySelector<HTMLButtonElement>('button')!;
+      expect(again.getAttribute('aria-label')).toBe('Suggest again: Spaghetti pomodoro');
+      expect(document.activeElement, 'focus after "Don\'t suggest"').toBe(again);
+      expectNoList(card);
+
+      await click(again);
+      const back = card.querySelector<HTMLButtonElement>('p.suggest button')!;
+      expect(textOf(back)).toBe("Don't suggest");
+      expect(document.activeElement, 'focus after "Suggest again"').toBe(back);
+      expectNoList(card);
+    });
+
+    describe('edge cases', () => {
+      it('ends the card of "Spaghetti pomodoro" with "Suggest again", the last element of its p.suggest, the card\'s last element, after "Don\'t suggest" and after a reload (#62 5a)', async () => {
+        await click(
+          cardOf('Spaghetti pomodoro').querySelector<HTMLButtonElement>('p.suggest button')!,
+        );
+        expectEndsWithSuggestAgain('after "Don\'t suggest"');
+        await reload();
+        expectEndsWithSuggestAgain('after a reload');
+
+        function expectEndsWithSuggestAgain(when: string) {
+          const card = cardOf('Spaghetti pomodoro');
+          const last = card.lastElementChild;
+          expect(last?.matches('p.suggest'), `p.suggest last ${when}`).toBe(true);
+          expect(textOf(last!.lastElementChild!), `last in p.suggest ${when}`).toBe(
+            'Suggest again',
+          );
+        }
+      });
+    });
+
+    function expectNoList(card: HTMLElement) {
+      expect(
+        card.querySelectorAll('ul, li'),
+        `ul and li of "${textOf(card.querySelector('h2')!)}"`,
+      ).toHaveLength(0);
+    }
+
+    function partsOf(card: HTMLElement): string[][] {
+      return Array.from(card.children).map((child) => [
+        [child.tagName.toLowerCase(), ...Array.from(child.classList)].join('.'),
+        textOf(child),
+      ]);
+    }
   });
 
   function configure() {
@@ -1181,22 +1322,20 @@ describe('RecipeList', () => {
     return found[0];
   }
 
-  function ingredientLinesOf(name: string): string[] {
-    const article = articles().find((candidate) => textOf(candidate.querySelector('h2')!) === name);
-    expect(article, `"${name}" not shown`).toBeDefined();
-    return Array.from(article!.querySelectorAll('li')).map(textOf);
-  }
-
   function nameLinkOf(name: string): HTMLAnchorElement {
-    const article = articles().find((candidate) => textOf(candidate.querySelector('h2')!) === name);
-    expect(article, `"${name}" not shown`).toBeDefined();
-    const link = article!.querySelector<HTMLAnchorElement>('h2 a');
+    const link = cardOf(name).querySelector<HTMLAnchorElement>('h2 a');
     expect(link, `no link in the name of "${name}"`).not.toBeNull();
     return link!;
   }
 
   function listedNames(): string[] {
     return articles().map((article) => textOf(article.querySelector('h2')!));
+  }
+
+  function cardOf(name: string): HTMLElement {
+    const article = articles().find((candidate) => textOf(candidate.querySelector('h2')!) === name);
+    expect(article, `"${name}" not shown`).toBeDefined();
+    return article!;
   }
 
   function articles(): HTMLElement[] {
