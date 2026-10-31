@@ -50,6 +50,8 @@ export interface PlanSettings {
   days: number;
   people: number;
   kidFriendly: boolean;
+  // The number of days after today the plan starts on
+  startsIn: number;
 }
 
 export type Random = () => number;
@@ -69,15 +71,22 @@ export const NO_SCORE: Score = () => 0;
 
 export const MIN_DAYS = 1;
 export const MAX_DAYS = 5;
+export const MIN_STARTS_IN = 0;
+export const MAX_STARTS_IN = 2;
 export const MIN_PEOPLE = 1;
 export const MIN_SUGGESTED = 15;
 const SUGGESTIONS = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const DEFAULT_SETTINGS: Readonly<PlanSettings> = { days: 5, people: 2, kidFriendly: false };
+export const DEFAULT_SETTINGS: Readonly<PlanSettings> = {
+  days: 5,
+  people: 2,
+  kidFriendly: false,
+  startsIn: 0,
+};
 
 export function createPlan(
-  startDate: string,
+  today: string,
   settings: PlanSettings,
   recipes: readonly string[],
   random: Random,
@@ -92,7 +101,7 @@ export function createPlan(
     shown: [],
     kidFriendly: settings.kidFriendly,
   };
-  return openDays(plan, startDate, settings.days, recipes, random, score);
+  return openDays(plan, addDays(today, settings.startsIn), settings.days, recipes, random, score);
 }
 
 export function pickRecipe(
@@ -613,7 +622,7 @@ function openDays(
     .reduce((next, ref) => openMeal(next, ref, recipes, random, score), withAdded);
 }
 
-function addDays(date: string, days: number): string {
+export function addDays(date: string, days: number): string {
   // Computed in UTC so a daylight saving change can't shift the date
   const [year, month, day] = date.split('-').map(Number);
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);

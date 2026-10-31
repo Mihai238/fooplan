@@ -17,9 +17,11 @@ import {
   forgetRecipe,
   isPicked,
   MAX_DAYS,
+  MAX_STARTS_IN,
   MealRef,
   MIN_DAYS,
   MIN_PEOPLE,
+  MIN_STARTS_IN,
   MIN_SUGGESTED,
   otherSuggestions,
   parseCooked,
@@ -304,13 +306,16 @@ export class PlanStore {
     );
   }
 
-  private isValid({ days, people, kidFriendly }: PlanSettings): boolean {
+  private isValid({ days, people, kidFriendly, startsIn }: PlanSettings): boolean {
     return (
       Number.isInteger(days) &&
       days >= MIN_DAYS &&
       days <= MAX_DAYS &&
       Number.isInteger(people) &&
       people >= MIN_PEOPLE &&
+      Number.isInteger(startsIn) &&
+      startsIn >= MIN_STARTS_IN &&
+      startsIn <= MAX_STARTS_IN &&
       (!kidFriendly || this.canBeKidFriendly())
     );
   }

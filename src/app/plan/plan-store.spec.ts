@@ -306,7 +306,7 @@ describe('PlanStore', () => {
   });
 
   it('shows the same days, people, picks and suggestions of a plan in progress after a reload', async () => {
-    store.newPlan({ days: 2, people: 3, kidFriendly: false });
+    store.newPlan({ days: 2, people: 3, kidFriendly: false, startsIn: 0 });
     pickFirstSuggestion(LUNCH);
     const before = store.plan();
     expect(before.days, 'days not set').toHaveLength(2);
@@ -544,7 +544,7 @@ describe('PlanStore', () => {
       }
       today = '2026-10-26';
 
-      store.newPlan({ days: 2, people: 3, kidFriendly: false });
+      store.newPlan({ days: 2, people: 3, kidFriendly: false, startsIn: 0 });
       const plan = store.plan();
       expect(plan.days.map((planDay) => planDay.date)).toEqual(['2026-10-26', '2026-10-27']);
       expect(plan.people).toBe(3);
@@ -565,12 +565,12 @@ describe('PlanStore', () => {
       store.toggleTicked(firstItemKey());
       store.addItem('toilet paper');
       expect(store.plan().ticked, 'item not ticked').toHaveLength(1);
-      store.newPlan({ days: 2, people: 3, kidFriendly: false });
+      store.newPlan({ days: 2, people: 3, kidFriendly: false, startsIn: 0 });
       expect(store.plan()).toMatchObject({ accepted: false, ticked: [], added: [], people: 3 });
       expect(store.plan().days).toHaveLength(2);
 
       store = await reload();
-      store.newPlan({ days: 5, people: 2, kidFriendly: true });
+      store.newPlan({ days: 5, people: 2, kidFriendly: true, startsIn: 0 });
       expect(store.plan().kidFriendly).toBe(true);
       expectKidFriendly('kid-friendly new plan');
 
@@ -580,11 +580,11 @@ describe('PlanStore', () => {
       leaveSuggested(store, 27, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
       const before = store.plan();
       for (const settings of [
-        { days: 3, people: 2, kidFriendly: true },
-        { days: 0, people: 2, kidFriendly: false },
-        { days: 6, people: 2, kidFriendly: false },
-        { days: 2.5, people: 2, kidFriendly: false },
-        { days: 3, people: 0, kidFriendly: false },
+        { days: 3, people: 2, kidFriendly: true, startsIn: 0 },
+        { days: 0, people: 2, kidFriendly: false, startsIn: 0 },
+        { days: 6, people: 2, kidFriendly: false, startsIn: 0 },
+        { days: 2.5, people: 2, kidFriendly: false, startsIn: 0 },
+        { days: 3, people: 0, kidFriendly: false, startsIn: 0 },
       ]) {
         store.newPlan(settings);
         expect(store.plan(), JSON.stringify(settings)).toBe(before);
@@ -596,31 +596,31 @@ describe('PlanStore', () => {
         const before = store.plan();
         const stored = localStorage.getItem(STORAGE_KEY);
         for (const settings of [
-          { days: 3, people: 1.5, kidFriendly: false },
-          { days: 3, people: -1, kidFriendly: false },
-          { days: -1, people: 2, kidFriendly: false },
-          { days: Number.NaN, people: 2, kidFriendly: false },
+          { days: 3, people: 1.5, kidFriendly: false, startsIn: 0 },
+          { days: 3, people: -1, kidFriendly: false, startsIn: 0 },
+          { days: -1, people: 2, kidFriendly: false, startsIn: 0 },
+          { days: Number.NaN, people: 2, kidFriendly: false, startsIn: 0 },
         ]) {
           store.newPlan(settings);
           expect(store.plan(), JSON.stringify(settings)).toBe(before);
         }
         expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
         // A rejected call must not be one that ignores its settings
-        store.newPlan({ days: 3, people: 2, kidFriendly: false });
+        store.newPlan({ days: 3, people: 2, kidFriendly: false, startsIn: 0 });
         expect(store.plan().days, 'valid settings').toHaveLength(3);
       });
 
       it('starts 1 day for 1 person, 5 days for 100 people, and a kid-friendly plan with exactly 15 kid-friendly recipes suggested', () => {
-        store.newPlan({ days: 1, people: 1, kidFriendly: false });
+        store.newPlan({ days: 1, people: 1, kidFriendly: false, startsIn: 0 });
         expect(store.plan().days).toHaveLength(1);
         expect(store.plan().people).toBe(1);
 
-        store.newPlan({ days: 5, people: 100, kidFriendly: false });
+        store.newPlan({ days: 5, people: 100, kidFriendly: false, startsIn: 0 });
         expect(store.plan().days).toHaveLength(5);
         expect(store.plan().people).toBe(100);
 
         leaveSuggested(store, 28, ...KID_FRIENDLY.slice(0, 15), ...NOT_KID_FRIENDLY);
-        store.newPlan({ days: 2, people: 2, kidFriendly: true });
+        store.newPlan({ days: 2, people: 2, kidFriendly: true, startsIn: 0 });
         expect(store.plan().days).toHaveLength(2);
         expect(store.plan().kidFriendly).toBe(true);
         expectKidFriendly('15 kid-friendly suggested');
@@ -657,12 +657,99 @@ describe('PlanStore', () => {
 
         const drawn = new Set<string>();
         for (let i = 0; i < 3; i++) {
-          store.newPlan({ days: 5, people: 2, kidFriendly: false });
+          store.newPlan({ days: 5, people: 2, kidFriendly: false, startsIn: 0 });
           expect(store.plan().kidFriendly).toBe(false);
           expect(store.plan().days).toHaveLength(5);
           suggestionsOf(store.plan()).forEach((name) => drawn.add(name));
         }
         expect(NOT_KID_FRIENDLY.filter((name) => drawn.has(name)).length).toBeGreaterThan(0);
+      });
+    });
+  });
+
+  describe('newPlan with a start day (#65)', () => {
+    beforeEach(async () => {
+      localStorage.clear();
+      today = '2026-10-31';
+      store = await reload();
+    });
+
+    it('starts 5 open days from 2026-11-02 on newPlan with startsIn 2 on 2026-10-31, returning true and counting it in started; returns false and keeps the same plan for startsIn 3, -1 or 0.5; and has startsIn 0 in DEFAULT_SETTINGS, the plan of a cleared storage starting on 2026-10-31 (#65 2)', async () => {
+      expect(DEFAULT_SETTINGS).toEqual({ days: 5, people: 2, kidFriendly: false, startsIn: 0 });
+      expectFreshPlan(store.plan(), '2026-10-31');
+
+      const started = store.started();
+      const dayAfterTomorrow = { days: 5, people: 2, kidFriendly: false, startsIn: 2 };
+      expect(store.newPlan(dayAfterTomorrow)).toBe(true);
+      expectFreshPlan(store.plan(), '2026-11-02');
+      expect(store.plan().days.map((planDay) => planDay.date)).toEqual([
+        '2026-11-02',
+        '2026-11-03',
+        '2026-11-04',
+        '2026-11-05',
+        '2026-11-06',
+      ]);
+      expect(store.started()).toBe(started + 1);
+
+      const before = store.plan();
+      for (const startsIn of [3, -1, 0.5]) {
+        const settings = { ...dayAfterTomorrow, startsIn };
+        expect(store.newPlan(settings), `startsIn ${startsIn}`).toBe(false);
+        expect(store.plan(), `startsIn ${startsIn}`).toBe(before);
+      }
+    });
+
+    describe('edge cases', () => {
+      it('saves nothing and counts nothing in started on newPlan with startsIn NaN, Infinity, 2.5 or 100, and starts a plan from 2026-11-01 with startsIn 1 right after (#65 2a)', () => {
+        const before = store.plan();
+        const stored = localStorage.getItem(STORAGE_KEY);
+        const started = store.started();
+        for (const startsIn of [Number.NaN, Infinity, 2.5, 100]) {
+          const settings = { ...DEFAULT_SETTINGS, startsIn };
+          expect(store.newPlan(settings), `startsIn ${startsIn}`).toBe(false);
+          expect(store.plan(), `startsIn ${startsIn}`).toBe(before);
+        }
+        expect(localStorage.getItem(STORAGE_KEY)).toBe(stored);
+        expect(store.started()).toBe(started);
+        // A rejected call must not be one that ignores its start day
+        const tomorrow = { ...DEFAULT_SETTINGS, startsIn: 1 };
+        expect(store.newPlan(tomorrow)).toBe(true);
+        expect(store.plan().days[0].date, 'valid start day').toBe('2026-11-01');
+      });
+
+      it('starts a 1-day plan on 2027-01-02 on newPlan with startsIn 2 once TODAY returns 2026-12-31, and on 2026-12-31 with startsIn 0 (#65 2b)', () => {
+        today = '2026-12-31';
+        const settings = { ...DEFAULT_SETTINGS, days: 1, startsIn: 2 };
+        expect(store.newPlan(settings)).toBe(true);
+        expect(store.plan().days.map((planDay) => planDay.date)).toEqual(['2027-01-02']);
+        const fromToday = { ...settings, startsIn: 0 };
+        expect(store.newPlan(fromToday)).toBe(true);
+        expect(store.plan().days.map((planDay) => planDay.date)).toEqual(['2026-12-31']);
+      });
+
+      it('saves a plan started with startsIn 1 with the same keys as before, no start day among them, and loads it with its dates from 2026-11-01 after a reload; loads a plan saved before as it was (#65 2c)', async () => {
+        const tomorrow = { ...DEFAULT_SETTINGS, startsIn: 1 };
+        store.newPlan(tomorrow);
+        const plan = store.plan();
+        expect(plan.days[0].date, 'start day').toBe('2026-11-01');
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as Plan;
+        expect(Object.keys(saved).sort()).toEqual([
+          'accepted',
+          'added',
+          'days',
+          'kidFriendly',
+          'people',
+          'shown',
+          'ticked',
+        ]);
+        expect((await reload()).plan(), 'after a reload').toEqual(plan);
+
+        const before = planOf([
+          day('2026-10-30', open(...NAMES.slice(0, 3)), open(...NAMES.slice(3, 6))),
+        ]);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(before));
+        expect((await reload()).plan(), 'a plan saved before').toEqual(before);
+        expect(localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify(before));
       });
     });
   });
@@ -2164,13 +2251,13 @@ describe('PlanStore', () => {
 
     it('never suggests "Dal", cooked today, in a new 1-day plan when the only recipes are 7 of base and protein "other" without minutes; suggests it dated 20 days ago or tomorrow (#57 7)', async () => {
       await loadOnly(SEVEN, { Dal: '2026-10-24' });
-      store.newPlan({ days: 1, people: 2, kidFriendly: false });
+      store.newPlan({ days: 1, people: 2, kidFriendly: false, startsIn: 0 });
       expect(suggestionsOf(store.plan()), 'cooked today').toHaveLength(6);
       expect(suggestionsOf(store.plan()), 'cooked today').not.toContain('Dal');
 
       for (const date of ['2026-10-04', '2026-10-25']) {
         await loadOnly(SEVEN, { Dal: date }, DRAWS_DAL);
-        store.newPlan({ days: 1, people: 2, kidFriendly: false });
+        store.newPlan({ days: 1, people: 2, kidFriendly: false, startsIn: 0 });
         expect(suggestionsOf(store.plan()), date).toContain('Dal');
       }
     });
@@ -2306,7 +2393,7 @@ describe('PlanStore', () => {
           today = '2026-10-24';
           await loadOnly(SEVEN, { Dal: today }, DRAWS_DAL);
           today = date;
-          store.newPlan({ days: 1, people: 2, kidFriendly: false });
+          store.newPlan({ days: 1, people: 2, kidFriendly: false, startsIn: 0 });
           expect(suggestionsOf(store.plan()).includes('Dal'), date).toBe(suggested);
         }
       });
@@ -2328,14 +2415,14 @@ describe('PlanStore', () => {
       it('leaves both recipes of a 1-day plan accepted from 8 recipes of base and protein "other" out of the next new 1-day plan, which suggests the other 6 (#57 7a)', async () => {
         const eight = [...SEVEN, 'Barley'];
         await loadOnly(eight);
-        store.newPlan({ days: 1, people: 2, kidFriendly: false });
+        store.newPlan({ days: 1, people: 2, kidFriendly: false, startsIn: 0 });
         pickFirstSuggestion(LUNCH);
         pickFirstSuggestion(DINNER);
         const cooked = [store.plan().days[0].lunch.recipe, store.plan().days[0].dinner.recipe];
         store.accept();
         expect(store.plan().accepted, 'not accepted').toBe(true);
 
-        store.newPlan({ days: 1, people: 2, kidFriendly: false });
+        store.newPlan({ days: 1, people: 2, kidFriendly: false, startsIn: 0 });
         expect([...suggestionsOf(store.plan())].sort()).toEqual(
           eight.filter((name) => !cooked.includes(name)).sort(),
         );

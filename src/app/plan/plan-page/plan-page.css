@@ -51,6 +51,24 @@ h1 {
   margin: 0;
 }
 
+/* On a phone, "Day after tomorrow" leaves no room for the label column beside the arrows, so each
+   label takes a line above its row there, the switch and its note under it */
+@media (max-width: 28rem) {
+  .settings {
+    grid-template-columns: repeat(3, auto) 1fr;
+  }
+
+  .settings .stepper-label,
+  .settings .switch-cell,
+  .settings .note {
+    grid-column: 1 / -1;
+  }
+
+  .settings .stepper-label {
+    margin-bottom: -0.375rem;
+  }
+}
+
 label,
 .stepper-label,
 .note,

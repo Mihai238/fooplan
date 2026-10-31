@@ -2,7 +2,7 @@ import { Provider } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { groceryList, itemKey } from '../groceries/groceries';
-import { addedKey, Plan } from '../plan/plan';
+import { addedKey, DEFAULT_SETTINGS, Plan } from '../plan/plan';
 import { PlanStore, RANDOM, TODAY } from '../plan/plan-store';
 import {
   covered,
@@ -130,6 +130,37 @@ describe('Home', () => {
         "Your plan doesn't include today. Go to the plan",
       );
       expect(todayLinks()).toEqual([['Go to the plan', '/plan']]);
+    });
+
+    it('says "Your plan doesn\'t include today." with "Go to the plan", no "Lunch" or "Dinner" row, "Start planning" and "No meals picked yet" on 2026-10-31 for a plan from 2026-11-01 to 2026-11-05 with every meal open, as started with "Tomorrow" and as loaded once saved (#65 12)', async () => {
+      const halloween = [{ provide: TODAY, useValue: () => '2026-10-31' }];
+      await openHome(undefined, halloween);
+      const tomorrow = { ...DEFAULT_SETTINGS, startsIn: 1 };
+      expect(store.newPlan(tomorrow), 'new plan').toBe(true);
+      await fixture.whenStable();
+      const plan = store.plan();
+      expect(plan.days.map((planDay) => planDay.date)).toEqual([
+        '2026-11-01',
+        '2026-11-02',
+        '2026-11-03',
+        '2026-11-04',
+        '2026-11-05',
+      ]);
+      for (const step of ['started', 'loaded']) {
+        if (step === 'loaded') {
+          TestBed.resetTestingModule();
+          await openHome(plan, halloween);
+        }
+        expect(textOf(element.querySelector('.today h2')), step).toBe('Today');
+        expect(textOf(element.querySelector('.today .date')), step).toBe('Saturday, October 31');
+        expect(textOf(element.querySelector('.today .not-today')), step).toBe(
+          "Your plan doesn't include today. Go to the plan",
+        );
+        expect(todayLinks(), step).toEqual([['Go to the plan', '/plan']]);
+        expect(todayRows(), step).toEqual([]);
+        expect(mainLink(), step).toEqual(['Start planning', '/plan']);
+        expect(cards()[0], step).toEqual(['Plan', 'No meals picked yet', '/plan']);
+      }
     });
 
     it('shows no img and no .placeholder for "Spaghetti pomodoro" as today\'s lunch, though the list holds it, nor for leftovers or eating out (#63 5)', async () => {

@@ -138,7 +138,7 @@ describe('plan', () => {
       const candidates = FORTY_RECIPES.slice(0, 20);
       const plan = createPlan(
         '2026-10-27',
-        { days: 3, people: 4, kidFriendly: true },
+        { days: 3, people: 4, kidFriendly: true, startsIn: 0 },
         candidates,
         seededRandom(1),
       );
@@ -152,13 +152,63 @@ describe('plan', () => {
 
       const small = createPlan(
         '2026-10-27',
-        { days: 1, people: 1, kidFriendly: false },
+        { days: 1, people: 1, kidFriendly: false, startsIn: 0 },
         candidates,
         seededRandom(1),
       );
       expect(small.days.map((day) => day.date)).toEqual(['2026-10-27']);
       expect(small.people).toBe(1);
       expect(small.kidFriendly).toBe(false);
+    });
+
+    it('starts the plan startsIn days after the given date: 2026-11-01 to 2026-11-03 from 2026-10-31 with startsIn 1, each with a lunch and a dinner open with three suggestions, from 2026-11-02 with 2, from 2026-10-31 with 0, and on 2026-03-30 from 2026-03-28 with 2, across the daylight saving change in Europe (#65 1)', () => {
+      const candidates = FORTY_RECIPES.slice(0, 20);
+      const tomorrow = { days: 3, people: 2, kidFriendly: false, startsIn: 1 };
+      const plan = createPlan('2026-10-31', tomorrow, candidates, seededRandom(1));
+      expect(plan.days.map((day) => day.date)).toEqual(['2026-11-01', '2026-11-02', '2026-11-03']);
+      expect(meals(plan)).toHaveLength(6);
+      openMealsOf(plan).forEach((meal) => expectValidSuggestions(meal, plan, candidates, 1));
+      expect(meals(plan).every((meal) => meal.recipe === null && !meal.eatOut)).toBe(true);
+
+      for (const [from, startsIn, dates] of [
+        ['2026-10-31', 2, ['2026-11-02', '2026-11-03', '2026-11-04']],
+        ['2026-10-31', 0, ['2026-10-31', '2026-11-01', '2026-11-02']],
+        ['2026-03-28', 2, ['2026-03-30', '2026-03-31', '2026-04-01']],
+      ] as const) {
+        const settings = { ...tomorrow, startsIn };
+        const started = createPlan(from, settings, candidates, seededRandom(1));
+        expect(
+          started.days.map((day) => day.date),
+          `${from} + ${startsIn}`,
+        ).toEqual(dates);
+      }
+    });
+
+    describe('edge cases', () => {
+      it('ranks the suggestions of a plan starting on 2026-11-02 by the dates 2026-11-02 to 2026-11-04, never by 2026-10-31, the date it is given (#65 1a)', () => {
+        const dated = new Set<string>();
+        const score: Score = (_, { plan, meal }) => {
+          dated.add(plan.days[meal.day].date);
+          return 0;
+        };
+        const settings = { days: 3, people: 2, kidFriendly: false, startsIn: 2 };
+        createPlan('2026-10-31', settings, FORTY_RECIPES, seededRandom(1), score);
+        expect([...dated].sort()).toEqual(['2026-11-02', '2026-11-03', '2026-11-04']);
+      });
+
+      it('starts on 2027-01-02, a Saturday, from 2026-12-31 with startsIn 2, and on 2026-03-01 from 2026-02-28 with startsIn 1 (#65 1b)', () => {
+        for (const [from, startsIn, dates] of [
+          ['2026-12-31', 2, ['2027-01-02', '2027-01-03']],
+          ['2026-02-28', 1, ['2026-03-01', '2026-03-02']],
+        ] as const) {
+          const settings = { days: 2, people: 2, kidFriendly: false, startsIn };
+          const plan = createPlan(from, settings, FORTY_RECIPES, seededRandom(1));
+          expect(
+            plan.days.map((day) => day.date),
+            `${from} + ${startsIn}`,
+          ).toEqual(dates);
+        }
+      });
     });
   });
 

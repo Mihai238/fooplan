@@ -193,6 +193,44 @@
     <!-- The arrow keys step the value also at a limit, where nothing changes, so that they never
          scroll the page from it -->
     <span class="stepper">
+      <span id="starts-label" class="stepper-label">{{ language.t('plan.starts') }}</span>
+      <button
+        #earlierStart
+        type="button"
+        class="step"
+        [attr.aria-label]="language.t('plan.oneDayEarlier')"
+        [disabled]="earliestStart()"
+        (click)="stepNewStartsIn(-1); keepFocus(earlierStart, earliestStart(), startsValue)"
+      >
+        <span aria-hidden="true">▼</span>
+      </button>
+      <span
+        #startsValue
+        role="spinbutton"
+        tabindex="0"
+        class="value"
+        aria-labelledby="starts-label"
+        [attr.aria-valuenow]="newPlanSettings().startsIn"
+        [attr.aria-valuemin]="minStartsIn"
+        [attr.aria-valuemax]="maxStartsIn"
+        [attr.aria-valuetext]="startsText()"
+        (keydown.arrowup)="$event.preventDefault(); stepNewStartsIn(1)"
+        (keydown.arrowdown)="$event.preventDefault(); stepNewStartsIn(-1)"
+      >
+        {{ startsText() }}
+      </span>
+      <button
+        #laterStart
+        type="button"
+        class="step"
+        [attr.aria-label]="language.t('plan.oneDayLater')"
+        [disabled]="latestStart()"
+        (click)="stepNewStartsIn(1); keepFocus(laterStart, latestStart(), startsValue)"
+      >
+        <span aria-hidden="true">▲</span>
+      </button>
+    </span>
+    <span class="stepper">
       <span id="days-label" class="stepper-label">{{ language.t('plan.days') }}</span>
       <button
         #fewerDays

@@ -35,6 +35,14 @@ import {
 import { PlanPage } from './plan-page';
 
 const ARROWS = ['One more day', 'One day fewer', 'One more person', 'One person fewer'] as const;
+const STARTS_ARROWS = ['One day later', 'One day earlier'] as const;
+// Each stepper's down and up arrow
+const STEP_ARROWS = {
+  Starts: ['One day earlier', 'One day later'],
+  Days: ['One day fewer', 'One more day'],
+  People: ['One person fewer', 'One more person'],
+} as const;
+type StepperName = keyof typeof STEP_ARROWS;
 
 // jsdom lays out nothing, so a dialog's box is stubbed, and these points are placed around it
 const BOX = { left: 100, top: 100, right: 400, bottom: 300 } as DOMRect;
@@ -248,7 +256,7 @@ describe('PlanPage', () => {
       expect(peopleValue.getAttribute('aria-valuenow')).toBe('2');
       expect(peopleValue.getAttribute('aria-valuemin')).toBe('1');
       expect(peopleValue.hasAttribute('aria-valuemax'), 'people has a maximum').toBe(false);
-      expect(element.querySelectorAll('[role="spinbutton"]')).toHaveLength(2);
+      expect(element.querySelectorAll('[role="spinbutton"]')).toHaveLength(3);
       for (const name of ARROWS) {
         expect(element.querySelectorAll(`button[aria-label="${name}"]`), name).toHaveLength(1);
       }
@@ -1703,7 +1711,9 @@ describe('PlanPage', () => {
       await startNewPlanWithPeople(1);
       await pickFirstSuggestion(0);
       await click(button(element, 'New plan'));
-      expect(textOf(openDialog())).toContain('The new plan starts today, for 5 days and 1 person');
+      expect(textOf(openDialog())).toContain(
+        'The new plan starts today (Sat 24 Oct), for 5 days and 1 person',
+      );
     });
 
     it('closes, keeps the plan and puts the focus back on "New plan" when the user clicks "Keep this plan"', async () => {
@@ -1897,7 +1907,7 @@ describe('PlanPage', () => {
       expect(toolbar().nextElementSibling).toBe(element.querySelector('.days'));
     });
 
-    it('opens the modal dialog "New plan" on "New plan" for a fresh plan with no meal filled: no #new-plan-lost, Days 5, People 2, "Kid-friendly" unchecked and enabled, "The new plan starts today, for 5 days and 2 people.", "Keep this plan" and "Start new plan" without danger, in the order heading, settings, next, actions, and the focus on the Days value', async () => {
+    it('opens the modal dialog "New plan" on "New plan" for a fresh plan with no meal filled: no #new-plan-lost, Days 5, People 2, "Kid-friendly" unchecked and enabled, "The new plan starts today (Sat 24 Oct), for 5 days and 2 people.", "Keep this plan" and "Start new plan" without danger, in the order heading, settings, next, actions, and the focus on the Starts value (changed by #65)', async () => {
       const dialog = await openNewPlan();
       expect(modalDialogs.has(dialog), 'opened with showModal()').toBe(true);
       expect(textOf(dialog.querySelector('h2#new-plan-title'))).toBe('New plan');
@@ -1940,14 +1950,14 @@ describe('PlanPage', () => {
       expect(toggle.disabled).toBe(false);
       expect(toggle.hasAttribute('aria-describedby')).toBe(false);
 
-      const next = 'The new plan starts today, for 5 days and 2 people.';
+      const next = 'The new plan starts today (Sat 24 Oct), for 5 days and 2 people.';
       expect(textOf(dialog.querySelector('p#new-plan-next'))).toBe(next);
       expect(textOfIdRefs(dialog, 'aria-describedby'), 'dialog description').toBe(next);
       const actions = dialog.querySelector<HTMLElement>('div.actions')!;
       expect(buttonTexts(actions)).toEqual(['Keep this plan', 'Start new plan']);
       expect(button(actions, 'Keep this plan').className).toBe('secondary');
       expect(button(actions, 'Start new plan').className).toBe('primary');
-      expect(document.activeElement).toBe(daysValue);
+      expect(document.activeElement).toBe(stepper('Starts', dialog));
     });
 
     describe('edge cases', () => {
@@ -1962,16 +1972,17 @@ describe('PlanPage', () => {
         expect(openDialogOrNull(), 'dialog not open').toBe(newPlanDialog());
       });
 
-      it('opens with the focus on the Days value, not on a button, also for a plan with a picked meal, and keeps the dialog open and the plan when the user presses Enter there', async () => {
+      it('opens with the focus on the Starts value, not on a button, also for a plan with a picked meal, and keeps the dialog open, the value "Today" and the plan when the user presses Enter there (changed by #65, #65 3a)', async () => {
         await pickFirstSuggestion(0);
         const before = store.plan();
         const dialog = await openNewPlan();
-        const daysValue = stepper('Days', dialog);
-        expect(document.activeElement).toBe(daysValue);
-        await keydown(daysValue, 'Enter');
+        const startsValue = stepper('Starts', dialog);
+        expect(document.activeElement).toBe(startsValue);
+        await keydown(startsValue, 'Enter');
         expect(openDialogOrNull()).toBe(dialog);
         expect(store.plan()).toBe(before);
-        expect(document.activeElement).toBe(daysValue);
+        expect(document.activeElement).toBe(startsValue);
+        expect(textOf(startsValue)).toBe('Today');
       });
     });
 
@@ -2068,7 +2079,7 @@ describe('PlanPage', () => {
       expect(textOf(stepper('Days', dialog))).toBe('3');
       expect(stepper('Days', dialog).getAttribute('aria-valuenow')).toBe('3');
       expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-        'The new plan starts today, for 3 days and 2 people.',
+        'The new plan starts today (Sat 24 Oct), for 3 days and 2 people.',
       );
 
       await click(arrow('One more person', dialog));
@@ -2080,7 +2091,7 @@ describe('PlanPage', () => {
       await click(kidFriendlyIn(dialog));
       expect(kidFriendlyIn(dialog).checked).toBe(true);
       expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-        'The new plan starts today, for 3 days and 3 people, kid-friendly.',
+        'The new plan starts today (Sat 24 Oct), for 3 days and 3 people, kid-friendly.',
       );
       expect(openDialogOrNull(), 'dialog closed').toBe(dialog);
       expect(store.plan()).toBe(before);
@@ -2132,14 +2143,14 @@ describe('PlanPage', () => {
       });
     });
 
-    it('says "The new plan starts today, for 1 day and 1 person." at Days 1 and People 1, and in German heads the dialog "Neuer Plan" and says "Der neue Plan beginnt heute, für 1 Tag und 1 Person."', async () => {
+    it('says "The new plan starts today (Sat 24 Oct), for 1 day and 1 person." at Days 1 and People 1, and in German heads the dialog "Neuer Plan" and says "Der neue Plan beginnt heute (Sa., 24. Okt.), für 1 Tag und 1 Person."', async () => {
       let dialog = await openNewPlan();
       for (let i = 0; i < 4; i++) {
         await click(arrow('One day fewer', dialog));
       }
       await click(arrow('One person fewer', dialog));
       expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-        'The new plan starts today, for 1 day and 1 person.',
+        'The new plan starts today (Sat 24 Oct), for 1 day and 1 person.',
       );
       await click(button(dialog, 'Keep this plan'));
 
@@ -2149,26 +2160,26 @@ describe('PlanPage', () => {
       expect(textOf(dialog.querySelector('h2#new-plan-title'))).toBe('Neuer Plan');
       expect(labelOf(dialog), 'dialog name').toBe('Neuer Plan');
       expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-        'Der neue Plan beginnt heute, für 5 Tage und 2 Personen.',
+        'Der neue Plan beginnt heute (Sa., 24. Okt.), für 5 Tage und 2 Personen.',
       );
       for (let i = 0; i < 4; i++) {
         await click(buttonNamed(dialog, 'Ein Tag weniger'));
       }
       await click(buttonNamed(dialog, 'Eine Person weniger'));
       expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-        'Der neue Plan beginnt heute, für 1 Tag und 1 Person.',
+        'Der neue Plan beginnt heute (Sa., 24. Okt.), für 1 Tag und 1 Person.',
       );
     });
 
     describe('edge cases', () => {
-      it('says "The new plan starts today, for 1 day and 2 people, kid-friendly." with "Kid-friendly" ticked at Days 1, and "Der neue Plan beginnt heute, für 1 Tag und 2 Personen, kinderfreundlich." in German', async () => {
+      it('says "The new plan starts today (Sat 24 Oct), for 1 day and 2 people, kid-friendly." with "Kid-friendly" ticked at Days 1, and "Der neue Plan beginnt heute (Sa., 24. Okt.), für 1 Tag und 2 Personen, kinderfreundlich." in German', async () => {
         let dialog = await openNewPlan();
         for (let i = 0; i < 4; i++) {
           await click(arrow('One day fewer', dialog));
         }
         await click(kidFriendlyIn(dialog));
         expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-          'The new plan starts today, for 1 day and 2 people, kid-friendly.',
+          'The new plan starts today (Sat 24 Oct), for 1 day and 2 people, kid-friendly.',
         );
         await click(button(dialog, 'Keep this plan'));
 
@@ -2180,7 +2191,7 @@ describe('PlanPage', () => {
         }
         await click(kidFriendlyIn(dialog));
         expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-          'Der neue Plan beginnt heute, für 1 Tag und 2 Personen, kinderfreundlich.',
+          'Der neue Plan beginnt heute (Sa., 24. Okt.), für 1 Tag und 2 Personen, kinderfreundlich.',
         );
       });
     });
@@ -2252,7 +2263,7 @@ describe('PlanPage', () => {
         expect(textOf(stepper('People', dialog)), `${way}: People again`).toBe('2');
         expect(kidFriendlyIn(dialog).checked, `${way}: Kid-friendly again`).toBe(false);
         expect(textOf(dialog.querySelector('#new-plan-next')), way).toBe(
-          'The new plan starts today, for 5 days and 2 people.',
+          'The new plan starts today (Sat 24 Oct), for 5 days and 2 people.',
         );
         await click(button(dialog, 'Keep this plan'));
       }
@@ -2327,11 +2338,13 @@ describe('PlanPage', () => {
       });
     });
 
-    it('moves the focus through the dialog in order on Tab from the Days value at Days 3 and People 2, from "Start new plan" back to "One day fewer", and back on Shift+Tab; skips "One day fewer" at Days 1', async () => {
+    it('moves the focus through the dialog in order on Tab from the Starts value at Starts "Today", Days 3 and People 2, skipping the disabled "One day earlier", from "Start new plan" back to the Starts value, and back on Shift+Tab; skips "One day fewer" at Days 1 (changed by #65)', async () => {
       const dialog = await openNewPlan();
       await click(arrow('One day fewer', dialog));
       await click(arrow('One day fewer', dialog));
       const order = [
+        'Starts value',
+        'One day later',
         'One day fewer',
         'Days value',
         'One more day',
@@ -2342,16 +2355,15 @@ describe('PlanPage', () => {
         'Keep this plan',
         'Start new plan',
       ];
-      stepper('Days', dialog).focus();
-      expect(await tabs(9)).toEqual([...order.slice(2), ...order.slice(0, 2)]);
-      arrow('One day fewer', dialog).focus();
-      expect(await tabs(9, true)).toEqual([...order].reverse());
+      stepper('Starts', dialog).focus();
+      expect(await tabs(11)).toEqual([...order.slice(1), order[0]]);
+      expect(await tabs(11, true)).toEqual([...order].reverse());
 
       await click(arrow('One day fewer', dialog));
       await click(arrow('One day fewer', dialog));
       expect(arrow('One day fewer', dialog).disabled, 'at Days 1').toBe(true);
       stepper('Days', dialog).focus();
-      expect(await tabs(1, true)).toEqual(['Start new plan']);
+      expect(await tabs(1, true)).toEqual(['One day later']);
       expect(await tabs(1)).toEqual(['Days value']);
       expect(openDialogOrNull()).toBe(dialog);
     });
@@ -2361,7 +2373,7 @@ describe('PlanPage', () => {
         const dialog = await openNewPlan();
         await click(arrow('One day fewer', dialog));
         const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(TABBABLE));
-        expect(focusable.length, 'focusable elements').toBe(9);
+        expect(focusable.length, 'focusable elements').toBe(11);
         for (const shiftKey of [false, true]) {
           for (const node of focusable) {
             node.focus();
@@ -2373,11 +2385,11 @@ describe('PlanPage', () => {
         }
       });
 
-      it('moves the focus to "One day fewer" on Tab and to "Start new plan" on Shift+Tab after a click on the dialog\'s text, and to the Days value on Tab at Days 1', async () => {
+      it('moves the focus to the Starts value on Tab and to "Start new plan" on Shift+Tab after a click on the dialog\'s text at Starts "Today", where "One day earlier" is disabled, and to "One day earlier" on Tab at Starts "Tomorrow" (changed by #65)', async () => {
         const dialog = await openNewPlan();
         const text = dialog.querySelector<HTMLElement>('p#new-plan-next')!;
         for (const [shiftKey, expected] of [
-          [false, 'One day fewer'],
+          [false, 'Starts value'],
           [true, 'Start new plan'],
         ] as const) {
           await pressAndRelease(text, INSIDE);
@@ -2385,11 +2397,9 @@ describe('PlanPage', () => {
           expect(await tabs(1, shiftKey), shiftKey ? 'Shift+Tab' : 'Tab').toEqual([expected]);
         }
 
-        for (let i = 0; i < 4; i++) {
-          await click(arrow('One day fewer', dialog));
-        }
+        await click(arrow('One day later', dialog));
         await pressAndRelease(text, INSIDE);
-        expect(await tabs(1), 'Tab at Days 1').toEqual(['Days value']);
+        expect(await tabs(1), 'Tab at Starts "Tomorrow"').toEqual(['One day earlier']);
       });
 
       it('skips the disabled "Kid-friendly" switch on Tab from "One more person" and on Shift+Tab from "Keep this plan" while 14 kid-friendly recipes are suggested', async () => {
@@ -2416,8 +2426,9 @@ describe('PlanPage', () => {
     });
 
     describe('"Kid-friendly" switch (#53)', () => {
-      const NEXT = 'The new plan starts today, for 5 days and 2 people.';
-      const NEXT_KID_FRIENDLY = 'The new plan starts today, for 5 days and 2 people, kid-friendly.';
+      const NEXT = 'The new plan starts today (Sat 24 Oct), for 5 days and 2 people.';
+      const NEXT_KID_FRIENDLY =
+        'The new plan starts today (Sat 24 Oct), for 5 days and 2 people, kid-friendly.';
 
       it('shows label.kid-friendly after the People stepper, holding span.stepper-label.kid-label with a hidden icon of one circle and three paths and then "Kid-friendly", and span.switch-cell with input#kid-friendly.switch[role="switch"], named "Kid-friendly", unchecked and enabled on a fresh plan; "Kinderfreundlich" in German (#53 1)', async () => {
         for (const [language, newPlan, text] of [
@@ -2430,8 +2441,8 @@ describe('PlanPage', () => {
           }
           const dialog = await openNewPlan(newPlan);
           const steppers = dialog.querySelectorAll('div.settings > span.stepper');
-          expect(steppers, `${language}: steppers`).toHaveLength(2);
-          const row = steppers[1].nextElementSibling;
+          expect(steppers, `${language}: steppers`).toHaveLength(3);
+          const row = steppers[2].nextElementSibling;
           expect(row && selectorOf(row), `${language}: after the People stepper`).toBe(
             'label.kid-friendly',
           );
@@ -2713,6 +2724,450 @@ describe('PlanPage', () => {
           }
         });
       });
+    });
+
+    describe('"Starts" stepper (#65)', () => {
+      beforeEach(async () => {
+        localStorage.clear();
+        // A Saturday
+        today = '2026-10-31';
+        await reload();
+        vi.spyOn(newPlanDialog(), 'getBoundingClientRect').mockReturnValue(BOX);
+      });
+
+      it('shows the "Starts" stepper first in div.settings, before Days, People and "Kid-friendly", with the markup of the Days row: "One day earlier" disabled, the value "Today", a spinbutton labelled "Starts" with aria-valuenow 0, aria-valuemin 0, aria-valuemax 2 and aria-valuetext "Today", and "One day later" enabled; says "The new plan starts today (Sat 31 Oct), for 5 days and 2 people."; and opens with the focus on the Starts value (#65 3)', async () => {
+        const dialog = await openNewPlan();
+        const rows = Array.from(dialog.querySelector('div.settings')!.children);
+        expect(rows.map(selectorOf)).toEqual([
+          'span.stepper',
+          'span.stepper',
+          'span.stepper',
+          'label.kid-friendly',
+        ]);
+        expect(
+          rows.slice(0, 3).map((row) => labelOf(row.querySelector('[role="spinbutton"]')!)),
+        ).toEqual(['Starts', 'Days', 'People']);
+        const [startsRow, daysRow] = rows;
+        expect(Array.from(startsRow.children).map(selectorOf)).toEqual([
+          'span#starts-label.stepper-label',
+          'button.step',
+          'span.value',
+          'button.step',
+        ]);
+        expect(Array.from(daysRow.children).map(selectorOf)).toEqual([
+          'span#days-label.stepper-label',
+          'button.step',
+          'span.value',
+          'button.step',
+        ]);
+        expect(textOf(startsRow.children[0])).toBe('Starts');
+        const [, earlier, value, later] = Array.from(startsRow.children) as HTMLElement[];
+        expect([nameOf(earlier), textOf(earlier)]).toEqual(['One day earlier', '▼']);
+        expect([nameOf(later), textOf(later)]).toEqual(['One day later', '▲']);
+        expect((earlier as HTMLButtonElement).disabled, '"One day earlier" at "Today"').toBe(true);
+        expect((later as HTMLButtonElement).disabled, '"One day later" at "Today"').toBe(false);
+
+        expect(value).toBe(stepper('Starts', dialog));
+        expect(value.getAttribute('role')).toBe('spinbutton');
+        expect(value.getAttribute('tabindex')).toBe('0');
+        expect(value.getAttribute('aria-labelledby')).toBe('starts-label');
+        expectStarts(dialog, 'Today', 0);
+        expect(value.getAttribute('aria-valuemin')).toBe('0');
+        expect(value.getAttribute('aria-valuemax')).toBe('2');
+        expect(nextOf(dialog)).toBe(
+          'The new plan starts today (Sat 31 Oct), for 5 days and 2 people.',
+        );
+        expect(document.activeElement).toBe(value);
+      });
+
+      describe('edge cases', () => {
+        it('shows no date in the Starts row or its aria-valuetext at "Today", "Tomorrow" and "Day after tomorrow", only in #new-plan-next (#65 3b)', async () => {
+          const dialog = await openNewPlan();
+          const row = stepper('Starts', dialog).closest('span.stepper')!;
+          for (const [shown, date] of [
+            ['Today', 'Sat 31 Oct'],
+            ['Tomorrow', 'Sun 1 Nov'],
+            ['Day after tomorrow', 'Mon 2 Nov'],
+          ] as const) {
+            if (shown !== 'Today') {
+              await click(arrow('One day later', dialog));
+            }
+            const value = stepper('Starts', dialog);
+            expect(textOf(row), shown).toBe(`Starts▼ ${shown} ▲`);
+            expect(value.getAttribute('aria-valuetext'), shown).toBe(shown);
+            expect(nextOf(dialog), shown).toContain(`(${date})`);
+          }
+        });
+      });
+
+      it('steps to "Tomorrow" on "One day later", with both arrows enabled and "The new plan starts tomorrow (Sun 1 Nov), for 5 days and 2 people.", then to "Day after tomorrow" with "One day later" disabled, the focus moved to the Starts value and "The new plan starts the day after tomorrow (Mon 2 Nov), for 5 days and 2 people.", and says "The new plan starts the day after tomorrow (Mon 2 Nov), for 3 days and 2 people, kid-friendly." once "Kid-friendly" is ticked and Days lowered to 3, the plan unchanged throughout (#65 4)', async () => {
+        const before = store.plan();
+        const dialog = await openNewPlan();
+        const later = arrow('One day later', dialog);
+        // Most browsers focus a clicked button, jsdom's click() doesn't
+        later.focus();
+        await click(later);
+        expectStarts(dialog, 'Tomorrow', 1);
+        expect(arrow('One day earlier', dialog).disabled, '"One day earlier" at "Tomorrow"').toBe(
+          false,
+        );
+        expect(later.disabled, '"One day later" at "Tomorrow"').toBe(false);
+        expect(document.activeElement, 'focus at "Tomorrow"').toBe(later);
+        expect(nextOf(dialog)).toBe(
+          'The new plan starts tomorrow (Sun 1 Nov), for 5 days and 2 people.',
+        );
+        expect(store.plan(), 'at "Tomorrow"').toBe(before);
+
+        await click(later);
+        expectStarts(dialog, 'Day after tomorrow', 2);
+        expect(later.disabled, '"One day later" at "Day after tomorrow"').toBe(true);
+        expect(document.activeElement, 'focus at "Day after tomorrow"').toBe(
+          stepper('Starts', dialog),
+        );
+        expect(nextOf(dialog)).toBe(
+          'The new plan starts the day after tomorrow (Mon 2 Nov), for 5 days and 2 people.',
+        );
+
+        await click(kidFriendlyIn(dialog));
+        await stepTo(dialog, 'Days', 3);
+        expect(nextOf(dialog)).toBe(
+          'The new plan starts the day after tomorrow (Mon 2 Nov), for 3 days and 2 people, kid-friendly.',
+        );
+        expect(openDialogOrNull(), 'dialog closed').toBe(dialog);
+        expect(store.plan()).toBe(before);
+      });
+
+      describe('edge cases', () => {
+        it('takes the date in #new-plan-next from TODAY when the dialog opens: still "tomorrow (Sun 1 Nov)" on "One day later" once TODAY returns 2026-11-01 while it is open, and "today (Sun 1 Nov)" when it opens again (#65 4a)', async () => {
+          let dialog = await openNewPlan();
+          today = '2026-11-01';
+          await click(arrow('One day later', dialog));
+          expect(nextOf(dialog)).toBe(
+            'The new plan starts tomorrow (Sun 1 Nov), for 5 days and 2 people.',
+          );
+          await click(button(dialog, 'Keep this plan'));
+
+          dialog = await openNewPlan();
+          expect(nextOf(dialog)).toBe(
+            'The new plan starts today (Sun 1 Nov), for 5 days and 2 people.',
+          );
+        });
+
+        it('names "Thu 31 Dec", "Fri 1 Jan" and "Sat 2 Jan" in #new-plan-next once TODAY returns 2026-12-31, across the year boundary (#65 4b)', async () => {
+          today = '2026-12-31';
+          await reload();
+          const dialog = await openNewPlan();
+          const shown: string[] = [nextOf(dialog)];
+          await click(arrow('One day later', dialog));
+          shown.push(nextOf(dialog));
+          await click(arrow('One day later', dialog));
+          shown.push(nextOf(dialog));
+          expect(shown).toEqual([
+            'The new plan starts today (Thu 31 Dec), for 5 days and 2 people.',
+            'The new plan starts tomorrow (Fri 1 Jan), for 5 days and 2 people.',
+            'The new plan starts the day after tomorrow (Sat 2 Jan), for 5 days and 2 people.',
+          ]);
+        });
+      });
+
+      it('steps the focused Starts value up to "Day after tomorrow" with two ArrowUp, keeps it there on a third while keeping the key from the browser, back to "Today" with three ArrowDown, the third changing nothing while kept from the browser, and to "Today" from "Tomorrow" on a click on the focused "One day earlier", which becomes disabled, moving the focus to the value (#65 5)', async () => {
+        const dialog = await openNewPlan();
+        const value = stepper('Starts', dialog);
+        expect(document.activeElement, 'focus on open').toBe(value);
+        await keydown(value, 'ArrowUp');
+        expectStarts(dialog, 'Tomorrow', 1);
+        await keydown(value, 'ArrowUp');
+        expectStarts(dialog, 'Day after tomorrow', 2);
+        expect(await keydown(value, 'ArrowUp'), 'ArrowUp at "Day after tomorrow" handled').toBe(
+          true,
+        );
+        expectStarts(dialog, 'Day after tomorrow', 2);
+
+        await keydown(value, 'ArrowDown');
+        await keydown(value, 'ArrowDown');
+        expectStarts(dialog, 'Today', 0);
+        expect(await keydown(value, 'ArrowDown'), 'ArrowDown at "Today" handled').toBe(true);
+        expectStarts(dialog, 'Today', 0);
+
+        await keydown(value, 'ArrowUp');
+        expectStarts(dialog, 'Tomorrow', 1);
+        const earlier = arrow('One day earlier', dialog);
+        earlier.focus();
+        await click(earlier);
+        expectStarts(dialog, 'Today', 0);
+        expect(earlier.disabled, '"One day earlier" at "Today"').toBe(true);
+        expect(document.activeElement).toBe(stepper('Starts', dialog));
+      });
+
+      describe('edge cases', () => {
+        it('never goes past "Day after tomorrow" or before "Today", on clicks on the disabled arrows or more arrow keys, and starts the plan on 2026-11-02 from there (#65 5a)', async () => {
+          const dialog = await openNewPlan();
+          const value = stepper('Starts', dialog);
+          await click(arrow('One day earlier', dialog));
+          await keydown(value, 'ArrowDown');
+          expectStarts(dialog, 'Today', 0);
+          for (let i = 0; i < 5; i++) {
+            await keydown(value, 'ArrowUp');
+          }
+          await click(arrow('One day later', dialog));
+          expectStarts(dialog, 'Day after tomorrow', 2);
+          await click(button(dialog, 'Start new plan'));
+          expect(store.plan().days[0].date).toBe('2026-11-02');
+        });
+      });
+
+      it('moves the focus on Tab from the Starts value through "One day later", "One day fewer", the Days value, "One more day", "One person fewer", the People value, "One more person", "Kid-friendly", "Keep this plan", "Start new plan", "One day earlier" and back to the Starts value at Starts "Tomorrow", Days 3 and People 2; and to "Start new plan" on Shift+Tab from the Starts value of the dialog as it opens (#65 6)', async () => {
+        let dialog = await openNewPlan();
+        await click(arrow('One day later', dialog));
+        await stepTo(dialog, 'Days', 3);
+        stepper('Starts', dialog).focus();
+        expect(await tabs(12)).toEqual([
+          'One day later',
+          'One day fewer',
+          'Days value',
+          'One more day',
+          'One person fewer',
+          'People value',
+          'One more person',
+          'Kid-friendly',
+          'Keep this plan',
+          'Start new plan',
+          'One day earlier',
+          'Starts value',
+        ]);
+        await click(button(dialog, 'Keep this plan'));
+
+        dialog = await openNewPlan();
+        expect(document.activeElement, 'focus on open').toBe(stepper('Starts', dialog));
+        expect(await tabs(1, true)).toEqual(['Start new plan']);
+      });
+
+      it('closes the dialog, keeps the plan and puts the focus on "New plan" when the user sets Starts to "Tomorrow" and clicks "Keep this plan", presses Escape or clicks the backdrop, showing "Today" again on the next "New plan"; and shows "Today" and names Sat 31 Oct for a saved plan from 2026-11-01 to 2026-11-05 (#65 7)', async () => {
+        for (const [way, keep] of [
+          ['"Keep this plan"', () => click(button(openDialog(), 'Keep this plan'))],
+          ['Escape', () => pressKey('Escape')],
+          ['the backdrop', () => clickBackdrop()],
+        ] as const) {
+          const before = store.plan();
+          let dialog = await openNewPlan();
+          await click(arrow('One day later', dialog));
+          expectStarts(dialog, 'Tomorrow', 1);
+          await keep();
+          expect(openDialogOrNull(), way).toBeNull();
+          expect(store.plan(), way).toBe(before);
+          expect(document.activeElement, way).toBe(button(toolbar(), 'New plan'));
+
+          dialog = await openNewPlan();
+          expect(textOf(stepper('Starts', dialog)), `${way}: Starts again`).toBe('Today');
+          expect(stepper('Starts', dialog).getAttribute('aria-valuenow'), way).toBe('0');
+          await click(button(dialog, 'Keep this plan'));
+        }
+
+        await openWith(
+          planFrom(['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05']),
+        );
+        const dialog = await openNewPlan();
+        expectStarts(dialog, 'Today', 0);
+        expect(nextOf(dialog)).toBe(
+          'The new plan starts today (Sat 31 Oct), for 5 days and 2 people.',
+        );
+      });
+
+      it('starts 2 open days, 2026-11-01 and 2026-11-02, for 3 people with no pick, tick or added item on "Start new plan" with Starts "Tomorrow", Days 2 and People 3: the dialog closes, the cards read "Sun 1 Nov" and "Mon 2 Nov", the toolbar "2 days for 3 people", no card is today or past, nothing has aria-current and the focus is on "New plan"; with "Day after tomorrow" the cards read "Mon 2 Nov" and "Tue 3 Nov" (#65 8)', async () => {
+        await pickFirstSuggestion(0);
+        store.addItem('Toilet paper');
+        store.toggleTicked(addedKey('Toilet paper'));
+        await fixture.whenStable();
+
+        await startNewPlan({ startsIn: 1, days: 2, people: 3 });
+        const plan = store.plan();
+        expect(plan.days.map((planned) => planned.date)).toEqual(['2026-11-01', '2026-11-02']);
+        expect(plan).toMatchObject({ people: 3, accepted: false, ticked: [], added: [] });
+        const meals = plan.days.flatMap((planned) => [planned.lunch, planned.dinner]);
+        expect(
+          meals.every(
+            (planned) =>
+              planned.recipe === null && !planned.eatOut && planned.suggestions.length === 3,
+          ),
+          'every meal open with three suggestions',
+        ).toBe(true);
+        expect(headings()).toEqual(['Sun 1 Nov', 'Mon 2 Nov']);
+        expect(textOf(element.querySelector('p.summary'))).toBe('2 days for 3 people');
+        expectNoDayMarked();
+        expect(document.activeElement).toBe(button(toolbar(), 'New plan'));
+
+        await startNewPlan({ startsIn: 2 });
+        expect(headings()).toEqual(['Mon 2 Nov', 'Tue 3 Nov']);
+        expectNoDayMarked();
+      });
+
+      describe('edge cases', () => {
+        it('loads a plan started with "Tomorrow" with its dates from "Sun 1 Nov" and no card marked after a reload (#65 8a)', async () => {
+          await startNewPlan({ startsIn: 1 });
+          const plan = store.plan();
+          await reload();
+          expect(store.plan()).toEqual(plan);
+          expect(headings()).toEqual([
+            'Sun 1 Nov',
+            'Mon 2 Nov',
+            'Tue 3 Nov',
+            'Wed 4 Nov',
+            'Thu 5 Nov',
+          ]);
+          expectNoDayMarked();
+        });
+      });
+
+      it('marks the first card, "Sat 31 Oct", as today with aria-current="date" on its heading on "Start new plan" with Starts "Today"; and marks no card as today or past when a plan from 2026-10-28 with a pick, opened on 2026-10-31, is replaced with Starts "Tomorrow" once TODAY returns 2026-11-01, the new plan starting on 2026-11-02 (#65 9)', async () => {
+        await startNewPlan({ startsIn: 0 });
+        expect(headings()[0]).toBe('Sat 31 Oct');
+        expect(days()[0].classList.contains('today'), 'first card today').toBe(true);
+        expect(
+          Array.from(element.querySelectorAll('[aria-current]')).map(
+            (node) => `${textOf(node)} ${node.getAttribute('aria-current')}`,
+          ),
+        ).toEqual(['Sat 31 Oct date']);
+
+        await openWith(
+          planFrom(['2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01'], true),
+        );
+        today = '2026-11-01';
+        await startNewPlan({ startsIn: 1 });
+        expect(store.plan().days[0].date).toBe('2026-11-02');
+        expectNoDayMarked();
+      });
+
+      describe('edge cases', () => {
+        it('keeps 2026-10-31 as today after a start with "Tomorrow" once TODAY returns 2026-11-01, through a pick, and marks "Sun 1 Nov" as today when the page opens again (#65 9a)', async () => {
+          await startNewPlan({ startsIn: 1 });
+          today = '2026-11-01';
+          await pickFirstSuggestion(0);
+          expectNoDayMarked();
+
+          await reload();
+          expect(days()[0].classList.contains('today'), '"Sun 1 Nov" today').toBe(true);
+          expect(element.querySelectorAll('section.day.past')).toHaveLength(0);
+        });
+
+        it('marks the first card of a plan started with "Today" as today when TODAY returns 2026-11-01 right after the store has started the plan on 2026-10-31, taking the marking from the moment the store reads TODAY (#65 9b)', async () => {
+          const newPlan = store.newPlan.bind(store);
+          vi.spyOn(store, 'newPlan').mockImplementation((settings) => {
+            const started = newPlan(settings);
+            today = '2026-11-01';
+            return started;
+          });
+          await startNewPlan({ startsIn: 0 });
+          expect(store.plan().days[0].date).toBe('2026-10-31');
+          expect(days()[0].classList.contains('today'), '"Sat 31 Oct" today').toBe(true);
+          expect(element.querySelectorAll('section.day.past')).toHaveLength(0);
+        });
+      });
+
+      it('reads "Cooked 9 days ago" on every suggestion of a plan started with "Tomorrow" on 2026-10-31 when every recipe was cooked on 2026-10-22, counted from today, and no "Cooked" text when every recipe is recorded as cooked on 2026-11-01 (#65 10)', async () => {
+        for (const [cookedOn, expected] of [
+          ['2026-10-22', ['Cooked 9 days ago']],
+          ['2026-11-01', []],
+        ] as const) {
+          localStorage.setItem(
+            'fooplan.cooked',
+            JSON.stringify(Object.fromEntries(RECIPES.map((recipe) => [recipe.name, cookedOn]))),
+          );
+          await reload();
+          await startNewPlan({ startsIn: 1 });
+          expect(store.plan().days[0].date, cookedOn).toBe('2026-11-01');
+          const rows = Array.from(element.querySelectorAll('button.suggestion'));
+          expect(rows, cookedOn).toHaveLength(30);
+          const cooked = Array.from(element.querySelectorAll('span.cooked')).map(textOf);
+          expect([...new Set(cooked)], cookedOn).toEqual(expected);
+          expect(cooked, cookedOn).toHaveLength(expected.length === 0 ? 0 : 30);
+        }
+        expect(textOf(element.querySelector('.days'))).not.toContain('Cooked');
+      });
+
+      it('names the stepper "Beginn" in German, its arrows "Ein Tag früher" and "Ein Tag später", shows "Heute" with aria-valuetext "Heute" and "Der neue Plan beginnt heute (Sa., 31. Okt.), für 5 Tage und 2 Personen.", then "Morgen" and "Übermorgen" with "Der neue Plan beginnt übermorgen (Mo., 2. Nov.), für 5 Tage und 2 Personen." on two clicks on "Ein Tag später" (#65 11)', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await reload();
+        const dialog = await openNewPlan('Neuer Plan');
+        const value = dialog.querySelector<HTMLElement>('[role="spinbutton"]')!;
+        expect(textOf(dialog.querySelector('#starts-label'))).toBe('Beginn');
+        expect(labelOf(value)).toBe('Beginn');
+        expect(buttonNamed(dialog, 'Ein Tag früher').disabled).toBe(true);
+        const later = buttonNamed(dialog, 'Ein Tag später');
+        expect([textOf(value), value.getAttribute('aria-valuetext')]).toEqual(['Heute', 'Heute']);
+        expect(nextOf(dialog)).toBe(
+          'Der neue Plan beginnt heute (Sa., 31. Okt.), für 5 Tage und 2 Personen.',
+        );
+
+        await click(later);
+        expect([textOf(value), value.getAttribute('aria-valuetext')]).toEqual(['Morgen', 'Morgen']);
+        await click(later);
+        expect([textOf(value), value.getAttribute('aria-valuetext')]).toEqual([
+          'Übermorgen',
+          'Übermorgen',
+        ]);
+        expect(nextOf(dialog)).toBe(
+          'Der neue Plan beginnt übermorgen (Mo., 2. Nov.), für 5 Tage und 2 Personen.',
+        );
+      });
+
+      describe('edge cases', () => {
+        it('says "Der neue Plan beginnt morgen (So., 1. Nov.), für 5 Tage und 2 Personen, kinderfreundlich." with "Morgen" and "Kinderfreundlich" on (#65 11a)', async () => {
+          localStorage.setItem(LANGUAGE_KEY, 'de');
+          await reload();
+          const dialog = await openNewPlan('Neuer Plan');
+          await click(buttonNamed(dialog, 'Ein Tag später'));
+          await click(kidFriendlyIn(dialog));
+          expect(nextOf(dialog)).toBe(
+            'Der neue Plan beginnt morgen (So., 1. Nov.), für 5 Tage und 2 Personen, kinderfreundlich.',
+          );
+        });
+      });
+
+      function expectStarts(dialog: HTMLDialogElement, shown: string, valueNow: number) {
+        const value = stepper('Starts', dialog);
+        expect(textOf(value), 'Starts value').toBe(shown);
+        expect(value.getAttribute('aria-valuenow'), `${shown}: aria-valuenow`).toBe(
+          String(valueNow),
+        );
+        expect(value.getAttribute('aria-valuetext'), `${shown}: aria-valuetext`).toBe(shown);
+      }
+
+      function expectNoDayMarked() {
+        expect(
+          days()
+            .filter((card) => card.matches('.today, .past'))
+            .map((card) => textOf(card.querySelector('h2'))),
+          'cards marked today or past',
+        ).toEqual([]);
+        expect(
+          element.querySelectorAll('[aria-current]'),
+          'elements with aria-current',
+        ).toHaveLength(0);
+      }
+
+      function nextOf(dialog: HTMLDialogElement): string {
+        return textOf(dialog.querySelector('p#new-plan-next'));
+      }
+
+      function headings(): string[] {
+        return days().map((card) => textOf(card.querySelector('h2')));
+      }
+
+      // Open days on these dates, each meal suggesting three kid-friendly recipes no other meal
+      // suggests, the first lunch picked when asked
+      function planFrom(dates: string[], pickFirst = false): Plan {
+        return planOf(
+          dates.map((date, i) =>
+            planDay(
+              date,
+              pickFirst && i === 0
+                ? picked(KID_FRIENDLY[30])
+                : open(...KID_FRIENDLY.slice(i * 6, i * 6 + 3)),
+              open(...KID_FRIENDLY.slice(i * 6 + 3, i * 6 + 6)),
+            ),
+          ),
+        );
+      }
     });
 
     // Resolves to the names of the elements focused after each of `count` presses
@@ -3500,7 +3955,7 @@ describe('PlanPage', () => {
       planDay('2026-10-25', covered(), open(...SHAKSHUKA_ROW)),
     ]);
 
-    it('shows the Plan page in German at once, at the same URL and with the same suggestions, when the user clicks "Deutsch" in the account menu, saving de and setting lang="de" with "Deutsch" checked: "Plan", the steppers "Tage" and "Personen", the arrows "Ein Tag weniger", "Ein Tag mehr", "Eine Person weniger" and "Eine Person mehr", the meals "Mittagessen" and "Abendessen", times like "15 Minuten", "Andere Vorschläge", "Neuer Plan" and "Plan annehmen"; and every text in English again on "English"', async () => {
+    it('shows the Plan page in German at once, at the same URL and with the same suggestions, when the user clicks "Deutsch" in the account menu, saving de and setting lang="de" with "Deutsch" checked: "Plan", the steppers "Beginn", "Tage" and "Personen", the arrows "Ein Tag früher", "Ein Tag später", "Ein Tag weniger", "Ein Tag mehr", "Eine Person weniger" and "Eine Person mehr", the meals "Mittagessen" and "Abendessen", times like "15 Minuten", "Andere Vorschläge", "Neuer Plan" and "Plan annehmen"; and every text in English again on "English"', async () => {
       TestBed.resetTestingModule();
       TestBed.configureTestingModule({
         providers: [
@@ -3534,11 +3989,18 @@ describe('PlanPage', () => {
       expect(
         Array.from(element.querySelectorAll('[role="spinbutton"]')).map(labelOf),
         'stepper labels',
-      ).toEqual(['Tage', 'Personen']);
+      ).toEqual(['Beginn', 'Tage', 'Personen']);
       expect(
         Array.from(element.querySelectorAll('button.step')).map((step) => nameOf(step)),
         'arrows',
-      ).toEqual(['Ein Tag weniger', 'Ein Tag mehr', 'Eine Person weniger', 'Eine Person mehr']);
+      ).toEqual([
+        'Ein Tag früher',
+        'Ein Tag später',
+        'Ein Tag weniger',
+        'Ein Tag mehr',
+        'Eine Person weniger',
+        'Eine Person mehr',
+      ]);
       for (const day of days()) {
         expect(
           Array.from(day.querySelectorAll('article.meal h3')).map(textOf),
@@ -3575,7 +4037,7 @@ describe('PlanPage', () => {
       expect(store.plan(), 'plan after "English"').toEqual(plan);
     });
 
-    it('heads the 5 days of a German plan from 2026-10-25 "So., 25. Okt." to "Do., 29. Okt."; with a meal picked, heads the "Neuer Plan" dialog "Neuer Plan", says "Der Plan für So., 25. Okt. – Do., 29. Okt. mit 1 von 10 gewählten Mahlzeiten wird verworfen." and "Der neue Plan beginnt heute, für 5 Tage und 2 Personen." with "Plan behalten" and "Neuen Plan starten"; and sums up an accepted plan as "1 Tag für 1 Person" and "2 Tage für 2 Personen"', async () => {
+    it('heads the 5 days of a German plan from 2026-10-25 "So., 25. Okt." to "Do., 29. Okt."; with a meal picked, heads the "Neuer Plan" dialog "Neuer Plan", says "Der Plan für So., 25. Okt. – Do., 29. Okt. mit 1 von 10 gewählten Mahlzeiten wird verworfen." and "Der neue Plan beginnt heute (So., 25. Okt.), für 5 Tage und 2 Personen." with "Plan behalten" and "Neuen Plan starten"; and sums up an accepted plan as "1 Tag für 1 Person" and "2 Tage für 2 Personen"', async () => {
       today = '2026-10-25';
       localStorage.removeItem('fooplan.plan');
       await openInGerman();
@@ -3596,7 +4058,7 @@ describe('PlanPage', () => {
         'Der Plan für So., 25. Okt. – Do., 29. Okt. mit 1 von 10 gewählten Mahlzeiten wird verworfen.',
       );
       expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-        'Der neue Plan beginnt heute, für 5 Tage und 2 Personen.',
+        'Der neue Plan beginnt heute (So., 25. Okt.), für 5 Tage und 2 Personen.',
       );
       expect(buttonTexts(dialog.querySelector<HTMLElement>('div.actions')!)).toEqual([
         'Plan behalten',
@@ -3638,7 +4100,7 @@ describe('PlanPage', () => {
         );
       });
 
-      it('sums up an accepted kid-friendly plan as "1 Tag für 2 Personen, kinderfreundlich", and says "Der neue Plan beginnt heute, für 1 Tag und 2 Personen, kinderfreundlich." in its "Neuer Plan" dialog, with "Dieser Plan ist angenommen.", "Die Häkchen auf der Einkaufsliste werden gelöscht." and "Die selbst hinzugefügten Einkäufe werden entfernt."', async () => {
+      it('sums up an accepted kid-friendly plan as "1 Tag für 2 Personen, kinderfreundlich", and says "Der neue Plan beginnt heute (Sa., 24. Okt.), für 1 Tag und 2 Personen, kinderfreundlich." in its "Neuer Plan" dialog, with "Dieser Plan ist angenommen.", "Die Häkchen auf der Einkaufsliste werden gelöscht." and "Die selbst hinzugefügten Einkäufe werden entfernt."', async () => {
         localStorage.setItem(LANGUAGE_KEY, 'de');
         const saved = planOf(
           [planDay('2026-10-24', picked('Spaghetti carbonara'), picked('Potato goulash'))],
@@ -3657,7 +4119,7 @@ describe('PlanPage', () => {
           'Der Plan für Sa., 24. Okt. mit 2 von 2 gewählten Mahlzeiten wird verworfen. Dieser Plan ist angenommen. Die Häkchen auf der Einkaufsliste werden gelöscht. Die selbst hinzugefügten Einkäufe werden entfernt.',
         );
         expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-          'Der neue Plan beginnt heute, für 1 Tag und 2 Personen, kinderfreundlich.',
+          'Der neue Plan beginnt heute (Sa., 24. Okt.), für 1 Tag und 2 Personen, kinderfreundlich.',
         );
       });
 
@@ -3672,7 +4134,7 @@ describe('PlanPage', () => {
           'Der Plan für Sa., 24. Okt. mit 1 von 2 gewählten Mahlzeiten wird verworfen.',
         );
         expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(
-          'Der neue Plan beginnt heute, für 1 Tag und 1 Person.',
+          'Der neue Plan beginnt heute (Sa., 24. Okt.), für 1 Tag und 1 Person.',
         );
       });
 
@@ -4447,15 +4909,19 @@ describe('PlanPage', () => {
   }
 
   async function startNewPlanWithDays(count: number) {
-    await startNewPlan({ days: count });
+    await startNewPlan({ startsIn: 0, days: count });
   }
 
   async function startNewPlanWithPeople(count: number) {
-    await startNewPlan({ people: count });
+    await startNewPlan({ startsIn: 0, people: count });
   }
 
-  async function startNewPlan({ days, people, kidFriendly }: Partial<PlanSettings>) {
+  async function startNewPlan({ startsIn, days, people, kidFriendly }: Partial<PlanSettings>) {
     const dialog = await openNewPlan();
+    // "Today" is prefilled on every open, so a plan from today steps nothing
+    if (startsIn) {
+      await stepTo(dialog, 'Starts', startsIn);
+    }
     if (days !== undefined) {
       await stepTo(dialog, 'Days', days);
     }
@@ -4474,16 +4940,15 @@ describe('PlanPage', () => {
     return openDialog();
   }
 
-  async function stepTo(dialog: HTMLDialogElement, name: 'Days' | 'People', count: number) {
-    const [fewer, more] =
-      name === 'Days'
-        ? (['One day fewer', 'One more day'] as const)
-        : (['One person fewer', 'One more person'] as const);
-    const steps = count - Number(textOf(stepper(name, dialog)));
+  // The Starts value shows a word, so its count is read from aria-valuenow
+  async function stepTo(dialog: HTMLDialogElement, name: StepperName, count: number) {
+    const [fewer, more] = STEP_ARROWS[name];
+    const current = () => Number(stepper(name, dialog).getAttribute('aria-valuenow'));
+    const steps = count - current();
     for (let i = 0; i < Math.abs(steps); i++) {
       await click(arrow(steps < 0 ? fewer : more, dialog));
     }
-    expect(textOf(stepper(name, dialog)), name).toBe(String(count));
+    expect(current(), name).toBe(count);
   }
 
   async function click(target: HTMLElement) {
@@ -4510,7 +4975,7 @@ describe('PlanPage', () => {
     return handled;
   }
 
-  function stepper(name: 'Days' | 'People', root: HTMLElement = element): HTMLElement {
+  function stepper(name: StepperName, root: HTMLElement = element): HTMLElement {
     const found = Array.from(root.querySelectorAll<HTMLElement>('[role="spinbutton"]')).find(
       (candidate) => labelOf(candidate) === name,
     );
@@ -4518,7 +4983,10 @@ describe('PlanPage', () => {
     return found!;
   }
 
-  function arrow(name: (typeof ARROWS)[number], root: HTMLElement = element): HTMLButtonElement {
+  function arrow(
+    name: (typeof ARROWS)[number] | (typeof STARTS_ARROWS)[number],
+    root: HTMLElement = element,
+  ): HTMLButtonElement {
     const found = root.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`);
     expect(found, `no "${name}" button`).not.toBeNull();
     return found!;

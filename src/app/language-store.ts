@@ -62,11 +62,13 @@ export class LanguageStore {
   }
 
   describePlan(
-    { days, people, kidFriendly }: PlanSettings,
+    { days, people, kidFriendly }: Pick<PlanSettings, 'days' | 'people' | 'kidFriendly'>,
     id: MessageId,
     kidFriendlyId: MessageId,
+    params: Record<string, string | number> = {},
   ): string {
     return this.t(kidFriendly ? kidFriendlyId : id, {
+      ...params,
       days,
       dayWord: this.t(days === 1 ? 'day.one' : 'day.other'),
       people,

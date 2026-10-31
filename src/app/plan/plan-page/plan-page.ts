@@ -1,4 +1,4 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, formatDate } from '@angular/common';
 import {
   afterNextRender,
   Component,
@@ -17,22 +17,37 @@ import { pictureOf, RECIPE_IMAGES } from '../../recipes/recipe-images';
 import { recipeSlug } from '../../recipes/recipe-slug';
 import { RecipeStore } from '../../recipes/recipe-store';
 import {
+  addDays,
   daysSinceCooked,
   DEFAULT_SETTINGS,
   filledMeals,
   isComplete,
   leftoversOf,
   MAX_DAYS,
+  MAX_STARTS_IN,
   MealKind,
   MIN_DAYS,
   MIN_PEOPLE,
+  MIN_STARTS_IN,
   MIN_SUGGESTED,
   PlanSettings,
 } from '../plan';
 import { PlanStore, TODAY } from '../plan-store';
 
 const DATE_FORMATS: Record<Language, string> = { en: 'EEE d MMM', de: 'EEE, d. MMM' };
+// Indexed by startsIn; the type requires an entry up to MAX_STARTS_IN, so raising it doesn't compile
+// without a text for the new value
+const STARTS = [
+  { value: 'plan.startsToday', sentence: 'newPlan.startsToday' },
+  { value: 'plan.startsTomorrow', sentence: 'newPlan.startsTomorrow' },
+  { value: 'plan.startsDayAfter', sentence: 'newPlan.startsDayAfter' },
+] as const satisfies readonly StartsMessages[] & Record<typeof MAX_STARTS_IN, StartsMessages>;
 const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), [tabindex="0"]';
+
+interface StartsMessages {
+  value: MessageId;
+  sentence: MessageId;
+}
 
 interface RemovalRow {
   dontSuggest: HTMLButtonElement;
@@ -53,9 +68,11 @@ export class PlanPage {
   private readonly readToday = inject(TODAY);
   private readonly injector = inject(Injector);
   protected readonly plan = this.store.plan;
-  // Not a live date: it is read when the page opens and taken from a new plan's first day when one
-  // starts, so a page left open past midnight keeps its marking until then
+  // Not a live date: it is read when the page opens and again when a new plan starts, so a page left
+  // open past midnight keeps its marking until then
   protected readonly today = signal(this.readToday());
+  // Read when the dialog opens, so the date it names doesn't change while it is open
+  private readonly newPlanToday = signal(this.today());
   protected readonly complete = computed(() => isComplete(this.plan()));
   protected readonly status = computed(() =>
     this.plan().accepted ? this.language.t('plan.acceptedStatus') : '',
@@ -71,13 +88,31 @@ export class PlanPage {
   protected readonly dateFormat = computed(() => DATE_FORMATS[this.language.language()]);
   protected readonly summary = computed(() => this.language.planSummary(this.plan()));
   protected readonly newPlanSettings = signal<PlanSettings>(DEFAULT_SETTINGS);
-  protected readonly nextPlan = computed(() =>
-    this.language.describePlan(this.newPlanSettings(), 'newPlan.next', 'newPlan.nextKidFriendly'),
+  protected readonly startsText = computed(() =>
+    this.language.t(STARTS[this.newPlanSettings().startsIn].value),
   );
+  protected readonly nextPlan = computed(() => {
+    const { startsIn } = this.newPlanSettings();
+    const date = formatDate(
+      addDays(this.newPlanToday(), startsIn),
+      this.dateFormat(),
+      this.language.locale(),
+    );
+    return this.language.describePlan(
+      this.newPlanSettings(),
+      'newPlan.next',
+      'newPlan.nextKidFriendly',
+      { start: this.language.t(STARTS[startsIn].sentence, { date }) },
+    );
+  });
+  protected readonly minStartsIn = MIN_STARTS_IN;
+  protected readonly maxStartsIn = MAX_STARTS_IN;
   protected readonly minDays = MIN_DAYS;
   protected readonly maxDays = MAX_DAYS;
   protected readonly minPeople = MIN_PEOPLE;
   protected readonly minSuggested = MIN_SUGGESTED;
+  protected readonly earliestStart = computed(() => this.newPlanSettings().startsIn <= MIN_STARTS_IN);
+  protected readonly latestStart = computed(() => this.newPlanSettings().startsIn >= MAX_STARTS_IN);
   protected readonly fewestDays = computed(() => this.newPlanSettings().days <= MIN_DAYS);
   protected readonly mostDays = computed(() => this.newPlanSettings().days >= MAX_DAYS);
   protected readonly fewestPeople = computed(() => this.newPlanSettings().people <= MIN_PEOPLE);
@@ -90,10 +125,17 @@ export class PlanPage {
     () => new Map(this.recipes.all().map((recipe) => [recipe.name, recipe])),
   );
   private readonly groceriesLink = viewChild<ElementRef<HTMLAnchorElement>>('groceriesLink');
-  private readonly newPlanDays = viewChild<ElementRef<HTMLElement>>('daysValue');
+  private readonly newPlanStarts = viewChild<ElementRef<HTMLElement>>('startsValue');
   protected readonly removing = signal('');
   private removalRow: RemovalRow | null = null;
   private pressedOnBackdrop = false;
+
+  protected stepNewStartsIn(delta: number): void {
+    const startsIn = this.newPlanSettings().startsIn + delta;
+    if (startsIn >= MIN_STARTS_IN && startsIn <= MAX_STARTS_IN) {
+      this.newPlanSettings.update((settings) => ({ ...settings, startsIn }));
+    }
+  }
 
   protected stepNewDays(delta: number): void {
     const days = this.newPlanSettings().days + delta;
@@ -159,7 +201,7 @@ export class PlanPage {
     afterNextRender(() => this.groceriesLink()?.nativeElement.focus(), { injector: this.injector });
   }
 
-  // The dialog opens with the focus on the Days value, which a screen reader reads out, so it opens
+  // The dialog opens with the focus on the Starts value, which a screen reader reads out, so it opens
   // once the values shown are the plan's. The focus is put there itself, as showModal() would focus
   // the first arrow, and some browsers ignore autofocus on an element that isn't a control; on a
   // value, unlike a button, a stray Enter discards nothing
@@ -168,11 +210,13 @@ export class PlanPage {
       days: this.plan().days.length,
       people: this.plan().people,
       kidFriendly: this.store.kidFriendly(),
+      startsIn: 0,
     });
+    this.newPlanToday.set(this.readToday());
     afterNextRender(
       () => {
         this.openDialog(dialog);
-        this.newPlanDays()?.nativeElement.focus();
+        this.newPlanStarts()?.nativeElement.focus();
       },
       { injector: this.injector },
     );
@@ -180,10 +224,13 @@ export class PlanPage {
 
   // The store refuses values outside its limits, which leaves the dialog open
   protected startNewPlan(dialog: HTMLDialogElement): void {
-    if (!this.store.newPlan(this.newPlanSettings())) {
+    const settings = this.newPlanSettings();
+    if (!this.store.newPlan(settings)) {
       return;
     }
-    this.today.set(this.plan().days[0].date);
+    // The date the store started the plan from, not a second read of TODAY: a midnight in between
+    // would grey out the first card of a plan started "Today"
+    this.today.set(addDays(this.plan().days[0].date, -settings.startsIn));
     dialog.close();
   }
 
