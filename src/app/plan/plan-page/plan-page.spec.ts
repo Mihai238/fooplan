@@ -1310,7 +1310,7 @@ describe('PlanPage', () => {
     }
   });
 
-  describe('"Kid-friendly" checkbox', () => {
+  describe('"Kid-friendly" plans', () => {
     const NOTE =
       "Fewer than 15 kid-friendly recipes are suggested, so the plan can't be kid-friendly.";
 
@@ -1424,7 +1424,7 @@ describe('PlanPage', () => {
     });
 
     describe('edge cases', () => {
-      it('gives the enabled checkbox in the "New plan" dialog no aria-describedby and shows no note on a fresh plan, nor with exactly 15 kid-friendly recipes suggested', async () => {
+      it('gives the enabled switch in the "New plan" dialog no aria-describedby and shows no note on a fresh plan, nor with exactly 15 kid-friendly recipes suggested', async () => {
         for (const step of ['fresh plan', '15 kid-friendly suggested']) {
           if (step !== 'fresh plan') {
             leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 15), ...NOT_KID_FRIENDLY);
@@ -1472,17 +1472,6 @@ describe('PlanPage', () => {
         shown.map(recipeOf).filter((name) => NOT_KID_FRIENDLY.includes(name)),
         step,
       ).toEqual([]);
-    }
-
-    // jsdom gives Space on a checkbox no default action, so the toggle and its change event, which
-    // the browser fires, are fired here
-    async function pressSpace(checkbox: HTMLInputElement) {
-      checkbox.focus();
-      checkbox.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
-      checkbox.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true }));
-      checkbox.checked = !checkbox.checked;
-      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-      await fixture.whenStable();
     }
   });
 
@@ -1869,7 +1858,7 @@ describe('PlanPage', () => {
       vi.spyOn(newPlanDialog(), 'getBoundingClientRect').mockReturnValue(BOX);
     });
 
-    it('shows the heading "Plan", p.summary and "New plan" in the toolbar, in this order, and no stepper, "Kid-friendly" checkbox or note outside the "New plan" dialog: "5 days for 2 people" with "New plan" as a link for a fresh plan, "3 days for 4 people, kid-friendly" for a kid-friendly 3-day plan for 4, and "1 day for 1 person" with "New plan" primary for an accepted 1-day plan for 1', async () => {
+    it('shows the heading "Plan", p.summary and "New plan" in the toolbar, in this order, and no stepper, "Kid-friendly" switch or note outside the "New plan" dialog: "5 days for 2 people" with "New plan" as a link for a fresh plan, "3 days for 4 people, kid-friendly" for a kid-friendly 3-day plan for 4, and "1 day for 1 person" with "New plan" primary for an accepted 1-day plan for 1', async () => {
       expectToolbar('5 days for 2 people', 'link');
       expect(outsideDialog('[role="spinbutton"], input#kid-friendly, #kid-friendly-note')).toEqual(
         [],
@@ -1884,7 +1873,7 @@ describe('PlanPage', () => {
       expectToolbar('1 day for 1 person', 'primary');
     });
 
-    it('shows the note and the disabled "Kid-friendly" checkbox nowhere outside the closed dialog while 14 kid-friendly recipes are suggested, with the days right after the toolbar', async () => {
+    it('shows the note and the disabled "Kid-friendly" switch nowhere outside the closed dialog while 14 kid-friendly recipes are suggested, with the days right after the toolbar', async () => {
       leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
       await fixture.whenStable();
       expect(store.canBeKidFriendly(), '14 kid-friendly suggested').toBe(false);
@@ -1929,12 +1918,12 @@ describe('PlanPage', () => {
       expect(arrow('One more day', dialog).disabled, '"One more day" at 5').toBe(true);
       expect(arrow('One day fewer', dialog).disabled).toBe(false);
       expect(arrow('One person fewer', dialog).disabled).toBe(false);
-      const checkbox = kidFriendlyIn(dialog);
-      expect(settings.contains(checkbox), 'checkbox in div.settings').toBe(true);
-      expect(textOf(checkbox.closest('label.kid-friendly'))).toBe('Kid-friendly');
-      expect(checkbox.checked).toBe(false);
-      expect(checkbox.disabled).toBe(false);
-      expect(checkbox.hasAttribute('aria-describedby')).toBe(false);
+      const toggle = kidFriendlyIn(dialog);
+      expect(settings.contains(toggle), 'switch in div.settings').toBe(true);
+      expect(textOf(toggle.closest('label.kid-friendly'))).toBe('Kid-friendly');
+      expect(toggle.checked).toBe(false);
+      expect(toggle.disabled).toBe(false);
+      expect(toggle.hasAttribute('aria-describedby')).toBe(false);
 
       const next = 'The new plan starts today, for 5 days and 2 people.';
       expect(textOf(dialog.querySelector('p#new-plan-next'))).toBe(next);
@@ -2289,14 +2278,14 @@ describe('PlanPage', () => {
       leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
       await fixture.whenStable();
       dialog = await openNewPlan();
-      const checkbox = kidFriendlyIn(dialog);
-      expect(checkbox.checked).toBe(false);
-      expect(checkbox.disabled).toBe(true);
-      expect(checkbox.getAttribute('aria-describedby')).toBe('kid-friendly-note');
+      const toggle = kidFriendlyIn(dialog);
+      expect(toggle.checked).toBe(false);
+      expect(toggle.disabled).toBe(true);
+      expect(toggle.getAttribute('aria-describedby')).toBe('kid-friendly-note');
       const note = dialog.querySelector('p.note#kid-friendly-note');
       expect(note, 'no note in the dialog').not.toBeNull();
       expect(textOf(note)).toBe(NOTE);
-      expect(follows(note!, checkbox), 'note after the checkbox').toBe(true);
+      expect(follows(note!, toggle), 'note after the switch').toBe(true);
       expect(follows(dialog.querySelector('#new-plan-next')!, note!), 'note before the next').toBe(
         true,
       );
@@ -2388,11 +2377,11 @@ describe('PlanPage', () => {
         expect(await tabs(1), 'Tab at Days 1').toEqual(['Days value']);
       });
 
-      it('skips the disabled "Kid-friendly" checkbox on Tab from "One more person" and on Shift+Tab from "Keep this plan" while 14 kid-friendly recipes are suggested', async () => {
+      it('skips the disabled "Kid-friendly" switch on Tab from "One more person" and on Shift+Tab from "Keep this plan" while 14 kid-friendly recipes are suggested', async () => {
         leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
         await fixture.whenStable();
         const dialog = await openNewPlan();
-        expect(kidFriendlyIn(dialog).disabled, 'checkbox disabled').toBe(true);
+        expect(kidFriendlyIn(dialog).disabled, 'switch disabled').toBe(true);
         arrow('One more person', dialog).focus();
         expect(await tabs(1)).toEqual(['Keep this plan']);
         expect(await tabs(1, true)).toEqual(['One more person']);
@@ -2409,6 +2398,238 @@ describe('PlanPage', () => {
       expect(store.plan()).toMatchObject({ people: 3, accepted: false });
       expect(store.plan().days).toHaveLength(3);
       expectToolbar('3 days for 3 people', 'link');
+    });
+
+    describe('"Kid-friendly" switch (#53)', () => {
+      const NEXT = 'The new plan starts today, for 5 days and 2 people.';
+      const NEXT_KID_FRIENDLY = 'The new plan starts today, for 5 days and 2 people, kid-friendly.';
+
+      it('shows label.kid-friendly after the People stepper, holding span.stepper-label.kid-label with a hidden icon of one circle and three paths and then "Kid-friendly", and span.switch-cell with input#kid-friendly.switch[role="switch"], named "Kid-friendly", unchecked and enabled on a fresh plan; "Kinderfreundlich" in German (#53 1)', async () => {
+        for (const [language, newPlan, text] of [
+          ['en', 'New plan', 'Kid-friendly'],
+          ['de', 'Neuer Plan', 'Kinderfreundlich'],
+        ] as const) {
+          if (language === 'de') {
+            localStorage.setItem(LANGUAGE_KEY, 'de');
+            await reload();
+          }
+          const dialog = await openNewPlan(newPlan);
+          const steppers = dialog.querySelectorAll('div.settings > span.stepper');
+          expect(steppers, `${language}: steppers`).toHaveLength(2);
+          const row = steppers[1].nextElementSibling;
+          expect(row && selectorOf(row), `${language}: after the People stepper`).toBe(
+            'label.kid-friendly',
+          );
+          expect(Array.from(row!.children).map(selectorOf), language).toEqual([
+            'span.stepper-label.kid-label',
+            'span.switch-cell',
+          ]);
+
+          const [label, cell] = Array.from(row!.children);
+          const shown = Array.from(label.childNodes).filter(
+            (node) => node instanceof Element || (node.textContent ?? '').trim() !== '',
+          );
+          expect(
+            shown.map((node) =>
+              node instanceof Element
+                ? node.tagName.toLowerCase()
+                : (node.textContent ?? '').trim(),
+            ),
+            `${language}: icon, then the text`,
+          ).toEqual(['svg', text]);
+          const icon = shown[0] as Element;
+          expect(icon.getAttribute('aria-hidden'), language).toBe('true');
+          expect(icon.querySelectorAll('circle'), `${language}: circles`).toHaveLength(1);
+          expect(icon.querySelectorAll('path'), `${language}: paths`).toHaveLength(3);
+
+          expect(Array.from(cell.children).map(selectorOf), language).toEqual([
+            'input#kid-friendly.switch',
+          ]);
+          const toggle = cell.children[0] as HTMLInputElement;
+          expect(toggle.type, language).toBe('checkbox');
+          expect(toggle.getAttribute('role'), language).toBe('switch');
+          expect(Array.from(toggle.labels ?? []).map(textOf), `${language}: name`).toEqual([text]);
+          expect(toggle.checked, `${language}: checked`).toBe(false);
+          expect(toggle.disabled, `${language}: disabled`).toBe(false);
+        }
+      });
+
+      it('toggles the switch on each click on the icon, the text and the switch, with #new-plan-next following, toggles it on Space keeping the focus on it, and starts a kid-friendly plan on "Start new plan" with it on (#53 2)', async () => {
+        const dialog = await openNewPlan();
+        for (const [what, clickIt, checked] of [
+          ['the icon', () => clickIcon(dialog), true],
+          ['the text', () => click(kidLabelIn(dialog)), false],
+          ['the switch', () => click(kidFriendlyIn(dialog)), true],
+        ] as const) {
+          await clickIt();
+          expect(kidFriendlyIn(dialog).checked, `after a click on ${what}`).toBe(checked);
+          expect(textOf(dialog.querySelector('#new-plan-next')), what).toBe(
+            checked ? NEXT_KID_FRIENDLY : NEXT,
+          );
+        }
+
+        await pressSpace(kidFriendlyIn(dialog));
+        expect(kidFriendlyIn(dialog).checked, 'after Space').toBe(false);
+        expect(textOf(dialog.querySelector('#new-plan-next')), 'after Space').toBe(NEXT);
+        expect(document.activeElement, 'focus after Space').toBe(kidFriendlyIn(dialog));
+        await pressSpace(kidFriendlyIn(dialog));
+        expect(kidFriendlyIn(dialog).checked, 'after Space again').toBe(true);
+
+        await click(button(dialog, 'Start new plan'));
+        expect(store.plan().kidFriendly).toBe(true);
+        expect(textOf(element.querySelector('p.summary'))).toBe(
+          '5 days for 2 people, kid-friendly',
+        );
+      });
+
+      it('shows the switch unchecked and disabled, described by p.note#kid-friendly-note right after the row, while 14 kid-friendly recipes are suggested, and enabled without the note once one is restored (#53 3)', async () => {
+        leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+        await fixture.whenStable();
+        const dialog = await openNewPlan();
+        const toggle = kidFriendlyIn(dialog);
+        expect(toggle.checked, 'checked').toBe(false);
+        expect(toggle.disabled, 'disabled').toBe(true);
+        expect(toggle.getAttribute('aria-describedby')).toBe('kid-friendly-note');
+        const note = toggle.closest('label.kid-friendly')!.nextElementSibling;
+        expect(note && selectorOf(note), 'after the row').toBe('p#kid-friendly-note.note');
+        expect(textOf(note)).toBe(NOTE);
+
+        store.restoreRecipe(KID_FRIENDLY[14]);
+        await fixture.whenStable();
+        expect(kidFriendlyIn(dialog).disabled, 'disabled at 15').toBe(false);
+        expect(kidFriendlyIn(dialog).hasAttribute('aria-describedby')).toBe(false);
+        expect(element.querySelector('#kid-friendly-note'), 'note at 15').toBeNull();
+      });
+
+      it('moves the focus from "One more person" to the switch and then to "Keep this plan" on Tab at Days 3 (#53 4)', async () => {
+        const dialog = await openNewPlan();
+        await stepTo(dialog, 'Days', 3);
+        arrow('One more person', dialog).focus();
+        expect(await tabs(1)).toEqual(['Kid-friendly']);
+        expect(document.activeElement, 'focus on the switch').toBe(kidFriendlyIn(dialog));
+        expect(await tabs(1)).toEqual(['Keep this plan']);
+      });
+
+      describe('edge cases', () => {
+        it('draws the icon as svg[aria-hidden="true"][focusable="false"] with viewBox "0 0 24 24" and exactly the circle and the paths of the eyes, the smile and the hair, holding no text (#53 1a)', async () => {
+          const icon = iconIn(await openNewPlan());
+          expect(icon.getAttribute('aria-hidden')).toBe('true');
+          expect(icon.getAttribute('focusable')).toBe('false');
+          expect(icon.getAttribute('viewBox')).toBe('0 0 24 24');
+          expect(Array.from(icon.children).map(shapeOf)).toEqual([
+            'circle cx="12" cy="13" r="8"',
+            'path d="M9.5 12h.01M14.5 12h.01"',
+            'path d="M9 15.5c1.6 1.6 4.4 1.6 6 0"',
+            'path d="M12 5V3M9.6 3.8l.5 1.5M14.4 3.8l-.5 1.5"',
+          ]);
+          expect(textOf(icon), 'text in the icon').toBe('');
+        });
+
+        it('keeps "Cook extra for tomorrow\'s lunch" a plain checkbox right in its label, with no role="switch", no switch class and no icon, the dialog\'s "Kid-friendly" being the only switch on the page (#53 1b)', async () => {
+          await pickFirstSuggestion(1);
+          const cookExtra = input('cook-extra-0');
+          expect(selectorOf(cookExtra.parentElement!)).toBe('label.cook-extra');
+          expect(cookExtra.hasAttribute('role'), 'role').toBe(false);
+          expect(cookExtra.classList.contains('switch'), 'switch class').toBe(false);
+          expect(cookExtra.parentElement!.querySelector('svg'), 'icon').toBeNull();
+
+          const dialog = await openNewPlan();
+          expect(Array.from(element.querySelectorAll('[role="switch"], .switch'))).toEqual([
+            kidFriendlyIn(dialog),
+          ]);
+        });
+
+        // A checkbox has no default action on Enter, so nothing more is fired
+        it('leaves the focused switch, #new-plan-next, the open dialog and the plan as they are on Enter, which the page leaves to the browser (#53 2a)', async () => {
+          const before = store.plan();
+          const dialog = await openNewPlan();
+          const toggle = kidFriendlyIn(dialog);
+          toggle.focus();
+          expect(await keydown(toggle, 'Enter'), 'Enter handled by the page').toBe(false);
+          expect(toggle.checked, 'checked').toBe(false);
+          expect(textOf(dialog.querySelector('#new-plan-next'))).toBe(NEXT);
+          expect(openDialogOrNull(), 'dialog closed').toBe(dialog);
+          expect(document.activeElement).toBe(toggle);
+          expect(store.plan()).toBe(before);
+        });
+
+        it('keeps the disabled switch unchecked when the user clicks the icon, the text or the switch while 14 kid-friendly recipes are suggested, and starts a plan that is not kid-friendly (#53 2b)', async () => {
+          leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
+          await fixture.whenStable();
+          const dialog = await openNewPlan();
+          expect(kidFriendlyIn(dialog).disabled, 'disabled').toBe(true);
+          for (const [what, clickIt] of [
+            ['the icon', () => clickIcon(dialog)],
+            ['the text', () => click(kidLabelIn(dialog))],
+            ['the switch', () => click(kidFriendlyIn(dialog))],
+          ] as const) {
+            await clickIt();
+            expect(kidFriendlyIn(dialog).checked, `after a click on ${what}`).toBe(false);
+            expect(textOf(dialog.querySelector('#new-plan-next')), what).toBe(NEXT);
+          }
+          await click(button(dialog, 'Start new plan'));
+          expect(store.plan().kidFriendly).toBe(false);
+        });
+
+        it('shows no "on" or "off" text and no aria-checked on the switch, the row reading "Kid-friendly" whether it is off or on (#53 2c)', async () => {
+          const dialog = await openNewPlan();
+          for (const checked of [false, true]) {
+            if (checked) {
+              await click(kidFriendlyIn(dialog));
+            }
+            expect(kidFriendlyIn(dialog).checked, 'checked').toBe(checked);
+            expect(textOf(dialog.querySelector('label.kid-friendly')), `on: ${checked}`).toBe(
+              'Kid-friendly',
+            );
+            expect(kidFriendlyIn(dialog).hasAttribute('aria-checked'), `on: ${checked}`).toBe(
+              false,
+            );
+          }
+        });
+
+        it('gives the enabled switch no aria-describedby and shows no note, on a fresh plan and with exactly 15 kid-friendly recipes suggested (#53 3a)', async () => {
+          for (const step of ['fresh plan', '15 kid-friendly suggested']) {
+            if (step !== 'fresh plan') {
+              leaveSuggested(store, 26, ...KID_FRIENDLY.slice(0, 15), ...NOT_KID_FRIENDLY);
+              await fixture.whenStable();
+            }
+            const dialog = await openNewPlan();
+            expect(kidFriendlyIn(dialog).disabled, step).toBe(false);
+            expect(kidFriendlyIn(dialog).hasAttribute('aria-describedby'), step).toBe(false);
+            expect(element.querySelector('#kid-friendly-note'), step).toBeNull();
+            await click(button(dialog, 'Keep this plan'));
+          }
+        });
+      });
+
+      // SVG elements have no click(), so the click is dispatched
+      async function clickIcon(dialog: HTMLDialogElement) {
+        iconIn(dialog).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        await fixture.whenStable();
+      }
+
+      function iconIn(dialog: HTMLDialogElement): SVGSVGElement {
+        const found = kidLabelIn(dialog).querySelector('svg');
+        expect(found, 'no icon in span.kid-label').not.toBeNull();
+        return found!;
+      }
+
+      function kidLabelIn(dialog: HTMLDialogElement): HTMLElement {
+        const found = dialog.querySelector<HTMLElement>(
+          'label.kid-friendly > span.stepper-label.kid-label',
+        );
+        expect(found, 'no span.stepper-label.kid-label in label.kid-friendly').not.toBeNull();
+        return found!;
+      }
+
+      // Its tag and attributes, without those Angular adds to scope the component's styles
+      function shapeOf(node: Element): string {
+        const attributes = Array.from(node.attributes)
+          .filter((attribute) => !attribute.name.startsWith('_ng'))
+          .map((attribute) => `${attribute.name}="${attribute.value}"`)
+          .sort();
+        return [node.tagName.toLowerCase(), ...attributes].join(' ');
+      }
     });
 
     // Resolves to the names of the elements focused after each of `count` presses
@@ -3320,14 +3541,15 @@ describe('PlanPage', () => {
     });
 
     describe('edge cases', () => {
-      it('shows the unticked checkbox "Kinderfreundlich", and while 14 kid-friendly recipes are suggested the note "Weniger als 15 kinderfreundliche Rezepte werden vorgeschlagen, deshalb kann der Plan nicht kinderfreundlich sein."', async () => {
+      it('shows the unchecked switch "Kinderfreundlich", and while 14 kid-friendly recipes are suggested disables it, with the note "Weniger als 15 kinderfreundliche Rezepte werden vorgeschlagen, deshalb kann der Plan nicht kinderfreundlich sein."', async () => {
         await openInGerman();
-        const checkbox = element.querySelector<HTMLInputElement>('input#kid-friendly');
-        expect(checkbox, 'no #kid-friendly checkbox').not.toBeNull();
-        expect(textOf(checkbox!.closest('label'))).toBe('Kinderfreundlich');
+        const dialog = await openNewPlan('Neuer Plan');
+        expect(textOf(kidFriendlyIn(dialog).closest('label'))).toBe('Kinderfreundlich');
+        expect(kidFriendlyIn(dialog).checked, 'checked').toBe(false);
 
         leaveSuggested(store, 25, ...KID_FRIENDLY.slice(0, 14), ...NOT_KID_FRIENDLY);
         await fixture.whenStable();
+        expect(kidFriendlyIn(dialog).disabled, 'disabled').toBe(true);
         expect(textOf(element.querySelector('p.note#kid-friendly-note'))).toBe(
           'Weniger als 15 kinderfreundliche Rezepte werden vorgeschlagen, deshalb kann der Plan nicht kinderfreundlich sein.',
         );
@@ -3758,6 +3980,17 @@ describe('PlanPage', () => {
     await fixture.whenStable();
   }
 
+  // jsdom gives Space on a checkbox no default action, so the toggle and its change event, which
+  // the browser fires, are fired here
+  async function pressSpace(checkbox: HTMLInputElement) {
+    checkbox.focus();
+    checkbox.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    checkbox.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true }));
+    checkbox.checked = !checkbox.checked;
+    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    await fixture.whenStable();
+  }
+
   // Resolves to whether the page handled the key itself, keeping the browser from acting on it
   async function keydown(target: HTMLElement, key: string): Promise<boolean> {
     const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
@@ -3787,8 +4020,8 @@ describe('PlanPage', () => {
   }
 
   function kidFriendlyIn(dialog: HTMLDialogElement): HTMLInputElement {
-    const found = dialog.querySelector<HTMLInputElement>('input#kid-friendly[type="checkbox"]');
-    expect(found, 'no #kid-friendly checkbox in the dialog').not.toBeNull();
+    const found = dialog.querySelector<HTMLInputElement>('input#kid-friendly');
+    expect(found, 'no #kid-friendly switch in the dialog').not.toBeNull();
     return found!;
   }
 

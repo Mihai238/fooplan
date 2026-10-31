@@ -244,16 +244,28 @@
       </button>
     </span>
     <label class="kid-friendly">
-      <input
-        #kidFriendlyInput
-        type="checkbox"
-        id="kid-friendly"
-        [checked]="newPlanSettings().kidFriendly"
-        [disabled]="!store.canBeKidFriendly()"
-        [attr.aria-describedby]="store.canBeKidFriendly() ? null : 'kid-friendly-note'"
-        (change)="setNewKidFriendly(kidFriendlyInput.checked)"
-      />
-      {{ language.t('plan.kidFriendly') }}
+      <span class="stepper-label kid-label">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="12" cy="13" r="8" />
+          <path d="M9.5 12h.01M14.5 12h.01" />
+          <path d="M9 15.5c1.6 1.6 4.4 1.6 6 0" />
+          <path d="M12 5V3M9.6 3.8l.5 1.5M14.4 3.8l-.5 1.5" />
+        </svg>
+        {{ language.t('plan.kidFriendly') }}
+      </span>
+      <span class="switch-cell">
+        <input
+          #kidFriendlyInput
+          type="checkbox"
+          class="switch"
+          role="switch"
+          id="kid-friendly"
+          [checked]="newPlanSettings().kidFriendly"
+          [disabled]="!store.canBeKidFriendly()"
+          [attr.aria-describedby]="store.canBeKidFriendly() ? null : 'kid-friendly-note'"
+          (change)="setNewKidFriendly(kidFriendlyInput.checked)"
+        />
+      </span>
     </label>
     @if (!store.canBeKidFriendly()) {
       <p id="kid-friendly-note" class="note">
