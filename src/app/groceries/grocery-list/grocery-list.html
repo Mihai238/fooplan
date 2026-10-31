@@ -56,6 +56,9 @@
     @for (group of view().sections; track group.section) {
       <section>
         <h2>{{ language.section(group.section) }}</h2>
+        @if (group.section === 'Probably at home') {
+          <p class="hint">{{ language.t('groceries.atHomeHint') }}</p>
+        }
         <ul class="items">
           @for (item of group.items; track key(item)) {
             <li animate.leave="leaving">
@@ -118,7 +121,7 @@
     </ul>
   </details>
 }
-@if (undoBar(); as line) {
+@if (undoBar(); as item) {
   <div
     #undoBarElement
     class="undo-bar"
@@ -132,7 +135,7 @@
     (focusin)="undoFocused.set(true)"
     (focusout)="undoFocused.set(false)"
   >
-    <span>{{ language.t('groceries.inCartUndo', { item: labelOf(line.item) }) }}</span>
+    <span>{{ undoText(item) }}</span>
     <button #undoButton type="button" class="link" (click)="undo(undoButton)">
       {{ language.t('groceries.undo') }}
     </button>

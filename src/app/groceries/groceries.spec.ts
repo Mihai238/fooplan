@@ -16,6 +16,7 @@ import {
   itemKey,
   listItems,
   shoppingView,
+  ShoppingView,
 } from './groceries';
 import { Section, SECTIONS, sectionOf } from './sections';
 
@@ -261,15 +262,15 @@ describe('groceries', () => {
       expect(linesOf(groceryList(plan, RECIPES), 'onion')).toEqual([item('onion', 1, 'pc')]);
     });
 
-    it("sorts the items by section in the shop's order, then by name, then by unit", () => {
+    it('sorts the items by section in the shop\'s order, then by name, then by unit, the rice under "Probably at home" first (changed by #61)', () => {
       const plan = acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice')));
       expect(groceryList(plan, RECIPES)).toEqual([
+        item('rice', 150, 'g', 'Probably at home'),
         item('basil', 20, 'g', 'Fruit & vegetables'),
         item('tomato', 200, 'g', 'Fruit & vegetables'),
         item('tomato', 1, 'pc', 'Fruit & vegetables'),
         item('beef sirloin', 300, 'g', 'Meat & fish'),
         item('parmesan', 50, 'g', 'Dairy & eggs'),
-        item('rice', 150, 'g', 'Pasta, rice & grains'),
       ]);
     });
 
@@ -351,7 +352,7 @@ describe('groceries', () => {
       );
     });
 
-    it('lists "Croque monsieur" and "Chicken fried rice" of a 1-day plan for 2 under their sections: ham and chicken breast under Meat & fish, emmental, egg, butter and milk under Dairy & eggs, bread under Bread & bakery, rice and flour under Pasta, rice & grains, soy sauce, mustard and the 0.5 tsp nutmeg rounded up to 1 tsp under Spices & sauces, nothing under Other and no oil (#58 10)', () => {
+    it('lists "Croque monsieur" and "Chicken fried rice" of a 1-day plan for 2 under their sections: butter, egg, flour, garlic clove, milk, mustard, the 0.5 tsp nutmeg rounded up to 1 tsp, rice and soy sauce under Probably at home first, ham and chicken breast under Meat & fish, emmental under Dairy & eggs, bread under Bread & bakery, no Pasta, rice & grains or Spices & sauces, nothing under Other and no oil (#58 10, changed by #61)', () => {
       const plan = acceptedPlanFor(
         2,
         day('2026-10-24', picked('Croque monsieur'), picked('Chicken fried rice')),
@@ -364,14 +365,23 @@ describe('groceries', () => {
         ]),
       ).toEqual([
         [
-          'Fruit & vegetables',
-          ['1 pc carrot', '2 pc garlic clove', '100 g pea', '3 pc spring onion'],
+          'Probably at home',
+          [
+            '30 g butter',
+            '2 pc egg',
+            '20 g flour',
+            '2 pc garlic clove',
+            '200 ml milk',
+            '1 tbsp mustard',
+            '1 tsp nutmeg',
+            '200 g rice',
+            '3 tbsp soy sauce',
+          ],
         ],
+        ['Fruit & vegetables', ['1 pc carrot', '100 g pea', '3 pc spring onion']],
         ['Meat & fish', ['250 g chicken breast', '150 g ham']],
-        ['Dairy & eggs', ['30 g butter', '2 pc egg', '150 g emmental', '200 ml milk']],
+        ['Dairy & eggs', ['150 g emmental']],
         ['Bread & bakery', ['200 g bread']],
-        ['Pasta, rice & grains', ['20 g flour', '200 g rice']],
-        ['Spices & sauces', ['1 tbsp mustard', '1 tsp nutmeg', '3 tbsp soy sauce']],
       ]);
       expect(
         list.filter((line) => /oil/.test(line.name)),
@@ -380,7 +390,7 @@ describe('groceries', () => {
     });
 
     describe('edge cases', () => {
-      it('adds up the ham, emmental, milk, butter and flour of "Croque monsieur" and "Savoury pancakes with ham and cheese" in a 1-day plan for 2 into one line each: 300 g ham, 300 g emmental, 500 ml milk, 60 g butter and 170 g flour (#58 10a)', () => {
+      it('adds up the ham, emmental, milk, butter and flour of "Croque monsieur" and "Savoury pancakes with ham and cheese" in a 1-day plan for 2 into one line each: 300 g ham, 300 g emmental, and 500 ml milk, 60 g butter and 170 g flour under Probably at home (#58 10a, changed by #61)', () => {
         const plan = acceptedPlanFor(
           2,
           day(
@@ -395,16 +405,16 @@ describe('groceries', () => {
         ).toEqual([
           item('ham', 300, 'g', 'Meat & fish'),
           item('emmental', 300, 'g', 'Dairy & eggs'),
-          item('milk', 500, 'ml', 'Dairy & eggs'),
-          item('butter', 60, 'g', 'Dairy & eggs'),
-          item('flour', 170, 'g', 'Pasta, rice & grains'),
+          item('milk', 500, 'ml', 'Probably at home'),
+          item('butter', 60, 'g', 'Probably at home'),
+          item('flour', 170, 'g', 'Probably at home'),
         ]);
       });
     });
   });
 
   describe('addedItems', () => {
-    it('puts an added item matching an ingredient name under that ingredient\'s section, sorted by name among the plan\'s items, and olive oil, salt and other text under "Other"', () => {
+    it('puts an added item matching an ingredient name under that ingredient\'s section, "lemon" under "Probably at home", sorted by name among the plan\'s items, and olive oil, salt and other text under "Other" (changed by #61)', () => {
       const plan = withAdded(
         acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice'))),
         'toilet paper',
@@ -414,17 +424,15 @@ describe('groceries', () => {
       );
       expect(shoppingView(listItems(plan, RECIPES), []).sections).toEqual([
         {
+          section: 'Probably at home',
+          items: [added('lemon', 'Probably at home'), item('rice', 150, 'g')],
+        },
+        {
           section: 'Fruit & vegetables',
-          items: [
-            item('basil', 20, 'g'),
-            added('lemon', 'Fruit & vegetables'),
-            item('tomato', 200, 'g'),
-            item('tomato', 1, 'pc'),
-          ],
+          items: [item('basil', 20, 'g'), item('tomato', 200, 'g'), item('tomato', 1, 'pc')],
         },
         { section: 'Meat & fish', items: [item('beef sirloin', 300, 'g')] },
         { section: 'Dairy & eggs', items: [item('parmesan', 50, 'g')] },
-        { section: 'Pasta, rice & grains', items: [item('rice', 150, 'g')] },
         {
           section: 'Other',
           items: [
@@ -436,7 +444,7 @@ describe('groceries', () => {
       ]);
     });
 
-    it('matches the whole text with an ingredient name ignoring case, and keeps the text as typed', () => {
+    it('matches the whole text with an ingredient name ignoring case, and keeps the text as typed (changed by #61)', () => {
       const plan = withAdded(
         acceptedPlanFor(2, day('2026-10-24', picked('Rice'), picked('Salad'))),
         'Lemon',
@@ -445,7 +453,7 @@ describe('groceries', () => {
         'lemon juice',
       );
       expect(addedItems(plan)).toEqual([
-        added('Lemon', 'Fruit & vegetables'),
+        added('Lemon', 'Probably at home'),
         added('Canned Tomatoes', 'Cans & jars'),
         added('2 lemons', 'Other'),
         added('lemon juice', 'Other'),
@@ -457,7 +465,9 @@ describe('groceries', () => {
         acceptedPlanFor(2, day('2026-10-24', picked('Market'), picked('Rice'))),
         'tomato',
       );
-      const [vegetables] = shoppingView(listItems(plan, RECIPES), []).sections;
+      const vegetables = shoppingView(listItems(plan, RECIPES), []).sections.find(
+        ({ section }) => section === 'Fruit & vegetables',
+      );
       expect(vegetables).toEqual({
         section: 'Fruit & vegetables',
         items: [
@@ -474,14 +484,14 @@ describe('groceries', () => {
     const plan = acceptedPlanFor(2, day('2026-10-24', picked('Chili'), picked('Rice')));
     const onion = item('onion', 1, 'pc');
 
-    it('says an entry is added under its section, already on the list or already in the cart, and nothing for a blank entry (changed by #52)', () => {
+    it('says an entry is added under its section, already on the list or already in the cart, and nothing for a blank entry (changed by #52 and #61)', () => {
       expect(addFeedback(plan, 'tea')).toEqual({
         id: 'groceries.added',
         params: { item: 'tea', section: 'Other' },
       });
       expect(addFeedback(plan, ' Lemon ')).toEqual({
         id: 'groceries.added',
-        params: { item: 'Lemon', section: 'Fruit & vegetables' },
+        params: { item: 'Lemon', section: 'Probably at home' },
       });
       expect(addFeedback(plan, '  ')).toBeNull();
 
@@ -502,23 +512,23 @@ describe('groceries', () => {
       });
     });
 
-    it('says "Added" for an entry named like a plan line, which is not an added item', () => {
+    it('says "Added" for an entry named like a plan line, which is not an added item (changed by #61)', () => {
       expect(groceryList(plan, RECIPES), 'onion line').toContainEqual(onion);
       expect(addFeedback(plan, 'onion')).toEqual({
         id: 'groceries.added',
-        params: { item: 'onion', section: 'Fruit & vegetables' },
+        params: { item: 'onion', section: 'Probably at home' },
       });
       expect(addFeedback(plan, 'Onion')).toEqual({
         id: 'groceries.added',
-        params: { item: 'Onion', section: 'Fruit & vegetables' },
+        params: { item: 'Onion', section: 'Probably at home' },
       });
     });
 
-    it('never says "already in the cart" because a plan line of that name is ticked, as only added items count', () => {
+    it('never says "already in the cart" because a plan line of that name is ticked, as only added items count (changed by #61)', () => {
       const onionTicked = { ...plan, ticked: [itemKey(onion)] };
       expect(addFeedback(onionTicked, 'onion')).toEqual({
         id: 'groceries.added',
-        params: { item: 'onion', section: 'Fruit & vegetables' },
+        params: { item: 'onion', section: 'Probably at home' },
       });
       expect(addFeedback(withAdded(onionTicked, 'onion'), 'ONION')).toEqual({
         id: 'groceries.alreadyOnList',
@@ -565,11 +575,11 @@ describe('groceries', () => {
   describe('before acceptance (#52)', () => {
     const notAccepted = planFor(2, day('2026-10-24', picked('Spaghetti'), picked('Chili')));
 
-    it('lists only the added "toilet paper" under Other and "Lemon" under Fruit & vegetables for a plan that is not accepted, and says "toilet paper" is already on the list and "tea" is added to Other (#52 3)', () => {
+    it('lists only the added "toilet paper" under Other and "Lemon" under Probably at home for a plan that is not accepted, and says "toilet paper" is already on the list and "tea" is added to Other (#52 3, changed by #61)', () => {
       const plan = withAdded(notAccepted, 'toilet paper', 'Lemon');
       expect(listItems(plan, RECIPES)).toEqual([
         added('toilet paper', 'Other'),
-        added('Lemon', 'Fruit & vegetables'),
+        added('Lemon', 'Probably at home'),
       ]);
       expect(addFeedback(plan, 'toilet paper')).toEqual({
         id: 'groceries.alreadyOnList',
@@ -595,7 +605,7 @@ describe('groceries', () => {
       expect(listItems(plan, RECIPES)).toEqual([added('coffee', 'Other')]);
     });
 
-    it('returns no message for a blank entry on a plan that is not accepted, says the ticked "Coffee" is already in the cart by its stored text, and "Zitrone" is added to Fruit & vegetables in German (#52 3b)', () => {
+    it('returns no message for a blank entry on a plan that is not accepted, says the ticked "Coffee" is already in the cart by its stored text, and "Zitrone" is added to Probably at home in German (#52 3b, changed by #61)', () => {
       const plan = { ...withAdded(notAccepted, 'Coffee'), ticked: [addedKey('Coffee')] };
       expect(addFeedback(plan, '   ')).toBeNull();
 
@@ -605,23 +615,23 @@ describe('groceries', () => {
       });
       expect(addFeedback(notAccepted, 'Zitrone', 'de')).toEqual({
         id: 'groceries.added',
-        params: { item: 'Zitrone', section: 'Fruit & vegetables' },
+        params: { item: 'Zitrone', section: 'Probably at home' },
       });
     });
   });
 
   describe('addedSection', () => {
-    it('puts "Zitrone" under Fruit & vegetables and "käse" under Other in German, "lemon" still under Fruit & vegetables in German, and "Zitrone" under Other in English', () => {
-      expect(addedSection('Zitrone', 'de')).toBe('Fruit & vegetables');
+    it('puts "Zitrone" under Probably at home and "käse" under Other in German, "lemon" still under Probably at home in German, and "Zitrone" under Other in English (changed by #61)', () => {
+      expect(addedSection('Zitrone', 'de')).toBe('Probably at home');
       expect(addedSection('käse', 'de')).toBe('Other');
-      expect(addedSection('lemon', 'de')).toBe('Fruit & vegetables');
+      expect(addedSection('lemon', 'de')).toBe('Probably at home');
       expect(addedSection('Zitrone', 'en')).toBe('Other');
     });
 
     describe('edge cases', () => {
-      it('puts the German names "Knoblauchzehe", "rote Zwiebel", "Bratwürste" and "Dosentomaten" under Other in English, and under their sections in German', () => {
+      it('puts the German names "Knoblauchzehe", "rote Zwiebel", "Bratwürste" and "Dosentomaten" under Other in English, and under their sections in German, "Knoblauchzehe" under Probably at home (changed by #61)', () => {
         for (const [name, section] of [
-          ['Knoblauchzehe', 'Fruit & vegetables'],
+          ['Knoblauchzehe', 'Probably at home'],
           ['rote Zwiebel', 'Fruit & vegetables'],
           ['Bratwürste', 'Meat & fish'],
           ['Dosentomaten', 'Cans & jars'],
@@ -642,14 +652,15 @@ describe('groceries', () => {
         }
       });
 
-      it('ignores case in German, putting "ZITRONE", "Rote zwiebel" and "LEMON" under Fruit & vegetables', () => {
-        for (const name of ['ZITRONE', 'Rote zwiebel', 'LEMON']) {
-          expect(addedSection(name, 'de'), name).toBe('Fruit & vegetables');
+      it('ignores case in German, putting "ZITRONE" and "LEMON" under Probably at home and "Rote zwiebel" under Fruit & vegetables (changed by #61)', () => {
+        for (const name of ['ZITRONE', 'LEMON']) {
+          expect(addedSection(name, 'de'), name).toBe('Probably at home');
         }
+        expect(addedSection('Rote zwiebel', 'de')).toBe('Fruit & vegetables');
       });
 
-      it('puts "Zwiebel" under Fruit & vegetables in German, but the inflected "Zwiebeln" and "Zitronen" under Other, as only a whole German name counts', () => {
-        expect(addedSection('Zwiebel', 'de')).toBe('Fruit & vegetables');
+      it('puts "Zwiebel" under Probably at home in German, but the inflected "Zwiebeln" and "Zitronen" under Other, as only a whole German name counts (changed by #61)', () => {
+        expect(addedSection('Zwiebel', 'de')).toBe('Probably at home');
         expect(addedSection('Zwiebeln', 'de')).toBe('Other');
         expect(addedSection('Zitronen', 'de')).toBe('Other');
       });
@@ -738,7 +749,7 @@ describe('groceries', () => {
   });
 
   describe('shoppingView with an order', () => {
-    it('sorts the sections and the cart by the order it is given, keeping each item in its section', () => {
+    it('sorts the sections and the cart by the order it is given, keeping each item in its section, onion and garlic clove under "Probably at home" (changed by #61)', () => {
       const onion = item('onion', 1, 'pc');
       const garlic = item('garlic clove', 2, 'pc');
       const tomato = item('tomato', 3, 'pc');
@@ -749,10 +760,11 @@ describe('groceries', () => {
       ]);
       const order = byShownName((line) => shown.get(line.name) ?? line.name, 'de');
       expect(shoppingView([onion, garlic, tomato], [], order).sections).toEqual([
-        { section: 'Fruit & vegetables', items: [garlic, tomato, onion] },
+        { section: 'Probably at home', items: [garlic, onion] },
+        { section: 'Fruit & vegetables', items: [tomato] },
       ]);
       expect(shoppingView([onion, garlic, tomato], [onion, tomato].map(itemKey), order)).toEqual({
-        sections: [{ section: 'Fruit & vegetables', items: [garlic] }],
+        sections: [{ section: 'Probably at home', items: [garlic] }],
         inCart: [tomato, onion],
       });
     });
@@ -784,21 +796,146 @@ describe('groceries', () => {
       expect(itemKey(item('garlic', 1, 'pc'))).not.toBe(onionPieces);
     });
 
-    it('gives an added item the key addedKey makes, which no plan item of that name has, so the two are ticked separately', () => {
+    it('gives an added item the key addedKey makes, which no plan item of that name has, so the two are ticked separately (changed by #61)', () => {
       const planOnion = item('onion', 1, 'pc');
-      const addedOnion = added('onion', 'Fruit & vegetables');
+      const addedOnion = added('onion', 'Probably at home');
       expect(itemKey(addedOnion)).toBe(addedKey('onion'));
       expect(itemKey(addedOnion)).not.toBe(itemKey(planOnion));
       expect(itemKey(addedOnion)).not.toBe(itemKey(item('onion', 1, 'g')));
 
       const list = [planOnion, addedOnion];
       expect(shoppingView(list, [itemKey(planOnion)])).toEqual({
-        sections: [{ section: 'Fruit & vegetables', items: [addedOnion] }],
+        sections: [{ section: 'Probably at home', items: [addedOnion] }],
         inCart: [planOnion],
       });
       expect(shoppingView(list, [itemKey(addedOnion)])).toEqual({
-        sections: [{ section: 'Fruit & vegetables', items: [planOnion] }],
+        sections: [{ section: 'Probably at home', items: [planOnion] }],
         inCart: [addedOnion],
+      });
+    });
+  });
+
+  describe('"Probably at home" (#61)', () => {
+    const HUMMUS_AND_CURRY = day(
+      '2026-10-24',
+      picked('Hummus plate with bread and vegetables'),
+      picked('Chicken curry with rice'),
+    );
+    const AT_HOME_LINES = [
+      '2 tsp curry powder',
+      '2 pc garlic clove',
+      '1 pc lemon',
+      '1 pc onion',
+      '1 tsp paprika',
+      '150 g rice',
+    ];
+
+    it('groups the lines of "Hummus plate with bread and vegetables" and "Chicken curry with rice" for 2 under Probably at home first, then Fruit & vegetables, Meat & fish, Bread & bakery and Cans & jars, with no Pasta, rice & grains or Spices & sauces; puts the added "Lemon" and "rice" of a plan not accepted under Probably at home and "tea" under Other, the added "Zitrone" under Probably at home in German, and says "rice" is added to Probably at home (#61 2)', () => {
+      const plan = acceptedPlanFor(2, HUMMUS_AND_CURRY);
+      expect(shownBySection(shoppingView(listItems(plan, BUILT_IN_RECIPES), []))).toEqual([
+        ['Probably at home', AT_HOME_LINES],
+        [
+          'Fruit & vegetables',
+          ['2 pc carrot', '150 g cherry tomato', '1 pc cucumber', '10 g ginger'],
+        ],
+        ['Meat & fish', ['300 g chicken breast']],
+        ['Bread & bakery', ['200 g bread']],
+        ['Cans & jars', ['200 g canned tomatoes', '200 ml coconut milk', '200 g hummus']],
+      ]);
+
+      const notAccepted = withAdded(planFor(2, HUMMUS_AND_CURRY), 'rice', 'Lemon', 'tea');
+      expect(shoppingView(listItems(notAccepted, BUILT_IN_RECIPES), []).sections).toEqual([
+        {
+          section: 'Probably at home',
+          items: [added('Lemon', 'Probably at home'), added('rice', 'Probably at home')],
+        },
+        { section: 'Other', items: [added('tea', 'Other')] },
+      ]);
+
+      const german = withAdded(planFor(2, HUMMUS_AND_CURRY), 'Zitrone');
+      expect(shoppingView(listItems(german, BUILT_IN_RECIPES, 'de'), []).sections).toEqual([
+        { section: 'Probably at home', items: [added('Zitrone', 'Probably at home')] },
+      ]);
+
+      expect(addFeedback(plan, 'rice')).toEqual({
+        id: 'groceries.added',
+        params: { item: 'rice', section: 'Probably at home' },
+      });
+    });
+
+    describe('edge cases', () => {
+      it('lists none of the lemon, onion, garlic clove, rice, paprika and curry powder under a shop section as well, and each of the 15 lines once (#61 2a)', () => {
+        const plan = acceptedPlanFor(2, HUMMUS_AND_CURRY);
+        const { sections } = shoppingView(listItems(plan, BUILT_IN_RECIPES), []);
+        const atHome = ['lemon', 'onion', 'garlic clove', 'rice', 'paprika', 'curry powder'];
+        expect(sections[0]?.section, 'first section').toBe('Probably at home');
+        expect(
+          sections
+            .slice(1)
+            .flatMap(({ items }) => items)
+            .filter((line) => atHome.includes(line.name)),
+        ).toEqual([]);
+        expect(sections.flatMap(({ items }) => items)).toHaveLength(15);
+      });
+
+      it('moves the ticked "1 pc lemon" out of Probably at home into the cart, not into Fruit & vegetables, and counts it as 1 of 15 in the cart (#61 2b)', () => {
+        const plan = {
+          ...acceptedPlanFor(2, HUMMUS_AND_CURRY),
+          ticked: [itemKey(item('lemon', 1, 'pc'))],
+        };
+        const view = shoppingView(listItems(plan, BUILT_IN_RECIPES), plan.ticked);
+        expect(view.inCart).toEqual([item('lemon', 1, 'pc', 'Probably at home')]);
+        expect(shownBySection(view).slice(0, 2)).toEqual([
+          ['Probably at home', AT_HOME_LINES.filter((line) => line !== '1 pc lemon')],
+          [
+            'Fruit & vegetables',
+            ['2 pc carrot', '150 g cherry tomato', '1 pc cucumber', '10 g ginger'],
+          ],
+        ]);
+        expect(cartCount(plan, BUILT_IN_RECIPES)).toEqual({ inCart: 1, total: 15 });
+      });
+
+      it('lists the plan\'s "1 pc lemon" and then the added "lemon" as separate lines under Probably at home (#61 2c)', () => {
+        const plan = withAdded(acceptedPlanFor(2, HUMMUS_AND_CURRY), 'lemon');
+        const [first] = shoppingView(listItems(plan, BUILT_IN_RECIPES), []).sections;
+        expect(first).toEqual({
+          section: 'Probably at home',
+          items: [
+            item('curry powder', 2, 'tsp'),
+            item('garlic clove', 2, 'pc'),
+            item('lemon', 1, 'pc'),
+            added('lemon', 'Probably at home'),
+            item('onion', 1, 'pc'),
+            item('paprika', 1, 'tsp'),
+            item('rice', 150, 'g'),
+          ],
+        });
+      });
+
+      it('shows no Probably at home section for lines without one of the 29, and one holding only the added "rice", first, once it is added (#61 2d)', () => {
+        const plan = acceptedPlanFor(2, day('2026-10-24', picked('Spaghetti'), picked('Market')));
+        const sectionsOf = (shown: Plan) =>
+          shoppingView(listItems(shown, RECIPES), []).sections.map(({ section }) => section);
+        expect(sectionsOf(plan)).toEqual([
+          'Fruit & vegetables',
+          'Meat & fish',
+          'Dairy & eggs',
+          'Pasta, rice & grains',
+          'Other',
+        ]);
+
+        const withRice = withAdded(plan, 'rice');
+        expect(sectionsOf(withRice)).toEqual([
+          'Probably at home',
+          'Fruit & vegetables',
+          'Meat & fish',
+          'Dairy & eggs',
+          'Pasta, rice & grains',
+          'Other',
+        ]);
+        expect(shoppingView(listItems(withRice, RECIPES), []).sections[0].items).toEqual([
+          added('rice', 'Probably at home'),
+        ]);
       });
     });
   });
@@ -826,6 +963,15 @@ describe('groceries', () => {
     section: Section = sectionOf(name),
   ): GroceryItem {
     return { name, amount, unit, section };
+  }
+
+  function shownBySection({ sections }: ShoppingView): [Section, string[]][] {
+    return sections.map(({ section, items }) => [
+      section,
+      items.map((line) =>
+        'added' in line ? line.name : `${line.amount} ${line.unit} ${line.name}`,
+      ),
+    ]);
   }
 
   function linesOf(list: GroceryItem[], name: string): GroceryItem[] {

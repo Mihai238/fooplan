@@ -40,6 +40,15 @@ describe('MESSAGES', () => {
     expect(Object.keys(MESSAGES.de)).not.toContain('groceries.addAgain');
   });
 
+  it('names the section "Probably at home", in German "Wahrscheinlich zu Hause", with the hint "Tick what you already have." ("Hak ab, was du schon hast.") and the undo text "{item}" is at home. („{item}“ ist zu Hause.) (#61)', () => {
+    const ids = ['section.atHome', 'groceries.atHomeHint', 'groceries.atHomeUndo'] as const;
+    expect(ids.map((id) => [id, MESSAGES.en[id], MESSAGES.de[id]])).toEqual([
+      ['section.atHome', 'Probably at home', 'Wahrscheinlich zu Hause'],
+      ['groceries.atHomeHint', 'Tick what you already have.', 'Hak ab, was du schon hast.'],
+      ['groceries.atHomeUndo', '"{item}" is at home.', '„{item}“ ist zu Hause.'],
+    ]);
+  });
+
   describe('edge cases', () => {
     it("follows the current language in t(), filling in every placeholder, numbers too: English, German after set('de') and English again after set('en')", () => {
       const store = TestBed.inject(LanguageStore);

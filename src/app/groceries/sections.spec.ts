@@ -1,5 +1,12 @@
 import { RECIPES } from '../recipes/recipes';
-import { INGREDIENTS_BY_SECTION, PANTRY_STAPLES, Section, sectionOf } from './sections';
+import {
+  AT_HOME,
+  INGREDIENTS_BY_SECTION,
+  PANTRY_STAPLES,
+  Section,
+  SECTIONS,
+  sectionOf,
+} from './sections';
 
 const REMOVED_INGREDIENTS = [
   'arborio rice',
@@ -52,7 +59,7 @@ const ADDED_SECTIONS: [string, Section][] = [
   ['ground lamb', 'Meat & fish'],
   ['ham', 'Meat & fish'],
   ['italian sausage', 'Meat & fish'],
-  ['mayonnaise', 'Spices & sauces'],
+  ['mayonnaise', 'Probably at home'],
   ['peanut butter', 'Cans & jars'],
   ['pita bread', 'Bread & bakery'],
   ['pork chop', 'Meat & fish'],
@@ -65,6 +72,39 @@ const ADDED_SECTIONS: [string, Section][] = [
   ['tortellini', 'Pasta, rice & grains'],
   ['trout', 'Meat & fish'],
   ['yogurt', 'Dairy & eggs'],
+];
+
+// #61's ingredients most kitchens keep
+const AT_HOME_NAMES = [
+  'bay leaf',
+  'beef stock',
+  'breadcrumbs',
+  'butter',
+  'caraway',
+  'chili flakes',
+  'chili powder',
+  'cumin',
+  'curry powder',
+  'egg',
+  'flour',
+  'garlic clove',
+  'ketchup',
+  'lemon',
+  'marjoram',
+  'mayonnaise',
+  'milk',
+  'mustard',
+  'nutmeg',
+  'onion',
+  'oregano',
+  'paprika',
+  'rice',
+  'soy sauce',
+  'sugar',
+  'tomato paste',
+  'vegetable stock',
+  'white wine vinegar',
+  'worcestershire sauce',
 ];
 
 // #24's list without "chive" and "cream", which #32's recipes use again
@@ -170,7 +210,7 @@ describe('sections', () => {
     );
   });
 
-  it('puts each of the 25 ingredients of #58 in its section, at its alphabetical position there, none under "Other", and none of them among the ingredients only removed recipes used (#58 5)', () => {
+  it('puts each of the 25 ingredients of #58 in its section, mayonnaise under "Probably at home", at its alphabetical position there, none under "Other", and none of them among the ingredients only removed recipes used (#58 5, changed by #61)', () => {
     expect(ADDED_SECTIONS.map(([name]) => [name, sectionOf(name)])).toEqual(ADDED_SECTIONS);
     for (const [section, names] of Object.entries(INGREDIENTS_BY_SECTION)) {
       expect(names, `"${section}" in alphabetical order`).toEqual([...names].sort());
@@ -179,5 +219,104 @@ describe('sections', () => {
       ADDED_SECTIONS.filter(([name]) => REMOVED_INGREDIENTS.includes(name)),
       'removed',
     ).toEqual([]);
+  });
+
+  describe('"Probably at home" (#61)', () => {
+    it('lists exactly the 29 ingredients most kitchens keep in AT_HOME, in alphabetical order, each mapped to a shop section and none a pantry staple, puts "Probably at home" first in SECTIONS, and gives "Probably at home" for lemon, rice, egg and soy sauce, "Fruit & vegetables" for carrot, "Dairy & eggs" for cheddar and "Other" for olive oil and mystery spice (#61 1)', () => {
+      expect(AT_HOME).toEqual(AT_HOME_NAMES);
+      expect(AT_HOME, 'alphabetical').toEqual([...AT_HOME].sort());
+      const mapped = Object.values(INGREDIENTS_BY_SECTION).flat();
+      expect(
+        AT_HOME.filter((name) => !mapped.includes(name)),
+        'not mapped',
+      ).toEqual([]);
+      expect(
+        AT_HOME.filter((name) => PANTRY_STAPLES.includes(name)),
+        'pantry staples',
+      ).toEqual([]);
+      expect(SECTIONS).toEqual([
+        'Probably at home',
+        'Fruit & vegetables',
+        'Meat & fish',
+        'Dairy & eggs',
+        'Bread & bakery',
+        'Pasta, rice & grains',
+        'Cans & jars',
+        'Spices & sauces',
+        'Nuts & seeds',
+        'Drinks',
+        'Other',
+      ]);
+      const names = [
+        'lemon',
+        'rice',
+        'egg',
+        'soy sauce',
+        'carrot',
+        'cheddar',
+        'olive oil',
+        'mystery spice',
+      ];
+      expect(names.map((name) => [name, sectionOf(name)])).toEqual([
+        ['lemon', 'Probably at home'],
+        ['rice', 'Probably at home'],
+        ['egg', 'Probably at home'],
+        ['soy sauce', 'Probably at home'],
+        ['carrot', 'Fruit & vegetables'],
+        ['cheddar', 'Dairy & eggs'],
+        ['olive oil', 'Other'],
+        ['mystery spice', 'Other'],
+      ]);
+    });
+
+    describe('edge cases', () => {
+      it('puts only the exact names under "Probably at home": onion, lemon, rice, egg, milk and mustard there, but red onion, spring onion and lime under "Fruit & vegetables", rice noodle and egg noodle under "Pasta, rice & grains", coconut milk under "Cans & jars" and fish sauce under "Spices & sauces" (#61 1a)', () => {
+        const names = [
+          'onion',
+          'lemon',
+          'rice',
+          'egg',
+          'milk',
+          'mustard',
+          'red onion',
+          'spring onion',
+          'lime',
+          'rice noodle',
+          'egg noodle',
+          'coconut milk',
+          'fish sauce',
+        ];
+        expect(names.map((name) => [name, sectionOf(name)])).toEqual([
+          ['onion', 'Probably at home'],
+          ['lemon', 'Probably at home'],
+          ['rice', 'Probably at home'],
+          ['egg', 'Probably at home'],
+          ['milk', 'Probably at home'],
+          ['mustard', 'Probably at home'],
+          ['red onion', 'Fruit & vegetables'],
+          ['spring onion', 'Fruit & vegetables'],
+          ['lime', 'Fruit & vegetables'],
+          ['rice noodle', 'Pasta, rice & grains'],
+          ['egg noodle', 'Pasta, rice & grains'],
+          ['coconut milk', 'Cans & jars'],
+          ['fish sauce', 'Spices & sauces'],
+        ]);
+      });
+
+      it('gives "Probably at home" for each of the 29 names and its mapped section for every other mapped ingredient, while INGREDIENTS_BY_SECTION keeps the 29 in their shop sections and has no "Probably at home" key (#61 1b)', () => {
+        expect(AT_HOME.map((name) => [name, sectionOf(name)])).toEqual(
+          AT_HOME_NAMES.map((name) => [name, 'Probably at home']),
+        );
+        for (const [section, names] of Object.entries(INGREDIENTS_BY_SECTION)) {
+          const others = names.filter((name) => !AT_HOME.includes(name));
+          expect(others.map(sectionOf), section).toEqual(others.map(() => section));
+        }
+        expect(Object.keys(INGREDIENTS_BY_SECTION)).toEqual(
+          SECTIONS.filter((section) => section !== 'Probably at home' && section !== 'Other'),
+        );
+        expect(INGREDIENTS_BY_SECTION['Fruit & vegetables'], 'lemon mapped').toContain('lemon');
+        expect(INGREDIENTS_BY_SECTION['Pasta, rice & grains'], 'rice mapped').toContain('rice');
+      });
+    });
   });
 });

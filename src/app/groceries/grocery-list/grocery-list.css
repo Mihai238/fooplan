@@ -106,10 +106,18 @@ button {
   margin-top: 0.5rem;
 }
 
-.note {
-  margin: 0 0 1rem;
+.note,
+.hint {
   color: var(--muted);
   font-size: 0.875rem;
+}
+
+.note {
+  margin: 0 0 1rem;
+}
+
+.hint {
+  margin: 0 0 0.5rem;
 }
 
 .note a {

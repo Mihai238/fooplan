@@ -20,7 +20,7 @@ import { Recipe, Unit } from '../../recipes/recipe';
 import { RecipeStore } from '../../recipes/recipe-store';
 import { PLAIN_RICE, QUICK_DAL, storeOwnRecipes } from '../../recipes/testing';
 import { LANGUAGE_KEY, TABBABLE } from '../../testing';
-import { byName, bySection, GroceryItem, groceryList, itemKey } from '../groceries';
+import { byName, bySection, cartCount, GroceryItem, groceryList, itemKey } from '../groceries';
 import { Section, SECTIONS } from '../sections';
 import { RECENT_ITEMS_KEY } from '../testing';
 import { GroceryList } from './grocery-list';
@@ -98,21 +98,26 @@ describe('GroceryList', () => {
   });
 
   // jsdom has no Element.getAnimations, so Angular removes a leaving line at once, without its fade
-  it('takes a ticked line out of its section with the render and lists it in "In the cart (1)", leaving no fading line in the page', async () => {
+  it('takes a ticked line out of its section with the render and lists it in "In the cart (1)", leaving no fading line in the page (changed by #61)', async () => {
     await openAccepted(
       'Fish fingers with mashed potatoes and peas',
       'Chicken and rice with carrots and peas',
     );
-    const onion = listedIn(sectionHeaded('Fruit & vegetables')).find(
+    const onion = listedIn(sectionHeaded('Probably at home')).find(
       (item) => labelOf(item) === '1 pc onion',
     );
-    expect(onion, 'no "1 pc onion" under "Fruit & vegetables"').toBeDefined();
+    expect(onion, 'no "1 pc onion" under "Probably at home"').toBeDefined();
 
     await click(checkboxOf(onion!));
-    expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toEqual([
-      '2 pc carrot',
-      '350 g pea',
-      '600 g potato',
+    expect(labelsIn(sectionHeaded('Probably at home'))).toEqual([
+      '80 g breadcrumbs',
+      '30 g butter',
+      '1 pc egg',
+      '50 g flour',
+      '100 ml milk',
+      '1 tsp paprika',
+      '200 g rice',
+      '500 ml vegetable stock',
     ]);
     expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('In the cart (1)');
     expect(inCart().map(labelOf)).toEqual(['1 pc onion']);
@@ -480,7 +485,7 @@ describe('GroceryList', () => {
     expect(tabbable.slice(0, 2)).toEqual([field(), checkboxOf(listed()[0])]);
   });
 
-  it('lists the scaled ingredients of the own recipes "Quick Dal" and "Plain Rice" of an accepted plan for 2 under their sections, and "mystery spice" under "Other"', async () => {
+  it('lists the scaled ingredients of the own recipes "Quick Dal" and "Plain Rice" of an accepted plan for 2 under their sections, onion and rice under "Probably at home", and "mystery spice" under "Other" (changed by #61)', async () => {
     storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
     const saved = planOf([day('2026-10-24', picked('Quick Dal'), picked('Plain Rice'))], {
       accepted: true,
@@ -496,23 +501,22 @@ describe('GroceryList', () => {
     expect(
       sections().map((section) => [textOf(section.querySelector('h2')), labelsIn(section)]),
     ).toEqual([
-      ['Fruit & vegetables', ['1 pc onion']],
-      ['Pasta, rice & grains', ['150 g rice']],
+      ['Probably at home', ['1 pc onion', '150 g rice']],
       ['Cans & jars', ['100 g canned chickpeas']],
       ['Other', ['1 pc mystery spice']],
     ]);
   });
 
-  it('lists "350 g bread" under "Bread & bakery", "4 pc tomato" and "1 pc avocado" under "Fruit & vegetables", "250 g mozzarella" and "2 pc egg" under "Dairy & eggs", and no olive oil, for "Caprese salad with bread" and "Avocado toast with fried egg" accepted for 2', async () => {
+  it('lists "350 g bread" under "Bread & bakery", "4 pc tomato" and "1 pc avocado" under "Fruit & vegetables", "250 g mozzarella" under "Dairy & eggs", "1 tsp chili flakes", "2 pc egg" and "1 pc lemon" under "Probably at home", and no olive oil, for "Caprese salad with bread" and "Avocado toast with fried egg" accepted for 2 (changed by #61)', async () => {
     await openAccepted('Caprese salad with bread', 'Avocado toast with fried egg');
 
     expect(
       sections().map((section) => [textOf(section.querySelector('h2')), labelsIn(section)]),
     ).toEqual([
-      ['Fruit & vegetables', ['1 pc avocado', '15 g basil', '1 pc lemon', '4 pc tomato']],
-      ['Dairy & eggs', ['2 pc egg', '250 g mozzarella']],
+      ['Probably at home', ['1 tsp chili flakes', '2 pc egg', '1 pc lemon']],
+      ['Fruit & vegetables', ['1 pc avocado', '15 g basil', '4 pc tomato']],
+      ['Dairy & eggs', ['250 g mozzarella']],
       ['Bread & bakery', ['350 g bread']],
-      ['Spices & sauces', ['1 tsp chili flakes']],
     ]);
     expect(
       listed()
@@ -521,7 +525,7 @@ describe('GroceryList', () => {
     ).toEqual([]);
   });
 
-  it('lists "200 g hummus" and "400 g canned white beans" under "Cans & jars", "2 pc lemon" under "Fruit & vegetables", "400 g bread" under "Bread & bakery", and no olive oil, for "Hummus plate with bread and vegetables" and "Tuna and white bean salad with bread" accepted for 2', async () => {
+  it('lists "200 g hummus" and "400 g canned white beans" under "Cans & jars", "2 pc lemon" under "Probably at home", "400 g bread" under "Bread & bakery", and no olive oil, for "Hummus plate with bread and vegetables" and "Tuna and white bean salad with bread" accepted for 2 (changed by #61)', async () => {
     await openAccepted(
       'Hummus plate with bread and vegetables',
       'Tuna and white bean salad with bread',
@@ -530,20 +534,13 @@ describe('GroceryList', () => {
     expect(
       sections().map((section) => [textOf(section.querySelector('h2')), labelsIn(section)]),
     ).toEqual([
+      ['Probably at home', ['2 pc lemon', '1 tsp paprika']],
       [
         'Fruit & vegetables',
-        [
-          '2 pc carrot',
-          '150 g cherry tomato',
-          '1 pc cucumber',
-          '2 pc lemon',
-          '10 g parsley',
-          '1 pc red onion',
-        ],
+        ['2 pc carrot', '150 g cherry tomato', '1 pc cucumber', '10 g parsley', '1 pc red onion'],
       ],
       ['Bread & bakery', ['400 g bread']],
       ['Cans & jars', ['150 g canned tuna', '400 g canned white beans', '200 g hummus']],
-      ['Spices & sauces', ['1 tsp paprika']],
     ]);
     expect(
       listed()
@@ -552,7 +549,7 @@ describe('GroceryList', () => {
     ).toEqual([]);
   });
 
-  it('lists "350 g pea", "600 g potato" and "2 pc carrot" under "Fruit & vegetables", "1 pc egg" under "Dairy & eggs", "400 g cod" and "400 g chicken thigh" under "Meat & fish", and no vegetable oil, for "Fish fingers with mashed potatoes and peas" and "Chicken and rice with carrots and peas" accepted for 2', async () => {
+  it('lists "350 g pea", "600 g potato" and "2 pc carrot" under "Fruit & vegetables", "1 pc egg" under "Probably at home", "400 g cod" and "400 g chicken thigh" under "Meat & fish", and no vegetable oil, for "Fish fingers with mashed potatoes and peas" and "Chicken and rice with carrots and peas" accepted for 2 (changed by #61)', async () => {
     await openAccepted(
       'Fish fingers with mashed potatoes and peas',
       'Chicken and rice with carrots and peas',
@@ -561,13 +558,22 @@ describe('GroceryList', () => {
     expect(
       sections().map((section) => [textOf(section.querySelector('h2')), labelsIn(section)]),
     ).toEqual([
-      ['Fruit & vegetables', ['2 pc carrot', '1 pc onion', '350 g pea', '600 g potato']],
+      [
+        'Probably at home',
+        [
+          '80 g breadcrumbs',
+          '30 g butter',
+          '1 pc egg',
+          '50 g flour',
+          '100 ml milk',
+          '1 pc onion',
+          '1 tsp paprika',
+          '200 g rice',
+          '500 ml vegetable stock',
+        ],
+      ],
+      ['Fruit & vegetables', ['2 pc carrot', '350 g pea', '600 g potato']],
       ['Meat & fish', ['400 g chicken thigh', '400 g cod']],
-      ['Dairy & eggs', ['30 g butter', '1 pc egg', '100 ml milk']],
-      ['Bread & bakery', ['80 g breadcrumbs']],
-      ['Pasta, rice & grains', ['50 g flour', '200 g rice']],
-      ['Cans & jars', ['500 ml vegetable stock']],
-      ['Spices & sauces', ['1 tsp paprika']],
     ]);
     expect(
       listed()
@@ -617,9 +623,9 @@ describe('GroceryList', () => {
   // jsdom has no Element.getAnimations, so Angular removes a leaving line at once; marking a line
   // that stays on the list with the class Angular gives a leaving one stands for its fade
   describe('focus past lines that are still fading', () => {
-    // "Fruit & vegetables": 2 pc carrot, 1 pc onion, 350 g pea, 600 g potato; "Bread & bakery": 80 g
-    // breadcrumbs; "Pasta, rice & grains": 50 g flour, 200 g rice; "Cans & jars": 500 ml vegetable
-    // stock
+    // "Probably at home": 80 g breadcrumbs, 30 g butter, 1 pc egg, 50 g flour, 100 ml milk, 1 pc
+    // onion, 1 tsp paprika, 200 g rice, 500 ml vegetable stock; "Fruit & vegetables": 2 pc carrot,
+    // 350 g pea, 600 g potato; "Meat & fish": 400 g chicken thigh, 400 g cod
     beforeEach(async () => {
       await openAccepted(
         'Fish fingers with mashed potatoes and peas',
@@ -627,18 +633,22 @@ describe('GroceryList', () => {
       );
     });
 
-    it('moves the focus past a fading line to the next line after ticking a line by keyboard', async () => {
+    it('moves the focus past a fading line to the next line after ticking a line by keyboard (changed by #61)', async () => {
       fade(line('350 g pea'));
 
-      await press(checkboxOf(line('1 pc onion')));
+      await press(checkboxOf(line('2 pc carrot')));
       expect(document.activeElement).toBe(checkboxOf(line('600 g potato')));
     });
 
-    it('moves the focus past a section whose lines are all fading to the first line of the section after it', async () => {
-      listedIn(sectionHeaded('Pasta, rice & grains')).forEach(fade);
+    it('moves the focus past a section whose lines are all fading to the first line of the section after it (changed by #61)', async () => {
+      const [remaining, ...others] = labelsIn(sectionHeaded('Probably at home')).reverse();
+      for (const label of others) {
+        await tick(label);
+      }
+      listedIn(sectionHeaded('Fruit & vegetables')).forEach(fade);
 
-      await press(checkboxOf(line('80 g breadcrumbs')));
-      expect(document.activeElement).toBe(checkboxOf(line('500 ml vegetable stock')));
+      await press(checkboxOf(line(remaining)));
+      expect(document.activeElement).toBe(checkboxOf(line('400 g chicken thigh')));
     });
 
     it("moves the focus to the line's checkbox back in its section, not to the cart, after unticking the cart's last line not fading by keyboard", async () => {
@@ -729,13 +739,13 @@ describe('GroceryList', () => {
       expect(document.activeElement).toBe(field());
     });
 
-    it('quotes the entry without its surrounding spaces and names the section the line is listed under', async () => {
+    it('quotes the entry without its surrounding spaces and names the section the line is listed under (changed by #61)', async () => {
       acceptOneDayPlan(store);
       await open();
 
       await add('  Lemon  ');
-      expect(statusText()).toBe('Added "Lemon" to Fruit & vegetables.');
-      expect(labelsIn(sectionHeaded('Fruit & vegetables')), 'item not listed').toContain('Lemon');
+      expect(statusText()).toBe('Added "Lemon" to Probably at home.');
+      expect(labelsIn(sectionHeaded('Probably at home')), 'item not listed').toContain('Lemon');
 
       await add('olive oil');
       expect(statusText()).toBe('Added "olive oil" to Other.');
@@ -949,8 +959,9 @@ describe('GroceryList', () => {
   });
 
   describe('"Undo" bar after a tick', () => {
-    // For 2 people: 1 pc bell pepper, 1 pc onion and 2 pc spring onion under "Fruit & vegetables",
-    // and 30 ml soy sauce halved to 15 ml, which reads "1 tbsp"
+    // For 2 people: 1 pc onion, and 30 ml soy sauce halved to 15 ml, which reads "1 tbsp", under
+    // "Probably at home" with Plain Rice's 150 g rice, and 1 pc bell pepper and 2 pc spring onion
+    // under "Fruit & vegetables"
     const ONION_STIR_FRY: Recipe = {
       name: 'Onion Stir-Fry',
       servings: 4,
@@ -973,7 +984,7 @@ describe('GroceryList', () => {
       vi.useRealTimers();
     });
 
-    it('shows the bar as the last child with "1 pc onion" is in the cart. and an "Undo" button after the text after a click on the line\'s checkbox, leaving the status text and the focus alone', async () => {
+    it('shows the bar as the last child with "1 pc onion" is at home. and an "Undo" button after the text after a click on the line\'s checkbox, leaving the status text and the focus alone (changed by #61)', async () => {
       await openStirFryPlan();
 
       await tick(ONION);
@@ -981,7 +992,7 @@ describe('GroceryList', () => {
       expect(inCart().map(labelOf)).toEqual([ONION]);
       const shown = shownBar();
       expect(element.lastElementChild, 'last child').toBe(shown);
-      expect(barText()).toBe('"1 pc onion" is in the cart.');
+      expect(barText()).toBe('"1 pc onion" is at home.');
       expect(Array.from(shown.children).map((child) => child.tagName)).toEqual(['SPAN', 'BUTTON']);
       const button = undoButton();
       expect(button.type).toBe('button');
@@ -1036,13 +1047,13 @@ describe('GroceryList', () => {
       expect(focusable.at(-2)).toBe(checkboxOf(inCart().at(-1)!));
     });
 
-    it('shows no bar after unticking a line in the cart', async () => {
+    it('shows no bar after unticking a line in the cart (changed by #61)', async () => {
       await openStirFryPlan({ ticked: [itemKey({ name: 'onion', unit: 'pc' })] });
       expect(inCart().map(labelOf), 'line not ticked').toEqual([ONION]);
 
       cart()!.open = true;
       await click(checkboxOf(inCart()[0]));
-      expect(labelsIn(sectionHeaded('Fruit & vegetables')), 'line not unticked').toContain(ONION);
+      expect(labelsIn(sectionHeaded('Probably at home')), 'line not unticked').toContain(ONION);
       expect(bar()).toBeNull();
     });
 
@@ -1066,13 +1077,13 @@ describe('GroceryList', () => {
       expect(bar()).toBeNull();
     });
 
-    it('says "toilet paper" is in the cart. for a ticked added item, and "1 tbsp soy sauce" is in the cart. for a 15 ml plan line, with the amount as shown', async () => {
+    it('says "toilet paper" is in the cart. for a ticked added item, and "1 tbsp soy sauce" is at home. for a 15 ml plan line, with the amount as shown (changed by #61)', async () => {
       await openStirFryPlan({ added: ['toilet paper'] });
 
       await tick('toilet paper');
       expect(barText()).toBe('"toilet paper" is in the cart.');
       await tick('1 tbsp soy sauce');
-      expect(barText()).toBe('"1 tbsp soy sauce" is in the cart.');
+      expect(barText()).toBe('"1 tbsp soy sauce" is at home.');
     });
 
     it('quotes an added item of 60 letters whole', async () => {
@@ -1083,13 +1094,13 @@ describe('GroceryList', () => {
       expect(barText()).toBe(`"${name}" is in the cart.`);
     });
 
-    it('says "onion" is in the cart. for an added item "onion" ticked next to the plan line "1 pc onion"', async () => {
+    it('says "onion" is at home. for an added item "onion" ticked next to the plan line "1 pc onion" under "Probably at home" (changed by #61)', async () => {
       await openStirFryPlan({ added: ['onion'] });
-      expect(labelsIn(sectionHeaded('Fruit & vegetables')), 'item not listed').toContain('onion');
+      expect(labelsIn(sectionHeaded('Probably at home')), 'item not listed').toContain('onion');
 
       await tick('onion');
-      expect(barText()).toBe('"onion" is in the cart.');
-      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain(ONION);
+      expect(barText()).toBe('"onion" is at home.');
+      expect(labelsIn(sectionHeaded('Probably at home'))).toContain(ONION);
     });
 
     it('quotes an added item with its case and inner spaces as typed', async () => {
@@ -1112,7 +1123,7 @@ describe('GroceryList', () => {
       expect(inCart().map(labelOf)).toEqual([ONION]);
     });
 
-    it('shows the bar again for 5 seconds after a tick following one whose bar went away', async () => {
+    it('shows the bar again for 5 seconds after a tick following one whose bar went away (changed by #61)', async () => {
       await openStirFryPlan();
       await tick(RICE);
       shownBar();
@@ -1121,21 +1132,21 @@ describe('GroceryList', () => {
 
       await wait(2000);
       await tick(ONION);
-      expect(barText()).toBe('"1 pc onion" is in the cart.');
+      expect(barText()).toBe('"1 pc onion" is at home.');
       await wait(4999);
       expect(bar(), 'gone at 4999 ms').not.toBeNull();
       await wait(1);
       expect(bar(), 'shown at 5000 ms').toBeNull();
     });
 
-    it("replaces the text with the latest tick's line and counts the 5 seconds from it", async () => {
+    it("replaces the text with the latest tick's line and counts the 5 seconds from it (changed by #61)", async () => {
       await openStirFryPlan();
       await tick(ONION);
       shownBar();
 
       await wait(3000);
       await tick(RICE);
-      expect(barText()).toBe('"150 g rice" is in the cart.');
+      expect(barText()).toBe('"150 g rice" is at home.');
       await wait(4999);
       expect(bar(), 'gone 4999 ms after the latest tick').not.toBeNull();
       await wait(1);
@@ -1143,16 +1154,16 @@ describe('GroceryList', () => {
       expect(inCart().map(labelOf)).toEqual([ONION, RICE]);
     });
 
-    it('undoes only the latest tick after two ticks in a row', async () => {
+    it('undoes only the latest tick after two ticks in a row (changed by #61)', async () => {
       await openStirFryPlan();
       await tick(ONION);
       await wait(1000);
       await tick(RICE);
-      expect(barText(), 'bar of the latest tick').toBe('"150 g rice" is in the cart.');
+      expect(barText(), 'bar of the latest tick').toBe('"150 g rice" is at home.');
 
       await click(undoButton());
       expect(inCart().map(labelOf)).toEqual([ONION]);
-      expect(labelsIn(sectionHeaded('Pasta, rice & grains'))).toEqual([RICE]);
+      expect(labelsIn(sectionHeaded('Probably at home'))).toEqual([RICE, '1 tbsp soy sauce']);
       expect(bar()).toBeNull();
     });
 
@@ -1240,18 +1251,14 @@ describe('GroceryList', () => {
       expect(bar(), 'shown after pointerleave').toBeNull();
     });
 
-    it('moves the line back to its sorted place in its section with a click on "Undo", leaving the earlier tick in the cart, the status text and the focus alone', async () => {
+    it('moves the line back to its sorted place in its section with a click on "Undo", leaving the earlier tick in the cart, the status text and the focus alone (changed by #61)', async () => {
       await openStirFryPlan();
       await tick(RICE);
       await tick(ONION);
-      expect(barText(), 'bar of the latest tick').toBe('"1 pc onion" is in the cart.');
+      expect(barText(), 'bar of the latest tick').toBe('"1 pc onion" is at home.');
 
       await click(undoButton());
-      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toEqual([
-        '1 pc bell pepper',
-        ONION,
-        '2 pc spring onion',
-      ]);
+      expect(labelsIn(sectionHeaded('Probably at home'))).toEqual([ONION, '1 tbsp soy sauce']);
       expect(checkboxOf(line(ONION)).checked).toBe(false);
       expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('In the cart (1)');
       expect(inCart().map(labelOf)).toEqual([RICE]);
@@ -1281,7 +1288,7 @@ describe('GroceryList', () => {
       expect(store.plan().ticked).toEqual([]);
     });
 
-    it('keeps the bar while a press on it is in progress past 5 seconds, so a tap on "Undo" at the 5 s mark unticks the line', async () => {
+    it('keeps the bar while a press on it is in progress past 5 seconds, so a tap on "Undo" at the 5 s mark unticks the line (changed by #61)', async () => {
       await openStirFryPlan();
       await tick(ONION);
       await wait(4000);
@@ -1292,7 +1299,7 @@ describe('GroceryList', () => {
       await pointer('pointerleave');
 
       await click(undoButton());
-      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain(ONION);
+      expect(labelsIn(sectionHeaded('Probably at home'))).toContain(ONION);
       expect(store.plan().ticked).toEqual([]);
       expect(bar()).toBeNull();
     });
@@ -1364,7 +1371,7 @@ describe('GroceryList', () => {
       expect(bar(), 'shown after the press ended outside').toBeNull();
     });
 
-    it('never ticks the line again with "Undo" after it was unticked elsewhere', async () => {
+    it('never ticks the line again with "Undo" after it was unticked elsewhere (changed by #61)', async () => {
       const key = itemKey({ name: 'onion', unit: 'pc' });
       await openStirFryPlan();
       await tick(ONION);
@@ -1377,17 +1384,17 @@ describe('GroceryList', () => {
         await click(undoButton());
       }
       expect(store.plan().ticked).toEqual([]);
-      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain(ONION);
+      expect(labelsIn(sectionHeaded('Probably at home'))).toContain(ONION);
       expect(bar()).toBeNull();
     });
 
-    it('removes the cart box when "Undo" unticks the only ticked line', async () => {
+    it('removes the cart box when "Undo" unticks the only ticked line (changed by #61)', async () => {
       await openStirFryPlan();
       await tick(ONION);
 
       await click(undoButton());
       expect(cart()).toBeNull();
-      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toContain(ONION);
+      expect(labelsIn(sectionHeaded('Probably at home'))).toContain(ONION);
       expect(bar()).toBeNull();
       expect(vi.getTimerCount(), 'pending timers').toBe(0);
     });
@@ -1426,13 +1433,13 @@ describe('GroceryList', () => {
       expect(bar()).toBeNull();
     });
 
-    it('removes the bar when its line is unticked in the cart, and when its added item is removed with "Remove"', async () => {
+    it('removes the bar when its line is unticked in the cart, and when its added item is removed with "Remove" (changed by #61)', async () => {
       await openStirFryPlan({ added: ['toilet paper'] });
       await tick(ONION);
       shownBar();
       cart()!.open = true;
       await click(checkboxOf(cartLine(ONION)));
-      expect(labelsIn(sectionHeaded('Fruit & vegetables')), 'line not unticked').toContain(ONION);
+      expect(labelsIn(sectionHeaded('Probably at home')), 'line not unticked').toContain(ONION);
       expect(bar(), 'after unticking').toBeNull();
 
       await tick('toilet paper');
@@ -1454,9 +1461,10 @@ describe('GroceryList', () => {
       expect(document.activeElement).toBe(checkboxOf(line('2 pc spring onion')));
     });
 
-    it('moves the focus to the cart after a keyboard tick of the last line while the bar shows, not to the bar', async () => {
+    it('moves the focus to the cart after a keyboard tick of the last line while the bar shows, not to the bar (changed by #61)', async () => {
       await openStirFryPlan();
       const [remaining, ...others] = listed().map(labelOf);
+      expect(remaining, 'first line').toBe(ONION);
       for (const label of others) {
         await tick(label);
       }
@@ -1464,7 +1472,7 @@ describe('GroceryList', () => {
 
       await press(checkboxOf(line(remaining)));
       expect(listed()).toEqual([]);
-      expect(barText(), 'bar of the keyboard tick').toBe(`"${remaining}" is in the cart.`);
+      expect(barText(), 'bar of the keyboard tick').toBe('"1 pc onion" is at home.');
       expect(document.activeElement).toBe(cart()?.querySelector('summary'));
     });
 
@@ -1481,22 +1489,22 @@ describe('GroceryList', () => {
       expect(inCart().map(labelOf)).toEqual([ONION]);
     });
 
-    it('shows no bar after a reload and keeps its text neither in the plan nor in the storage', async () => {
+    it('shows no bar after a reload and keeps its text neither in the plan nor in the storage (changed by #61)', async () => {
       await openStirFryPlan();
       await tick(ONION);
       shownBar();
 
-      expect(JSON.stringify(store.plan()), 'plan').not.toContain('is in the cart');
+      expect(JSON.stringify(store.plan()), 'plan').not.toContain('is at home');
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)!;
-        expect(localStorage.getItem(key), `storage "${key}"`).not.toContain('is in the cart');
+        expect(localStorage.getItem(key), `storage "${key}"`).not.toContain('is at home');
       }
       await reload();
       expect(bar()).toBeNull();
       expect(inCart().map(labelOf)).toEqual([ONION]);
     });
 
-    it('keeps the bar and its text when another line is unticked in the cart', async () => {
+    it('keeps the bar and its text when another line is unticked in the cart (changed by #61)', async () => {
       await openStirFryPlan();
       await tick(RICE);
       await tick(ONION);
@@ -1505,7 +1513,7 @@ describe('GroceryList', () => {
       cart()!.open = true;
       await click(checkboxOf(cartLine(RICE)));
       expect(inCart().map(labelOf), 'line not unticked').toEqual([ONION]);
-      expect(barText()).toBe('"1 pc onion" is in the cart.');
+      expect(barText()).toBe('"1 pc onion" is at home.');
     });
 
     it('keeps the bar when another added item is removed from the cart', async () => {
@@ -1535,7 +1543,7 @@ describe('GroceryList', () => {
       expect(bar(), 'shown at 5000 ms').toBeNull();
     });
 
-    it('says „1 Stk. Zwiebel“ ist im Wagen. with a "Rückgängig" button in German, and „1 EL Sojasauce“ ist im Wagen. for the 15 ml soy sauce, which "Rückgängig" moves back', async () => {
+    it('says „1 Stk. Zwiebel“ ist zu Hause. with a "Rückgängig" button in German, and „1 EL Sojasauce“ ist zu Hause. for the 15 ml soy sauce, which "Rückgängig" moves back (changed by #61)', async () => {
       storeOwnRecipes(ONION_STIR_FRY, PLAIN_RICE);
       localStorage.setItem(LANGUAGE_KEY, 'de');
       localStorage.setItem(
@@ -1549,10 +1557,10 @@ describe('GroceryList', () => {
       await reload();
 
       await tick('1 Stk. Zwiebel');
-      expect(barText()).toBe('„1 Stk. Zwiebel“ ist im Wagen.');
+      expect(barText()).toBe('„1 Stk. Zwiebel“ ist zu Hause.');
       expect(buttonsIn(shownBar()).map(textOf)).toEqual(['Rückgängig']);
       await tick('1 EL Sojasauce');
-      expect(barText()).toBe('„1 EL Sojasauce“ ist im Wagen.');
+      expect(barText()).toBe('„1 EL Sojasauce“ ist zu Hause.');
       await click(buttonsIn(shownBar())[0]);
       expect(bar()).toBeNull();
       expect(listed().map(labelOf)).toContain('1 EL Sojasauce');
@@ -1612,25 +1620,10 @@ describe('GroceryList', () => {
       expect(button, 'no "Undo" button').toBeDefined();
       return button!;
     }
-
-    // Trimmed only, like statusText: the inner spaces of an added item are part of the text
-    function barText(): string {
-      return (shownBar().querySelector('span')?.textContent ?? '').trim();
-    }
-
-    function shownBar(): HTMLElement {
-      const found = bar();
-      expect(found, 'no "Undo" bar').not.toBeNull();
-      return found!;
-    }
-
-    function bar(): HTMLElement | null {
-      return element.querySelector('div.undo-bar');
-    }
   });
 
   describe('in German (#35)', () => {
-    it('heads the list "Einkaufsliste" with the field "Eintrag hinzufügen" and no button "Hinzufügen", names the sections in German, as "Obst & Gemüse" for onion, shows "1 Stk. Zwiebel", says „Klopapier“ zu Sonstiges hinzugefügt. after adding "Klopapier" and heads the cart "Im Wagen (1)" after a tick (changed by #52)', async () => {
+    it('heads the list "Einkaufsliste" with the field "Eintrag hinzufügen" and no button "Hinzufügen", names the sections in German, as "Wahrscheinlich zu Hause" for onion and rice, shows "1 Stk. Zwiebel", says „Klopapier“ zu Sonstiges hinzugefügt. after adding "Klopapier" and heads the cart "Im Wagen (1)" after a tick (changed by #52 and #61)', async () => {
       storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
       localStorage.setItem(LANGUAGE_KEY, 'de');
       await openAccepted('Quick Dal', 'Plain Rice');
@@ -1640,13 +1633,14 @@ describe('GroceryList', () => {
       expect(buttonsIn(element.querySelector('form')).map(textOf)).toEqual([]);
       expect(buttonsIn(element).map(textOf)).not.toContain('Hinzufügen');
       expect(sections().map((section) => textOf(section.querySelector('h2')))).toEqual([
-        'Obst & Gemüse',
-        'Nudeln, Reis & Getreide',
+        'Wahrscheinlich zu Hause',
         'Konserven & Gläser',
         'Sonstiges',
       ]);
-      expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual(['1 Stk. Zwiebel']);
-      expect(labelsIn(sectionHeaded('Nudeln, Reis & Getreide'))).toEqual(['150 g Reis']);
+      expect(labelsIn(sectionHeaded('Wahrscheinlich zu Hause'))).toEqual([
+        '150 g Reis',
+        '1 Stk. Zwiebel',
+      ]);
       expect(labelsIn(sectionHeaded('Sonstiges'))).toEqual(['1 Stk. mystery spice']);
 
       await add('Klopapier');
@@ -1723,19 +1717,20 @@ describe('GroceryList', () => {
     const POMODORO_LINES = [
       '10 g Basilikum',
       '1 Stk. Gurke',
-      '2 Stk. Knoblauchzehe',
       '1 Stk. Paprikaschote',
       '1 Stk. rote Zwiebel',
       '3 Stk. Tomate',
     ];
+    const POMODORO_AT_HOME = ['2 Stk. Knoblauchzehe', '1 TL Oregano'];
 
     beforeEach(() => {
       localStorage.setItem(LANGUAGE_KEY, 'de');
     });
 
-    it('lists "400 g Dosentomaten" under "Konserven & Gläser" and "2 Stk. Knoblauchzehe", "1 Stk. rote Zwiebel" and "3 Stk. Tomate" under "Obst & Gemüse", sorted by the German names, for "Spaghetti pomodoro" and "Greek salad with feta and bread" accepted for 2, and stores the tick of "2 Stk. Knoblauchzehe" under the English name', async () => {
+    it('lists "400 g Dosentomaten" under "Konserven & Gläser", "2 Stk. Knoblauchzehe" under "Wahrscheinlich zu Hause" and "1 Stk. rote Zwiebel" and "3 Stk. Tomate" under "Obst & Gemüse", sorted by the German names, for "Spaghetti pomodoro" and "Greek salad with feta and bread" accepted for 2, and stores the tick of "2 Stk. Knoblauchzehe" under the English name (changed by #61)', async () => {
       await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
       expect(labelsIn(sectionHeaded('Konserven & Gläser'))).toContain('400 g Dosentomaten');
+      expect(labelsIn(sectionHeaded('Wahrscheinlich zu Hause'))).toEqual(POMODORO_AT_HOME);
       expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual(POMODORO_LINES);
 
       await click(checkboxOf(lineLabelled('2 Stk. Knoblauchzehe')));
@@ -1744,31 +1739,28 @@ describe('GroceryList', () => {
     });
 
     describe('edge cases', () => {
-      it('sorts "Römersalat" with the o, before "Rotkohl" and "Zitrone", in German for "Chicken Caesar salad" and "Fish tacos"', async () => {
+      it('sorts "Römersalat" with the o, before "Rotkohl", in German for "Chicken Caesar salad" and "Fish tacos" (changed by #61)', async () => {
         await openAccepted('Chicken Caesar salad', 'Fish tacos');
         expect(namesIn(sectionHeaded('Obst & Gemüse'))).toEqual([
           'Avocado',
-          'Knoblauchzehe',
           'Koriander',
           'Limette',
           'Römersalat',
           'Rotkohl',
-          'Zitrone',
         ]);
       });
 
-      it('shows an added "garlic clove" as typed, sorted by that text among the German lines of "Obst & Gemüse", and quotes it as typed', async () => {
+      it('shows an added "garlic clove" as typed, sorted by that text among the German lines of "Wahrscheinlich zu Hause", and quotes it as typed (changed by #61)', async () => {
         await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
         await add('garlic clove');
-        expect(statusText()).toBe('„garlic clove“ zu Obst & Gemüse hinzugefügt.');
-        expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual([
-          '10 g Basilikum',
+        expect(statusText()).toBe('„garlic clove“ zu Wahrscheinlich zu Hause hinzugefügt.');
+        expect(labelsIn(sectionHeaded('Wahrscheinlich zu Hause'))).toEqual([
           'garlic clove',
-          ...POMODORO_LINES.slice(1),
+          ...POMODORO_AT_HOME,
         ]);
       });
 
-      it('keeps "2 Stk. Knoblauchzehe", ticked in German, in the cart as "2 pc garlic clove" in English', async () => {
+      it('keeps "2 Stk. Knoblauchzehe", ticked in German, in the cart as "2 pc garlic clove" in English (changed by #61)', async () => {
         await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
         await click(checkboxOf(lineLabelled('2 Stk. Knoblauchzehe')));
 
@@ -1778,7 +1770,7 @@ describe('GroceryList', () => {
         store = await loadStores();
         await open();
         expect(inCart().map(labelOf)).toEqual(['2 pc garlic clove']);
-        expect(labelsIn(sectionHeaded('Fruit & vegetables'))).not.toContain('2 pc garlic clove');
+        expect(labelsIn(sectionHeaded('Probably at home'))).not.toContain('2 pc garlic clove');
       });
     });
 
@@ -1795,38 +1787,37 @@ describe('GroceryList', () => {
   });
 
   describe('German ingredient names (#37)', () => {
-    it('lists "Zitrone" under "Obst & Gemüse" as typed and says „Zitrone“ zu Obst & Gemüse hinzugefügt., lists "  käse  " under "Sonstiges" as "käse" and "lemon" under "Obst & Gemüse" in German, and lists "Zitrone" under "Other" saying Added "Zitrone" to Other. in English', async () => {
+    it('lists "Zitrone" under "Wahrscheinlich zu Hause" as typed and says „Zitrone“ zu Wahrscheinlich zu Hause hinzugefügt., lists "  käse  " under "Sonstiges" as "käse" and "lemon" under "Wahrscheinlich zu Hause" in German, and lists "Zitrone" under "Other" saying Added "Zitrone" to Other. in English (changed by #61)', async () => {
       localStorage.setItem(LANGUAGE_KEY, 'de');
       await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
       await add('Zitrone');
-      expect(statusText()).toBe('„Zitrone“ zu Obst & Gemüse hinzugefügt.');
-      expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toContain('Zitrone');
+      expect(statusText()).toBe('„Zitrone“ zu Wahrscheinlich zu Hause hinzugefügt.');
+      expect(labelsIn(sectionHeaded('Wahrscheinlich zu Hause'))).toContain('Zitrone');
       await add('  käse  ');
       expect(statusText()).toBe('„käse“ zu Sonstiges hinzugefügt.');
       expect(labelsIn(sectionHeaded('Sonstiges'))).toContain('käse');
       await add('lemon');
-      expect(statusText()).toBe('„lemon“ zu Obst & Gemüse hinzugefügt.');
-      expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toContain('lemon');
+      expect(statusText()).toBe('„lemon“ zu Wahrscheinlich zu Hause hinzugefügt.');
+      expect(labelsIn(sectionHeaded('Wahrscheinlich zu Hause'))).toContain('lemon');
 
       localStorage.setItem(LANGUAGE_KEY, 'en');
       await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
       await add('Zitrone');
       expect(statusText()).toBe('Added "Zitrone" to Other.');
       expect(labelsIn(sectionHeaded('Other'))).toContain('Zitrone');
-      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).not.toContain('Zitrone');
+      expect(labelsIn(sectionHeaded('Probably at home'))).not.toContain('Zitrone');
     });
 
     describe('edge cases', () => {
-      it('lists "ZITRONE" and "rote zwiebel" under "Obst & Gemüse" as typed in German, quoting them as typed, and not under "Sonstiges"', async () => {
+      it('lists "ZITRONE" under "Wahrscheinlich zu Hause" and "rote zwiebel" under "Obst & Gemüse" as typed in German, quoting them as typed, and not under "Sonstiges" (changed by #61)', async () => {
         localStorage.setItem(LANGUAGE_KEY, 'de');
         await openAccepted('Spaghetti pomodoro', 'Greek salad with feta and bread');
         await add('ZITRONE');
-        expect(statusText()).toBe('„ZITRONE“ zu Obst & Gemüse hinzugefügt.');
+        expect(statusText()).toBe('„ZITRONE“ zu Wahrscheinlich zu Hause hinzugefügt.');
         await add('rote zwiebel');
         expect(statusText()).toBe('„rote zwiebel“ zu Obst & Gemüse hinzugefügt.');
-        expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toEqual(
-          expect.arrayContaining(['ZITRONE', 'rote zwiebel']),
-        );
+        expect(labelsIn(sectionHeaded('Wahrscheinlich zu Hause'))).toContain('ZITRONE');
+        expect(labelsIn(sectionHeaded('Obst & Gemüse'))).toContain('rote zwiebel');
         expect(element.textContent).not.toContain('Sonstiges');
       });
     });
@@ -2473,7 +2464,7 @@ describe('GroceryList', () => {
       expect(statusText()).toBe('Added "coffee" to Other.');
     });
 
-    it('lists the plan\'s "2 pc lemon" and then the added "lemon" as separate lines under "Fruit & vegetables" once the plan is accepted (#52 7)', async () => {
+    it('lists the plan\'s "2 pc lemon" and then the added "lemon" as separate lines under "Probably at home" once the plan is accepted (#52 7, changed by #61)', async () => {
       const saved = planOf([
         day(
           '2026-10-24',
@@ -2489,7 +2480,7 @@ describe('GroceryList', () => {
       store.accept();
       await stable();
       expect(store.plan().accepted, 'plan not accepted').toBe(true);
-      const labels = labelsIn(sectionHeaded('Fruit & vegetables'));
+      const labels = labelsIn(sectionHeaded('Probably at home'));
       expect(labels.filter((label) => label.includes('lemon'))).toEqual(['2 pc lemon', 'lemon']);
       expect(labels.indexOf('lemon')).toBe(labels.indexOf('2 pc lemon') + 1);
     });
@@ -2549,6 +2540,265 @@ describe('GroceryList', () => {
       await stable();
       expect(element.querySelector('div.undo-bar'), 'bar of the plan before').toBeNull();
     });
+  });
+
+  describe('"Probably at home" (#61)', () => {
+    // For 2 people; "Meat & fish", "Bread & bakery" and "Cans & jars" follow
+    const AT_HOME_LINES = [
+      '2 tsp curry powder',
+      '2 pc garlic clove',
+      '1 pc lemon',
+      '1 pc onion',
+      '1 tsp paprika',
+      '150 g rice',
+    ];
+    const VEGETABLES = ['2 pc carrot', '150 g cherry tomato', '1 pc cucumber', '10 g ginger'];
+    const HINT = 'Tick what you already have.';
+
+    it('shows "Probably at home" as the first section, its h2, then p.hint "Tick what you already have.", then its six lines, and no p.hint in another section, "Fruit & vegetables" without lemon, onion or garlic clove and no "Pasta, rice & grains" for "Hummus plate with bread and vegetables" and "Chicken curry with rice" accepted for 2; and no "Probably at home" for "Pesto pasta with cherry tomatoes" and "Caprese salad with bread", none of whose lines is one of the 29 (#61 3)', async () => {
+      await openHummusAndCurry();
+      expect(sections().map(headingOf)).toEqual([
+        'Probably at home',
+        'Fruit & vegetables',
+        'Meat & fish',
+        'Bread & bakery',
+        'Cans & jars',
+      ]);
+      const [atHome, ...others] = sections();
+      expect(Array.from(atHome.children).map((child) => child.tagName)).toEqual(['H2', 'P', 'UL']);
+      const hint = atHome.querySelector('h2')?.nextElementSibling ?? null;
+      expect(hint?.matches('p.hint'), 'p.hint right after the h2').toBe(true);
+      expect(textOf(hint)).toBe(HINT);
+      expect(hint?.nextElementSibling?.matches('ul.items'), 'the lines right after p.hint').toBe(
+        true,
+      );
+      expect(labelsIn(atHome)).toEqual(AT_HOME_LINES);
+      for (const section of others) {
+        expect(section.querySelector('p.hint'), headingOf(section)).toBeNull();
+      }
+      expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toEqual(VEGETABLES);
+
+      await openAccepted('Pesto pasta with cherry tomatoes', 'Caprese salad with bread');
+      expect(sections().length, 'sections shown').toBeGreaterThan(0);
+      expect(sections().map(headingOf)).not.toContain('Probably at home');
+      expect(element.querySelector('p.hint')).toBeNull();
+    });
+
+    it('moves the ticked "1 pc lemon" out of the group into "In the cart (1)" with the bar "1 pc lemon" is at home. and "Undo", counts 1 of 15 in the cart for the home page, and puts it back under "Probably at home" on "Undo"; moves the focus to the first line of "Fruit & vegetables" after ticking the group\'s last line by keyboard; and says "2 pc carrot" is in the cart. (#61 4)', async () => {
+      await openHummusAndCurry();
+
+      await tick('1 pc lemon');
+      expect(labelsIn(sectionHeaded('Probably at home'))).toEqual(
+        AT_HOME_LINES.filter((label) => label !== '1 pc lemon'),
+      );
+      expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('In the cart (1)');
+      expect(inCart().map(labelOf)).toEqual(['1 pc lemon']);
+      expect(barText()).toBe('"1 pc lemon" is at home.');
+      expect(buttonsIn(shownBar()).map(textOf)).toEqual(['Undo']);
+      expect(cartCount(store.plan(), RECIPES), "the home page's count").toEqual({
+        inCart: 1,
+        total: 15,
+      });
+
+      await click(buttonsIn(shownBar())[0]);
+      expect(cart()).toBeNull();
+      expect(labelsIn(sectionHeaded('Probably at home'))).toEqual(AT_HOME_LINES);
+
+      // The rules of any section: the focus goes to the next section once the group's last line
+      // left in it is ticked
+      const [last, ...others] = [...AT_HOME_LINES].reverse();
+      for (const label of others) {
+        await tick(label);
+      }
+      await press(checkboxOf(line(last)));
+      expect(sections().map(headingOf), 'group still shown').not.toContain('Probably at home');
+      expect(document.activeElement).toBe(checkboxOf(line('2 pc carrot')));
+
+      await tick('2 pc carrot');
+      expect(barText()).toBe('"2 pc carrot" is in the cart.');
+    });
+
+    it('names the group "Wahrscheinlich zu Hause" with the hint "Hak ab, was du schon hast." in German, says „1 Stk. Zitrone“ ist zu Hause. with "Rückgängig" after ticking it, and „Zitrone“ zu Wahrscheinlich zu Hause hinzugefügt. after adding "Zitrone" (#61 5)', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await openHummusAndCurry();
+      const [first] = sections();
+      expect(headingOf(first)).toBe('Wahrscheinlich zu Hause');
+      expect(textOf(first.querySelector('p.hint'))).toBe('Hak ab, was du schon hast.');
+
+      await tick('1 Stk. Zitrone');
+      expect(barText()).toBe('„1 Stk. Zitrone“ ist zu Hause.');
+      expect(buttonsIn(shownBar()).map(textOf)).toEqual(['Rückgängig']);
+
+      await add('Zitrone');
+      expect(statusText()).toBe('„Zitrone“ zu Wahrscheinlich zu Hause hinzugefügt.');
+      expect(labelsIn(sectionHeaded('Wahrscheinlich zu Hause'))).toContain('Zitrone');
+    });
+
+    it('keeps the tick of a plan saved before #61 with ["lemon","pc"] in its ticked list: after the app loads, "1 pc lemon" is in the cart and not under "Probably at home" (#61 6)', async () => {
+      await openHummusAndCurry({ ticked: ['["lemon","pc"]'] });
+      expect(textOf(cart()?.querySelector('summary') ?? null)).toBe('In the cart (1)');
+      expect(inCart().map(labelOf)).toEqual(['1 pc lemon']);
+      expect(labelsIn(sectionHeaded('Probably at home'))).toEqual(
+        AT_HOME_LINES.filter((label) => label !== '1 pc lemon'),
+      );
+    });
+
+    describe('edge cases', () => {
+      it('takes the group and its hint away once its six lines are ticked, leaving "Fruit & vegetables" first (#61 3a)', async () => {
+        await openHummusAndCurry();
+        expect(headingOf(sections()[0]), 'first section').toBe('Probably at home');
+
+        for (const label of AT_HOME_LINES) {
+          await tick(label);
+        }
+        expect(sections().map(headingOf)).toEqual([
+          'Fruit & vegetables',
+          'Meat & fish',
+          'Bread & bakery',
+          'Cans & jars',
+        ]);
+        expect(element.querySelector('p.hint')).toBeNull();
+        expect(inCart().map(labelOf)).toEqual(AT_HOME_LINES);
+      });
+
+      it('shows the group with its hint first before the plan is accepted, holding the added "rice" with its "Remove" button, and says "rice" is added to Probably at home (#61 3b)', async () => {
+        await open();
+        expect(store.plan().accepted, 'plan accepted').toBe(false);
+
+        await add('rice');
+        expect(statusText()).toBe('Added "rice" to Probably at home.');
+        expect(sections().map(headingOf)).toEqual(['Probably at home']);
+        const [first] = sections();
+        expect(textOf(first.querySelector('p.hint'))).toBe(HINT);
+        expect(labelsIn(first)).toEqual(['rice']);
+        removeButtonOf(listedIn(first)[0]);
+      });
+
+      it('styles p.hint in var(--muted) at 14px with the margin 0 0 0.5rem (8px) (#61 3c)', async () => {
+        await openHummusAndCurry();
+        const hint = element.querySelector('p.hint');
+        expect(hint, 'p.hint').not.toBeNull();
+        const style = getComputedStyle(hint!);
+        expect([style.color, style.fontSize]).toEqual(['var(--muted)', '14px']);
+        expect([style.marginTop, style.marginRight, style.marginBottom, style.marginLeft]).toEqual([
+          '0px',
+          '0px',
+          '8px',
+          '0px',
+        ]);
+      });
+
+      it('says "rice" is at home. for the added "rice" under "Probably at home", and "tea" is in the cart. for the added "tea" under "Other" (#61 4a)', async () => {
+        await openHummusAndCurry({ added: ['rice', 'tea'] });
+        expect(labelsIn(sectionHeaded('Probably at home')), 'item not listed').toContain('rice');
+
+        await tick('rice');
+        expect(barText()).toBe('"rice" is at home.');
+        await tick('tea');
+        expect(barText()).toBe('"tea" is in the cart.');
+      });
+
+      it('moves the focus to the previous line of the group, "1 tsp paprika", after ticking its bottom line "150 g rice" by keyboard while other lines are left, as in any section (#61 4b)', async () => {
+        await openHummusAndCurry();
+
+        await press(checkboxOf(line('150 g rice')));
+        expect(inCart().map(labelOf), 'line not ticked').toEqual(['150 g rice']);
+        expect(document.activeElement).toBe(checkboxOf(line('1 tsp paprika')));
+        expect(listedIn(sectionHeaded('Probably at home'))).toContain(line('1 tsp paprika'));
+      });
+
+      it('brings "1 pc lemon" back under "Probably at home", not under "Fruit & vegetables", when it is unticked in the cart, with no bar (#61 4c)', async () => {
+        await openHummusAndCurry({ ticked: ['["lemon","pc"]'] });
+
+        cart()!.open = true;
+        await click(checkboxOf(cartLine('1 pc lemon')));
+        expect(cart()).toBeNull();
+        expect(labelsIn(sectionHeaded('Probably at home'))).toEqual(AT_HOME_LINES);
+        expect(labelsIn(sectionHeaded('Fruit & vegetables'))).toEqual(VEGETABLES);
+        expect(bar()).toBeNull();
+      });
+
+      it('sorts the group by the German names, "2 TL Currypulver", "2 Stk. Knoblauchzehe", "1 TL Paprikapulver", "150 g Reis", "1 Stk. Zitrone", "1 Stk. Zwiebel", and says „2 Stk. Karotte“ ist im Wagen. for a line of "Obst & Gemüse", in German (#61 5a)', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await openHummusAndCurry();
+        expect(labelsIn(sectionHeaded('Wahrscheinlich zu Hause'))).toEqual([
+          '2 TL Currypulver',
+          '2 Stk. Knoblauchzehe',
+          '1 TL Paprikapulver',
+          '150 g Reis',
+          '1 Stk. Zitrone',
+          '1 Stk. Zwiebel',
+        ]);
+
+        await tick('2 Stk. Karotte');
+        expect(barText()).toBe('„2 Stk. Karotte“ ist im Wagen.');
+      });
+
+      it("switches the group's heading, its hint and the shown bar to German when the language changes on the page (#61 5b)", async () => {
+        await openHummusAndCurry();
+        await tick('1 pc lemon');
+        expect(barText(), 'English bar').toBe('"1 pc lemon" is at home.');
+
+        TestBed.inject(LanguageStore).set('de');
+        await stable();
+        const [first] = sections();
+        expect(headingOf(first)).toBe('Wahrscheinlich zu Hause');
+        expect(textOf(first.querySelector('p.hint'))).toBe('Hak ab, was du schon hast.');
+        expect(barText()).toBe('„1 Stk. Zitrone“ ist zu Hause.');
+      });
+
+      it('switches the bar of the added "Zitrone" with its section when the language changes on the page: "Zitrone" is in the cart. in English after ticking it in German (#61 5c)', async () => {
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await openHummusAndCurry({ added: ['Zitrone'] });
+        await tick('Zitrone');
+        expect(barText(), 'German bar').toBe('„Zitrone“ ist zu Hause.');
+
+        TestBed.inject(LanguageStore).set('en');
+        await stable();
+        expect(barText()).toBe('"Zitrone" is in the cart.');
+      });
+
+      it('switches the bar of the added "Zitrone" with its section when the language changes on the page: „Zitrone“ ist zu Hause. in German after ticking it in English (#61 5d)', async () => {
+        await openHummusAndCurry({ added: ['Zitrone'] });
+        await tick('Zitrone');
+        expect(barText(), 'English bar').toBe('"Zitrone" is in the cart.');
+
+        TestBed.inject(LanguageStore).set('de');
+        await stable();
+        expect(barText()).toBe('„Zitrone“ ist zu Hause.');
+      });
+
+      it('ignores a saved tick ["lemon","g"] in another unit, leaving "1 pc lemon" under "Probably at home" and no cart (#61 6a)', async () => {
+        await openHummusAndCurry({ ticked: ['["lemon","g"]'] });
+        expect(cart()).toBeNull();
+        expect(labelsIn(sectionHeaded('Probably at home'))).toEqual(AT_HOME_LINES);
+      });
+    });
+
+    // A fresh app on the accepted plan of the spec, as a reload makes
+    async function openHummusAndCurry({ added = [] as string[], ticked = [] as string[] } = {}) {
+      const saved = {
+        ...planOf(
+          [
+            day(
+              '2026-10-24',
+              picked('Hummus plate with bread and vegetables'),
+              picked('Chicken curry with rice'),
+            ),
+          ],
+          { accepted: true },
+        ),
+        added,
+        ticked,
+      };
+      localStorage.setItem('fooplan.plan', JSON.stringify(saved));
+      await reload();
+      expect(store.plan(), 'saved plan not loaded').toEqual(saved);
+    }
+
+    function headingOf(section: HTMLElement): string {
+      return textOf(section.querySelector('h2'));
+    }
   });
 
   function configure() {
@@ -2761,6 +3011,21 @@ describe('GroceryList', () => {
     expect(found, 'status elements').toHaveLength(1);
     expect(found[0].tagName, 'status element').toBe('P');
     return found[0];
+  }
+
+  // Trimmed only, like statusText: the inner spaces of an added item are part of the text
+  function barText(): string {
+    return (shownBar().querySelector('span')?.textContent ?? '').trim();
+  }
+
+  function shownBar(): HTMLElement {
+    const found = bar();
+    expect(found, 'no "Undo" bar').not.toBeNull();
+    return found!;
+  }
+
+  function bar(): HTMLElement | null {
+    return element.querySelector('div.undo-bar');
   }
 
   function sectionHeaded(heading: string): HTMLElement {

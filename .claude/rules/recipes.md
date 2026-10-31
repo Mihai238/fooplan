@@ -12,6 +12,7 @@ paths:
 - Every ingredient name has one spelling and one unit across all recipes, so the grocery list can add them up. Reuse an existing name before adding one, and don't add a near-duplicate (`garlic` next to `garlic clove`). Different products may have similar names (`beef` and `beef sirloin`).
 - New names are lowercase and singular, with `canned …` for canned goods. Units: `pc` for countable items, `ml` for liquids, `tbsp`/`tsp` for spices and small amounts, `g` for the rest. `vegetable oil` is in `ml`, because frying amounts in spoons are unreadable.
 - No salt, pepper or water: pantry basics stay off the grocery list.
+- An ingredient most kitchens keep (dry goods, condiments, spices, and egg, butter, milk, onion, garlic clove, lemon) is in `AT_HOME` of `sections.ts`, so the grocery list puts it under "Probably at home"; a new one of that kind goes there too.
 - Each recipe has at least three non-empty `steps`. They describe the classic way to cook it, in order, one action a cook can do before looking at the screen again, with times and heat where they matter. Every ingredient is named in a step by its ingredient name; no step uses anything that isn't listed, apart from water, salt and pepper.
 - A German step names each ingredient by its German name (`recipes.de.json`), in a form the German word rule of `step-amounts.ts` matches (the name plus at most one ending: n, en, e, er, ern, s per word; the article "ein" never counts as "Ei").
 - Servings are 2 or 4: 4 for oven dishes and stews, 2 for quick pan dishes.

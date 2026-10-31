@@ -11,6 +11,7 @@ export type Language = 'en' | 'de';
 const STORAGE_KEY = 'fooplan.language';
 
 const SECTION_IDS: Record<Section, MessageId> = {
+  'Probably at home': 'section.atHome',
   'Fruit & vegetables': 'section.fruit',
   'Meat & fish': 'section.meat',
   'Dairy & eggs': 'section.dairy',

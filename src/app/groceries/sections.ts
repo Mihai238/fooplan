@@ -1,4 +1,5 @@
 export const SECTIONS = [
+  'Probably at home',
   'Fruit & vegetables',
   'Meat & fish',
   'Dairy & eggs',
@@ -23,8 +24,41 @@ export const PANTRY_STAPLES: readonly string[] = [
   'black pepper',
 ];
 
+// Most kitchens keep these, so the list groups them first to be ticked off before shopping
+export const AT_HOME: readonly string[] = [
+  'bay leaf',
+  'beef stock',
+  'breadcrumbs',
+  'butter',
+  'caraway',
+  'chili flakes',
+  'chili powder',
+  'cumin',
+  'curry powder',
+  'egg',
+  'flour',
+  'garlic clove',
+  'ketchup',
+  'lemon',
+  'marjoram',
+  'mayonnaise',
+  'milk',
+  'mustard',
+  'nutmeg',
+  'onion',
+  'oregano',
+  'paprika',
+  'rice',
+  'soy sauce',
+  'sugar',
+  'tomato paste',
+  'vegetable stock',
+  'white wine vinegar',
+  'worcestershire sauce',
+];
+
 export const INGREDIENTS_BY_SECTION: Readonly<
-  Record<Exclude<Section, 'Other'>, readonly string[]>
+  Record<Exclude<Section, 'Probably at home' | 'Other'>, readonly string[]>
 > = {
   'Fruit & vegetables': [
     'apple',
@@ -174,5 +208,6 @@ const SECTION_BY_INGREDIENT = new Map<string, Section>(
 );
 
 export function sectionOf(name: string): Section {
+  if (AT_HOME.includes(name)) return 'Probably at home';
   return SECTION_BY_INGREDIENT.get(name) ?? 'Other';
 }

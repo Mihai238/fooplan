@@ -31,11 +31,6 @@ const UNDO_SECONDS = 5;
 // A line leaving its list stays in the page until its fade ends, but is no longer on the list
 const LISTED_CHECKBOX = 'li:not(.leaving) input[type="checkbox"]';
 
-interface UndoLine {
-  key: string;
-  item: ListItem;
-}
-
 @Component({
   imports: [RouterLink],
   selector: 'app-grocery-list',
@@ -89,15 +84,16 @@ export class GroceryList {
   protected readonly undoFocused = signal(false);
   // The id of the pointer pressing on the bar, so another finger lifted elsewhere leaves the press on
   protected readonly undoPress = signal<number | null>(null);
-  private readonly undoLine = signal<UndoLine | null>(null);
+  private readonly undoKey = signal<string | null>(null);
   private readonly undoExpired = signal(false);
   private undoTimer: ReturnType<typeof setTimeout> | undefined;
-  // Derived from the cart, so the bar goes away however its line leaves it
+  // Derived from the cart, so the bar goes away however its line leaves it, and its text follows
+  // the line's section, which for an added item changes with the language
   protected readonly undoBar = computed(() => {
-    const line = this.undoLine();
+    const key = this.undoKey();
     const held =
       !this.undoExpired() || this.undoHovered() || this.undoFocused() || this.undoPress() !== null;
-    return held && line !== null && this.isInCart(line.key) ? line : null;
+    return held && key !== null ? this.cartItem(key) : null;
   });
 
   constructor() {
@@ -107,7 +103,7 @@ export class GroceryList {
       this.store.started();
       this.clearField();
       this.feedback.set(null);
-      this.undoLine.set(null);
+      this.undoKey.set(null);
       clearTimeout(this.undoTimer);
     });
   }
@@ -212,17 +208,17 @@ export class GroceryList {
   // its section. It goes by the bar's line, not the shown bar, as a click can still reach the button
   // between the bar expiring and the render that removes it
   protected undo(button: HTMLButtonElement): void {
-    const line = this.undoLine();
-    this.undoLine.set(null);
+    const key = this.undoKey();
+    this.undoKey.set(null);
     clearTimeout(this.undoTimer);
-    if (line === null || !this.isInCart(line.key)) {
+    if (key === null || this.cartItem(key) === null) {
       return;
     }
-    this.store.toggleTicked(line.key);
+    this.store.toggleTicked(key);
     if (!button.matches(':focus-visible')) {
       return;
     }
-    afterNextRender(() => this.checkboxOf(line.key)?.focus(), { injector: this.injector });
+    afterNextRender(() => this.checkboxOf(key)?.focus(), { injector: this.injector });
   }
 
   // Only a primary press is followed by a click; a ctrl+click opens the context menu on macOS
@@ -277,10 +273,16 @@ export class GroceryList {
       this.undoFocused.set(false);
       this.undoPress.set(null);
     }
-    this.undoLine.set({ key: itemKey(item), item });
+    this.undoKey.set(itemKey(item));
     this.undoExpired.set(false);
     clearTimeout(this.undoTimer);
     this.undoTimer = setTimeout(() => this.undoExpired.set(true), UNDO_SECONDS * 1000);
+  }
+
+  protected undoText(item: ListItem): string {
+    const id =
+      item.section === 'Probably at home' ? 'groceries.atHomeUndo' : 'groceries.inCartUndo';
+    return this.language.t(id, { item: this.labelOf(item) });
   }
 
   protected labelOf(item: ListItem): string {
@@ -295,8 +297,8 @@ export class GroceryList {
     return 'added' in item ? item.name : this.recipes.displayIngredient(item.name);
   }
 
-  private isInCart(key: string): boolean {
-    return this.view().inCart.some((item) => itemKey(item) === key);
+  private cartItem(key: string): ListItem | null {
+    return this.view().inCart.find((item) => itemKey(item) === key) ?? null;
   }
 
   // Past the siblings without one: a line or a section that is only still there for its fade
