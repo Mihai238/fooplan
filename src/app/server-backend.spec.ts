@@ -1,5 +1,6 @@
-import { DATA_FAILED, deferred, FakeSupabase, sessionFor } from './auth/testing';
+import { DATA_FAILED, FakeSupabase, sessionFor } from './auth/testing';
 import { ServerBackend } from './server-backend';
+import { deferred } from './testing';
 
 describe('ServerBackend', () => {
   let fake: FakeSupabase;

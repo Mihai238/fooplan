@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { deferred } from './auth/testing';
+import { deferred } from './testing';
 import { SaveStatus } from './save-status';
 
 describe('SaveStatus', () => {

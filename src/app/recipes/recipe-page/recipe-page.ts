@@ -3,6 +3,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
@@ -16,6 +17,7 @@ import { map } from 'rxjs';
 import { LanguageStore } from '../../language-store';
 import { cookedMeals, MIN_SUGGESTED } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
+import { WakeLock } from '../../wake-lock';
 import { scaleIngredients } from '../amount';
 import { servingsMessage } from '../recipe';
 import { recipeSlug } from '../recipe-slug';
@@ -141,6 +143,16 @@ export class RecipePage {
         void this.router.navigateByUrl('/recipes', { replaceUrl: true });
       }
     });
+    const wakeLock = inject(WakeLock);
+    const hasSteps = computed(() => !!this.steps());
+    effect(() => {
+      if (hasSteps()) {
+        void wakeLock.hold();
+      } else {
+        void wakeLock.release();
+      }
+    });
+    inject(DestroyRef).onDestroy(() => void wakeLock.release());
   }
 
   protected showView(view: StepsView): void {

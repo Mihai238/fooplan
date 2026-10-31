@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { DATA_FAILED, deferred, FakeSupabase, provideSupabase, sessionFor } from './auth/testing';
+import { DATA_FAILED, FakeSupabase, provideSupabase, sessionFor } from './auth/testing';
+import { deferred } from './testing';
 import { PlanStore } from './plan/plan-store';
 import { day, LUNCH, picked, planOf } from './plan/testing';
 import { RecipeStore } from './recipes/recipe-store';

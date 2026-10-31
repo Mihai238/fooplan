@@ -5,7 +5,6 @@ import { App, IMPORT_PLAN_STORE } from './app';
 import { routes } from './app.routes';
 import {
   DATA_FAILED,
-  deferred,
   FakeSupabase,
   provideSupabase,
   sessionFor,
@@ -18,7 +17,7 @@ import { RecipeStore } from './recipes/recipe-store';
 import { QUICK_DAL, RECIPES_KEY, storeOwnRecipes } from './recipes/testing';
 import { SessionBackend } from './session-backend';
 import { StorageBackend } from './storage';
-import { HeldBackend, LANGUAGE_KEY, TABBABLE } from './testing';
+import { deferred, HeldBackend, LANGUAGE_KEY, TABBABLE } from './testing';
 
 describe('App', () => {
   let fake: FakeSupabase;

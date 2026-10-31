@@ -17,7 +17,15 @@ import {
   planOf,
   seededRandom,
 } from '../../plan/testing';
-import { installDialog, LANGUAGE_KEY, modalDialogs } from '../../testing';
+import {
+  FakeWakeLock,
+  installDialog,
+  installWakeLock,
+  LANGUAGE_KEY,
+  modalDialogs,
+  settle,
+  unhandledRejections,
+} from '../../testing';
 import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
 import { RecipeStore } from '../recipe-store';
@@ -1311,6 +1319,120 @@ describe('RecipePage', () => {
         new MouseEvent('click', { bubbles: true, cancelable: true, ...releaseAt }),
       );
       await harness.fixture.whenStable();
+    }
+  });
+
+  describe('screen wake lock (#56)', () => {
+    let fake: FakeWakeLock;
+    let restoreWakeLock: () => void;
+
+    beforeEach(() => {
+      fake = new FakeWakeLock();
+      restoreWakeLock = installWakeLock(fake);
+    });
+
+    afterEach(() => {
+      restoreWakeLock();
+    });
+
+    it('requests the screen lock once when the page of "Spaghetti pomodoro" renders, not again on "All steps" and back to "Step by step", and releases it once when the page is left with "Back" (#56 4)', async () => {
+      harness = await openSettled('/recipes/spaghetti-pomodoro');
+      expect(headings().map(textOf), 'recipe page not shown').toEqual(['Spaghetti pomodoro']);
+      expect(fake.requests, 'rendered').toEqual(['screen']);
+
+      await click(button('All steps'));
+      await click(button('Step by step'));
+      await settle();
+      expect(fake.requests, 'after "All steps" and back').toEqual(['screen']);
+      expect(fake.releases(), 'while shown').toBe(0);
+
+      await click(backLink());
+      await settle();
+      expect(router().url).toBe('/recipes');
+      expect(fake.sentinels, 'sentinels').toHaveLength(1);
+      expect(fake.sentinels[0].releases, 'page left').toBe(1);
+    });
+
+    it('requests nothing on the page of the own recipe "Quick Dal", which has no steps, and releases the lock once when the page of "Spaghetti pomodoro" turns into it (#56 5)', async () => {
+      storeOwnRecipes(QUICK_DAL);
+      harness = await openSettled('/recipes/quick-dal');
+      expect(headings().map(textOf), 'Quick Dal not shown').toEqual(['Quick Dal']);
+      expect(fake.requests, 'own recipe').toEqual([]);
+
+      await harness.navigateByUrl('/recipes/spaghetti-pomodoro');
+      await settle();
+      const pomodoroPage = harness.routeDebugElement?.componentInstance;
+      expect(fake.requests, 'Spaghetti pomodoro').toEqual(['screen']);
+      await harness.navigateByUrl('/recipes/quick-dal');
+      await settle();
+      expect(headings().map(textOf), 'Quick Dal not shown again').toEqual(['Quick Dal']);
+      expect(harness.routeDebugElement?.componentInstance, 'same component').toBe(pomodoroPage);
+      expect(fake.sentinels, 'sentinels').toHaveLength(1);
+      expect(fake.sentinels[0].releases, 'steps gone').toBe(1);
+    });
+
+    describe('edge cases', () => {
+      it('requests nothing at /recipes/no-such-recipe, which leads to the Recipes page (#56 4a)', async () => {
+        harness = await openSettled('/recipes/no-such-recipe');
+        expect(router().url).toBe('/recipes');
+        expect(fake.requests).toEqual([]);
+      });
+
+      it('renders the page of "Spaghetti pomodoro" exactly the same with the wake lock and in a browser without navigator.wakeLock, adding no element (#56 4b)', async () => {
+        const unhandledWithLock = await unhandledRejections(async () => {
+          harness = await openSettled('/recipes/spaghetti-pomodoro');
+        });
+        expect(unhandledWithLock, 'with the wake lock').toEqual([]);
+        const withLock = page().innerHTML;
+        expect(fake.requests, 'with the wake lock').toEqual(['screen']);
+
+        TestBed.resetTestingModule();
+        restoreWakeLock();
+        restoreWakeLock = installWakeLock(null);
+        configure();
+        const unhandledWithout = await unhandledRejections(async () => {
+          harness = await openSettled('/recipes/spaghetti-pomodoro');
+        });
+        expect(unhandledWithout, 'without navigator.wakeLock').toEqual([]);
+        expect(headings().map(textOf), 'without navigator.wakeLock').toEqual([
+          'Spaghetti pomodoro',
+        ]);
+        expect(page().innerHTML).toBe(withLock);
+      });
+
+      it('keeps the one lock, neither requesting nor releasing again, when the page of "Spaghetti pomodoro" turns into "Spaghetti carbonara", and in the "All steps" view (#56 4c)', async () => {
+        harness = await openSettled('/recipes/spaghetti-pomodoro');
+        expect(fake.requests, 'Spaghetti pomodoro').toEqual(['screen']);
+        const pomodoroPage = harness.routeDebugElement?.componentInstance;
+
+        await harness.navigateByUrl('/recipes/spaghetti-carbonara');
+        await settle();
+        expect(harness.routeDebugElement?.componentInstance, 'same component').toBe(pomodoroPage);
+        await click(button('All steps'));
+        await settle();
+        expect(fake.requests, 'Spaghetti carbonara').toEqual(['screen']);
+        expect(fake.releases(), 'Spaghetti carbonara').toBe(0);
+      });
+
+      it('requests the lock once when the page of the own recipe "Quick Dal" turns into "Spaghetti pomodoro" (#56 5a)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        harness = await openSettled('/recipes/quick-dal');
+        expect(fake.requests, 'Quick Dal').toEqual([]);
+
+        await harness.navigateByUrl('/recipes/spaghetti-pomodoro');
+        await settle();
+        expect(headings().map(textOf), 'Spaghetti pomodoro not shown').toEqual([
+          'Spaghetti pomodoro',
+        ]);
+        expect(fake.requests, 'Spaghetti pomodoro').toEqual(['screen']);
+        expect(fake.releases(), 'Spaghetti pomodoro').toBe(0);
+      });
+    });
+
+    async function openSettled(url: string): Promise<RouterTestingHarness> {
+      const opened = await createHarness(url);
+      await settle();
+      return opened;
     }
   });
 

@@ -1,14 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { LANGUAGE_KEY } from '../../testing';
-import {
-  deferred,
-  FakeSupabase,
-  LINK_FAILED,
-  LINK_SENT,
-  provideSupabase,
-  sessionFor,
-} from '../testing';
+import { deferred, LANGUAGE_KEY } from '../../testing';
+import { FakeSupabase, LINK_FAILED, LINK_SENT, provideSupabase, sessionFor } from '../testing';
 import { SignInPage } from './sign-in-page';
 
 describe('SignInPage', () => {
