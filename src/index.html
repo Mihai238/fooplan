@@ -7,6 +7,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="favicon.ico" sizes="32x32" />
     <link rel="icon" type="image/svg+xml" href="logo.svg" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <!-- Browsers use the first matching theme-color meta, and the plain one matches in dark mode too -->
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1f231f" />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="apple-touch-icon" href="icons/icon-180.png" />
   </head>
   <body>
     <app-root></app-root>

@@ -25,6 +25,20 @@ Open `http://127.0.0.1:4200/`. Before reusing an open tab, check its URL in `lis
 
 To check the production build instead, run `npm run build`, then `npx http-server dist/fooplan/browser -a 127.0.0.1 -p 4300` and open `http://127.0.0.1:4300/`.
 
+## Service worker
+
+The service worker, the manifest and offline use exist only in the production build; `npm start` registers no worker. To check them, build and serve the app as GitHub Pages does, under `/fooplan/` with unknown paths answered by `404.html` (status 404), so a deep link like `/fooplan/recipes` still boots the app:
+
+```bash
+npx ng build --base-href /fooplan/
+cp dist/fooplan/browser/index.html dist/fooplan/browser/404.html
+node -e "const http=require('node:http'),fs=require('node:fs'),path=require('node:path');const root=path.resolve('dist/fooplan/browser'),types={'.js':'text/javascript','.css':'text/css','.html':'text/html; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml','.jpg':'image/jpeg','.ico':'image/x-icon'};http.createServer((req,res)=>{let file,status=200;try{const url=new URL(req.url,'http://h').pathname;file=url.startsWith('/fooplan/')&&path.resolve(root,decodeURIComponent(url.slice(9))||'index.html');if(!file||!file.startsWith(root+path.sep)||!fs.statSync(file,{throwIfNoEntry:false})?.isFile()){file=path.join(root,'404.html');status=404}}catch{res.writeHead(400).end();return}fs.createReadStream(file).on('error',()=>{if(res.headersSent)res.destroy();else res.writeHead(404).end()}).on('open',()=>res.writeHead(status,{'content-type':types[path.extname(file)]??'application/octet-stream'})).pipe(res)}).listen(4300,'127.0.0.1')"
+```
+
+Start the server from the repo root with `run_in_background`, open `http://127.0.0.1:4300/fooplan/`, and stop it when done. A rebuild needs no restart: the server reads the directory on every request, but `404.html` has to be copied again.
+
+The worker registers once the app is stable (or after 30 s) and controls the page from the next load. It stays registered in the browser profile (the production build served at `/` above registers one too, on the same origin) and keeps serving the build it cached, showing a new build only on the second load after the worker sees it: start each check in a fresh browser context, or unregister it first (`navigator.serviceWorker.getRegistrations()`, then `unregister()` on each).
+
 ## Supabase
 
 Signing in needs the local Supabase stack. Check whether it answers:

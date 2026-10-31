@@ -4,6 +4,8 @@ Fooplan plans lunch and dinner for the next few days from a set of built-in reci
 
 The interface is in English or German: a switch in the header ("EN" / "DE") changes it at once, the choice is saved in the browser, and a browser set to German starts in German. Recipe names, ingredients and steps are shown in German too; the user's own recipes stay as typed. Saved plans and recipe links use the English names in both languages.
 
+Fooplan can be installed as an app: on a phone or desktop, the browser's "Install app" (or "Add to Home Screen") puts it on the home screen with its icon, and it opens full screen. Once it has been opened online, it works without a connection, with the plan, the grocery list and your own recipes as saved in the browser. After an update, the app you have open shows the new version on the second load.
+
 Users can sign in with a link sent by email, through [Supabase](https://supabase.com/). The header ends with an "Account" group: "Sign in" while signed out, the user's email address and "Sign out" once signed in; until the saved session has been read on page load, the group isn't shown. "Sign in" opens `/sign-in`, which asks for an email address ("Email", "Send sign-in link"; "We'll email you a link that signs you in. No password needed."). An empty field or one that isn't an email address says "Enter your email address."; otherwise the app sends a one-time sign-in link and the form makes way for "Check your inbox" and `We sent a sign-in link to "ana@example.com". Open it on this device to sign in.`, with "Use another email" to bring the empty form back; if sending fails, it says "Couldn't send the link. Try again." and keeps the address. Opening the link signs the user in on that device and lands on the Plan page; Back from there returns to the link's address, which stays in the browser's history. A reload while signed in stays where it is. The Supabase client keeps the session in the browser, so a reload, a reopened tab and the other pages stay signed in, and `/sign-in` then leads to the Plan page, also when it is open while the link signs the user in from another tab. "Sign out" signs this device out, with the focus on "Sign in". Signed in, the plan, the removed recipes and your own recipes are kept in your account and are the same on every device you sign in on; signed out, they're saved in the browser as before. An account starts empty. Its first load gets a new plan, with nothing removed and no own recipes; the browser's data isn't copied into it, and stays as it was for when the user signs out. When the user signs in or out while the app is open, here or in another tab, the app loads that data again from where it now lives and goes to the Plan page, replacing the URL, with "Loading…" until it is read. When two devices change the same account, the last change saved wins. The other choices (language, steps view, "Add again") stay in the browser.
 
 The plan, the recipes taken out of the suggestions and the user's own recipes are read when the app opens, before any page shows: until then the header shows as usual and the page area says "Loading…" ("Wird geladen…"). A link straight to a recipe page waits for them too, so it finds the user's own recipes. If they can't be read (signed in, without a connection), the page area says "Couldn't load your data. Check your connection and reload the page." instead, and no page shows. When a change can't be saved, a line between the header and the page says "Your last change couldn't be saved. Check your connection and try again."; the change stays on the page meanwhile. The line goes once a later change to the same data (the plan, the removed recipes or the own recipes) is saved, which saves the earlier one too, or when the user signs in or out. A request the server doesn't answer within 15 seconds counts as failed. In the browser, saving never fails this way: when the browser refuses to store something, the change lasts until the page is reloaded.
@@ -53,11 +55,14 @@ The cloud project's redirect URLs must include the deployed app, `https://mihai2
 ```bash
 npx ng test --watch=false   # Vitest unit and component tests
 npm run build               # type check and production build into dist/fooplan/
+npm run icons               # regenerates public/icons/ from public/logo.svg
 ```
 
 ## Deployment
 
 Every push to `main` runs the tests, builds the app and publishes it to GitHub Pages at <https://mihai238.github.io/fooplan/> (`.github/workflows/deploy.yml`). A failing test stops the deployment. The workflow can also be started by hand from the Actions tab.
+
+The service worker caches the app, so an installed app shows a deployed change on its second load.
 
 One-time setup: Settings → Pages → Source: "GitHub Actions".
 
