@@ -139,6 +139,9 @@ const EN = {
   'recipes.matches': '{count} recipes match "{search}".',
   'servings.one': '1 serving',
   'servings.other': '{servings} servings',
+  'nutrition.perServing':
+    'Per serving: {kcal} kcal · {protein} g protein · {carbs} g carbs · {fat} g fat',
+  'nutrition.missing': 'No nutrition data for {names}.',
   'recipe.forPeople': 'For {people} {personWord} ({servings})',
   'recipe.forPeopleExtra': "For {people} {personWord} incl. tomorrow's lunch ({servings})",
   'recipe.back': 'Back',
@@ -342,6 +345,9 @@ export const MESSAGES: Record<Language, Record<MessageId, string>> = {
     'recipes.matches': '{count} Rezepte passen zu „{search}“.',
     'servings.one': '1 Portion',
     'servings.other': '{servings} Portionen',
+    'nutrition.perServing':
+      'Pro Portion: {kcal} kcal · {protein} g Eiweiß · {carbs} g Kohlenhydrate · {fat} g Fett',
+    'nutrition.missing': 'Keine Nährwerte für {names}.',
     'recipe.forPeople': 'Für {people} {personWord} ({servings})',
     'recipe.forPeopleExtra': 'Für {people} {personWord} inkl. Mittagessen morgen ({servings})',
     'recipe.back': 'Zurück',

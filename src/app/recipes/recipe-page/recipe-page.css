@@ -38,11 +38,12 @@ h1 {
 }
 
 .servings {
-  margin: 0.25rem 0 0.75rem;
+  margin: 0.25rem 0;
   color: var(--muted);
   font-size: 0.875rem;
 }
 
+.nutrition,
 .own,
 .suggest,
 .note {

@@ -19,6 +19,10 @@
           <a [routerLink]="['/recipes', recipeSlug(recipe.name)]">{{ name }}</a>
         </h2>
         <p class="servings">{{ servingsText(recipe.servings) }}</p>
+        @let nutrition = nutritionLines().get(recipe.name);
+        @if (nutrition) {
+          <p class="nutrition">{{ nutrition }}</p>
+        }
         @if (recipe.own) {
           <p class="own">{{ language.t('recipes.own') }}</p>
         }

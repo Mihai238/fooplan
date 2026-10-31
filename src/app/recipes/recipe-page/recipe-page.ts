@@ -19,6 +19,7 @@ import { cookedMeals, MIN_SUGGESTED } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
 import { WakeLock } from '../../wake-lock';
 import { scaleIngredients } from '../amount';
+import { nutritionMessage } from '../nutrition';
 import { servingsMessage } from '../recipe';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
@@ -89,6 +90,15 @@ export class RecipePage {
       personWord: this.language.personWord(scale.people),
       servings,
     });
+  });
+  // Per serving of the recipe as written, also when the page shows it scaled to the plan's people
+  protected readonly nutritionLine = computed(() => {
+    const recipe = this.page().recipe;
+    if (!recipe) {
+      return '';
+    }
+    const { id, params } = nutritionMessage(recipe);
+    return this.language.t(id, params);
   });
   private readonly scaledIngredients = computed(() => {
     const ingredients = this.page().recipe?.ingredients ?? [];

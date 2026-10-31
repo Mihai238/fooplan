@@ -916,7 +916,7 @@ describe('RecipePage', () => {
   });
 
   describe('own recipes', () => {
-    it('shows a stored own recipe saved with an extra `steps` key as "Back", its name, servings, "Your recipe" in a p.own, its p.suggest and its ingredients, with no steps, "Previous", "Next" or "Done"', async () => {
+    it('shows a stored own recipe saved with an extra `steps` key as "Back", its name, servings, its p.nutrition, "Your recipe" in a p.own, its p.suggest and its ingredients, with no steps, "Previous", "Next" or "Done" (changed by #60)', async () => {
       const { name, servings, ingredients } = QUICK_DAL;
       localStorage.setItem(
         RECIPES_KEY,
@@ -929,8 +929,10 @@ describe('RecipePage', () => {
       expect(headings().map(textOf)).toEqual(['Quick Dal']);
       const servingsLine = page().querySelector('p.servings');
       expect(textOf(servingsLine)).toBe('4 servings');
-      const own = servingsLine?.nextElementSibling ?? null;
-      expect(own?.matches('p.own'), 'p.own after the servings').toBe(true);
+      const nutrition = servingsLine?.nextElementSibling ?? null;
+      expect(nutrition?.matches('p.nutrition'), 'p.nutrition after the servings').toBe(true);
+      const own = nutrition?.nextElementSibling ?? null;
+      expect(own?.matches('p.own'), 'p.own after p.nutrition').toBe(true);
       expect(textOf(own)).toBe('Your recipe');
       expect(own?.nextElementSibling?.matches('p.suggest'), 'p.suggest after p.own').toBe(true);
       expect(ingredientLines()).toEqual(linesOf(QUICK_DAL));
@@ -958,10 +960,12 @@ describe('RecipePage', () => {
   });
 
   describe('"Don\'t suggest" and "Suggest again"', () => {
-    it('shows a "Don\'t suggest" button in a p.suggest between the servings and the ingredients, which turns into "Not suggested" and a focused "Suggest again", and back into a focused "Don\'t suggest", on clicks, removing the recipe at once without a dialog', async () => {
+    it('shows a "Don\'t suggest" button in a p.suggest between the servings and the ingredients, which turns into "Not suggested" and a focused "Suggest again", and back into a focused "Don\'t suggest", on clicks, removing the recipe at once without a dialog (changed by #60)', async () => {
       harness = await createHarness('/recipes/shakshuka-with-bread');
-      const suggest = page().querySelector('p.servings')?.nextElementSibling;
-      expect(suggest?.matches('p.suggest'), 'p.suggest after the servings').toBe(true);
+      const nutrition = page().querySelector('p.servings')?.nextElementSibling;
+      expect(nutrition?.matches('p.nutrition'), 'p.nutrition after the servings').toBe(true);
+      const suggest = nutrition!.nextElementSibling;
+      expect(suggest?.matches('p.suggest'), 'p.suggest after p.nutrition').toBe(true);
       expect(suggest!.nextElementSibling?.tagName, 'after p.suggest').toBe('UL');
       expect(Array.from(suggest!.querySelectorAll('button')).map(textOf)).toEqual([
         "Don't suggest",
@@ -990,14 +994,14 @@ describe('RecipePage', () => {
       expect(document.activeElement, 'focus after "Suggest again"').toBe(button("Don't suggest"));
     });
 
-    it('shows that at least 15 recipes stay suggested in a p.note instead of "Don\'t suggest" on the page of a suggested recipe while exactly 15 are suggested', async () => {
+    it('shows that at least 15 recipes stay suggested in a p.note instead of "Don\'t suggest" on the page of a suggested recipe while exactly 15 are suggested (changed by #60)', async () => {
       await loadStoresOnce();
       leaveSuggested(TestBed.inject(PlanStore), 15, 'Shakshuka with bread');
       harness = await createHarness('/recipes/shakshuka-with-bread');
 
       const notes = Array.from(page().querySelectorAll('p.note'));
       expect(notes.map(textOf)).toEqual([LIMIT_NOTE]);
-      expect(page().querySelector('p.servings')?.nextElementSibling, 'after the servings').toBe(
+      expect(page().querySelector('p.nutrition')?.nextElementSibling, 'after p.nutrition').toBe(
         notes[0],
       );
       expect(page().querySelector('p.suggest')).toBeNull();
@@ -1460,6 +1464,143 @@ describe('RecipePage', () => {
       const opened = await createHarness(url);
       await settle();
       return opened;
+    }
+  });
+
+  describe('nutrition (#60)', () => {
+    const POMODORO_LINE = 'Per serving: 615 kcal · 21 g protein · 85 g carbs · 20 g fat';
+    const DINNER_SUGGESTIONS = open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos');
+    const FLOUR_AND_SPICE: Recipe = {
+      name: 'Flour and Spice',
+      servings: 2,
+      ingredients: [
+        { name: 'flour', amount: 1, unit: 'pc' },
+        { name: 'mystery spice', amount: 1, unit: 'pc' },
+      ],
+      own: true,
+    };
+
+    it('shows "Per serving: 615 kcal · 21 g protein · 85 g carbs · 20 g fat" in a p.nutrition right after p.servings at /recipes/spaghetti-pomodoro, the same with "For 3 people (2 servings)" while it is picked in a plan for 3, "No nutrition data for mystery spice." at /recipes/quick-dal and "No nutrition data for flour, mystery spice." for an own recipe of 1 pc flour and 1 pc mystery spice (#60 5)', async () => {
+      await openAt('/recipes/spaghetti-pomodoro');
+      const servings = page().querySelector('p.servings');
+      expect(textOf(servings)).toBe('2 servings');
+      expect(
+        servings?.nextElementSibling?.matches('p.nutrition'),
+        'p.nutrition after p.servings',
+      ).toBe(true);
+      expect(nutritionLine()).toBe(POMODORO_LINE);
+
+      await openAt('/recipes/spaghetti-pomodoro', {
+        plan: planOf([day('2026-10-24', picked('Spaghetti pomodoro'), DINNER_SUGGESTIONS)], {
+          people: 3,
+        }),
+      });
+      expect(textOf(page().querySelector('p.servings'))).toBe('For 3 people (2 servings)');
+      expect(ingredientLines(), 'page not scaled').toContain('300 g spaghetti');
+      expect(nutritionLine()).toBe(POMODORO_LINE);
+
+      await openAt('/recipes/quick-dal', { own: [QUICK_DAL] });
+      expect(nutritionLine()).toBe('No nutrition data for mystery spice.');
+      await openAt('/recipes/flour-and-spice', { own: [FLOUR_AND_SPICE] });
+      expect(nutritionLine()).toBe('No nutrition data for flour, mystery spice.');
+    });
+
+    it('shows "Pro Portion: 615 kcal · 21 g Eiweiß · 85 g Kohlenhydrate · 20 g Fett" at /recipes/spaghetti-pomodoro and "Keine Nährwerte für mystery spice." at /recipes/quick-dal in German (#60 6)', async () => {
+      await openAt('/recipes/spaghetti-pomodoro', { language: 'de' });
+      expect(nutritionLine()).toBe(
+        'Pro Portion: 615 kcal · 21 g Eiweiß · 85 g Kohlenhydrate · 20 g Fett',
+      );
+      await openAt('/recipes/quick-dal', { own: [QUICK_DAL], language: 'de' });
+      expect(nutritionLine()).toBe('Keine Nährwerte für mystery spice.');
+    });
+
+    describe('edge cases', () => {
+      it('puts the p.nutrition of "Quick Dal" right after p.servings and before p.own "Your recipe" (#60 5a)', async () => {
+        await openAt('/recipes/quick-dal', { own: [QUICK_DAL] });
+        const line = page().querySelector('p.servings')?.nextElementSibling ?? null;
+        expect(line?.matches('p.nutrition'), 'p.nutrition after p.servings').toBe(true);
+        expect(textOf(line)).toBe('No nutrition data for mystery spice.');
+        const own = line?.nextElementSibling ?? null;
+        expect(own?.matches('p.own'), 'p.own after p.nutrition').toBe(true);
+        expect(textOf(own)).toBe('Your recipe');
+      });
+
+      it('keeps "Per serving: 567 kcal · 24 g protein · 57 g carbs · 27 g fat" on the page of "Pizza toast" scaled down to "For 1 person (2 servings)" in a plan for 1 (#60 5b)', async () => {
+        await openAt('/recipes/pizza-toast', {
+          plan: planOf(
+            [
+              day(
+                '2026-10-24',
+                open('Shakshuka with bread', 'Niçoise salad', 'Fish tacos'),
+                picked('Pizza toast'),
+              ),
+            ],
+            { people: 1 },
+          ),
+        });
+        expect(textOf(page().querySelector('p.servings'))).toBe('For 1 person (2 servings)');
+        expect(nutritionLine()).toBe(
+          'Per serving: 567 kcal · 24 g protein · 57 g carbs · 27 g fat',
+        );
+      });
+
+      it('names "mystery spice" without its amount, "No nutrition data for mystery spice.", on the page of "Quick Dal" scaled to "For 3 people (4 servings)" with "0.75 pc mystery spice" (#60 5c)', async () => {
+        await openAt('/recipes/quick-dal', {
+          own: [QUICK_DAL],
+          plan: planOf([day('2026-10-24', picked('Quick Dal'), DINNER_SUGGESTIONS)], { people: 3 }),
+        });
+        expect(textOf(page().querySelector('p.servings'))).toBe('For 3 people (4 servings)');
+        expect(ingredientLines()).toContain('0.75 pc mystery spice');
+        expect(nutritionLine()).toBe('No nutrition data for mystery spice.');
+      });
+
+      it('names the missing ingredients of an own recipe as typed in German: "Keine Nährwerte für flour, mystery spice." (#60 6b)', async () => {
+        await openAt('/recipes/flour-and-spice', { own: [FLOUR_AND_SPICE], language: 'de' });
+        expect(textOf(page().querySelector('p.servings')), 'German not shown').toBe('2 Portionen');
+        expect(nutritionLine()).toBe('Keine Nährwerte für flour, mystery spice.');
+      });
+
+      it('styles p.nutrition like p.servings, var(--muted) at 14px, with the margin 0 0 0.75rem (12px), and gives p.servings a bottom margin of 0.25rem (4px), as on the card (#60)', async () => {
+        await openAt('/recipes/spaghetti-pomodoro');
+        const servings = getComputedStyle(page().querySelector('p.servings')!);
+        const line = page().querySelector('p.nutrition');
+        expect(line, 'p.nutrition').not.toBeNull();
+        const style = getComputedStyle(line!);
+        expect([style.color, style.fontSize]).toEqual([servings.color, servings.fontSize]);
+        expect([style.color, style.fontSize]).toEqual(['var(--muted)', '14px']);
+        expect([style.marginTop, style.marginBottom], 'p.nutrition').toEqual(['0px', '12px']);
+        expect(servings.marginBottom, 'p.servings').toBe('4px');
+      });
+    });
+
+    // A fresh app on what is saved, as a reload makes
+    async function openAt(
+      url: string,
+      { own = [], plan, language }: { own?: Recipe[]; plan?: Plan; language?: 'en' | 'de' } = {},
+    ) {
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      configure();
+      if (own.length > 0) {
+        storeOwnRecipes(...own);
+      }
+      if (plan) {
+        localStorage.setItem('fooplan.plan', JSON.stringify(plan));
+      }
+      if (language) {
+        localStorage.setItem(LANGUAGE_KEY, language);
+      }
+      harness = await createHarness(url);
+      expect(router().url, 'page not shown').toBe(url);
+      if (plan) {
+        expect(TestBed.inject(PlanStore).plan(), 'saved plan not loaded').toEqual(plan);
+      }
+    }
+
+    function nutritionLine(): string {
+      const lines = page().querySelectorAll('p.nutrition');
+      expect(lines, 'p.nutrition').toHaveLength(1);
+      return textOf(lines[0]);
     }
   });
 

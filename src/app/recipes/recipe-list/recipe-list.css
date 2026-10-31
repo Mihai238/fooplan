@@ -108,11 +108,12 @@ h2 a:focus-visible {
 }
 
 .servings {
-  margin: 0.25rem 0 0.75rem;
+  margin: 0.25rem 0;
   color: var(--muted);
   font-size: 0.875rem;
 }
 
+.nutrition,
 .own,
 .suggest {
   margin: 0 0 0.75rem;

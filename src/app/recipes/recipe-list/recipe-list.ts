@@ -3,7 +3,8 @@ import { RouterLink } from '@angular/router';
 import { LanguageStore } from '../../language-store';
 import { MIN_SUGGESTED } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
-import { servingsMessage } from '../recipe';
+import { nutritionMessage } from '../nutrition';
+import { Recipe, servingsMessage } from '../recipe';
 import { searchRecipes } from '../recipe-search';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
@@ -25,6 +26,10 @@ export class RecipeList {
     searchRecipes(this.recipeStore.all(), this.search(), this.recipeStore),
   );
   protected readonly matchStatus = computed(() => this.matchStatusText());
+  protected readonly nutritionLines = computed(
+    () =>
+      new Map(this.recipeStore.all().map((recipe) => [recipe.name, this.nutritionLine(recipe)])),
+  );
   protected readonly recipeSlug = recipeSlug;
   protected readonly minSuggested = MIN_SUGGESTED;
 
@@ -55,6 +60,11 @@ export class RecipeList {
     return count === 1
       ? this.language.t('recipes.oneMatch', { search })
       : this.language.t('recipes.matches', { count, search });
+  }
+
+  private nutritionLine(recipe: Recipe): string | undefined {
+    const { id, params } = nutritionMessage(recipe);
+    return id === 'nutrition.perServing' ? this.language.t(id, params) : undefined;
   }
 
   // "Don't suggest" and "Suggest again" replace each other, so the focus would drop to the page along

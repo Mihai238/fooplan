@@ -2,6 +2,7 @@
 paths:
   - 'src/app/recipes/recipes.json'
   - 'src/app/recipes/recipes.de.json'
+  - 'src/app/recipes/nutrition.json'
 ---
 
 # Recipe data
@@ -20,3 +21,4 @@ paths:
 - Recipe names and their order are pinned by `recipes.spec.ts`, and saved plans refer to recipes by name: renaming one breaks both.
 - A recipe is kid-friendly unless it uses one of the strong flavours in `STRONG_FLAVOURS` (`src/app/recipes/kid-friendly.ts`); at least 15 built-in recipes stay kid-friendly.
 - A recipe's base (pasta, rice, potato, bread) and protein (chicken, meat, fish) are derived from its ingredient names by `src/app/plan/ranking.ts`; a new ingredient of one of these kinds goes into its list there.
+- Every ingredient has an entry in `src/app/recipes/nutrition.json`: `kcal`, `protein`, `carbs` and `fat` per 100 g as whole numbers from a public food table, and under `grams` the grams of one `pc`, `tbsp`, `tsp` or `ml` for every such unit it is used in. A new ingredient gets one; an entry no recipe uses goes.

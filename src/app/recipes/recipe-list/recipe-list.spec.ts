@@ -269,7 +269,7 @@ describe('RecipeList', () => {
     ).toBeTruthy();
   });
 
-  it('lists the own recipes "Grandma\'s Soup" and "Quick Dal" after all built-in recipes in the order added, each with "Your recipe" in a p.own between its servings and its p.suggest, and lists "Quick Dal" for the search "dal"', async () => {
+  it('lists the own recipes "Grandma\'s Soup" and "Quick Dal" after all built-in recipes in the order added, each with "Your recipe" in a p.own before its p.suggest, right after p.nutrition for "Grandma\'s Soup" and right after p.servings for "Quick Dal", and lists "Quick Dal" for the search "dal" (changed by #60)', async () => {
     recipeStore().add(ownRecipe("Grandma's Soup"));
     recipeStore().add(QUICK_DAL);
     await reopenPage();
@@ -279,15 +279,22 @@ describe('RecipeList', () => {
       "Grandma's Soup",
       'Quick Dal',
     ]);
+    const sequences: Record<string, string[]> = {
+      "Grandma's Soup": ['p.servings', 'p.nutrition', 'p.own', 'p.suggest'],
+      'Quick Dal': ['p.servings', 'p.own', 'p.suggest'],
+    };
     for (const article of articles()) {
       const name = textOf(article.querySelector('h2')!);
-      const own = article.querySelector('p.servings')?.nextElementSibling;
-      if (name === "Grandma's Soup" || name === 'Quick Dal') {
-        expect(own?.matches('p.own'), `p.own after the servings of "${name}"`).toBe(true);
-        expect(textOf(own!), `p.own of "${name}"`).toBe('Your recipe');
-        expect(own!.nextElementSibling?.matches('p.suggest'), `after p.own of "${name}"`).toBe(
-          true,
-        );
+      const sequence = sequences[name];
+      if (sequence) {
+        let element = article.querySelector('p.servings');
+        for (const [index, selector] of sequence.entries()) {
+          expect(element?.matches(selector), `${selector} at ${index} on "${name}"`).toBe(true);
+          if (selector === 'p.own') {
+            expect(textOf(element!), `p.own of "${name}"`).toBe('Your recipe');
+          }
+          element = element!.nextElementSibling;
+        }
       } else {
         expect(article.querySelector('p.own'), `p.own of "${name}"`).toBeNull();
       }
@@ -658,12 +665,17 @@ describe('RecipeList', () => {
   });
 
   describe('"Don\'t suggest" and "Suggest again"', () => {
-    it('shows a "Don\'t suggest <recipe>" button in a p.suggest between the servings and the ingredients of every card, which turns into "Not suggested" and a focused "Suggest again: Shakshuka with bread", and back into a focused "Don\'t suggest", on clicks, removing the recipe at once without a dialog', async () => {
+    it('shows a "Don\'t suggest <recipe>" button in a p.suggest between the servings and the ingredients of every card, which turns into "Not suggested" and a focused "Suggest again: Shakshuka with bread", and back into a focused "Don\'t suggest", on clicks, removing the recipe at once without a dialog (changed by #60)', async () => {
       expectAllRecipesRendered();
       articles().forEach((article, i) => {
         const name = RECIPES[i].name;
-        const suggest = article.querySelector('p.servings')?.nextElementSibling;
-        expect(suggest?.matches('p.suggest'), `p.suggest after the servings of "${name}"`).toBe(
+        const nutrition = article.querySelector('p.servings')?.nextElementSibling;
+        expect(
+          nutrition?.matches('p.nutrition'),
+          `p.nutrition after the servings of "${name}"`,
+        ).toBe(true);
+        const suggest = nutrition!.nextElementSibling;
+        expect(suggest?.matches('p.suggest'), `p.suggest after p.nutrition of "${name}"`).toBe(
           true,
         );
         expect(suggest!.nextElementSibling?.tagName, `after p.suggest of "${name}"`).toBe('UL');
@@ -819,6 +831,126 @@ describe('RecipeList', () => {
 
     function store(): PlanStore {
       return TestBed.inject(PlanStore);
+    }
+  });
+
+  describe('nutrition (#60)', () => {
+    const POMODORO_LINE = 'Per serving: 615 kcal · 21 g protein · 85 g carbs · 20 g fat';
+    const SUGAR_SPOON: Recipe = {
+      name: 'Sugar Spoon',
+      servings: 1,
+      ingredients: [{ name: 'sugar', amount: 1, unit: 'tbsp' }],
+      own: true,
+    };
+
+    it('shows "Per serving: 615 kcal · 21 g protein · 85 g carbs · 20 g fat" in a p.nutrition right after "2 servings" on the card of "Spaghetti pomodoro" and a p.nutrition starting with "Per serving: " on each of the 84 cards; "4 servings", "Your recipe" and no p.nutrition on the card of the own "Quick Dal"; "Per serving: 270 kcal · 5 g protein · 59 g carbs · 1 g fat" on the own "Plain Rice"; and "No recipe matches "protein"." for the search "protein" (#60 4)', async () => {
+      const servings = cardOf('Spaghetti pomodoro').querySelector('p.servings');
+      expect(textOf(servings!)).toBe('2 servings');
+      const line = servings!.nextElementSibling;
+      expect(line?.matches('p.nutrition'), 'p.nutrition after the servings').toBe(true);
+      expect(textOf(line!)).toBe(POMODORO_LINE);
+      expectAllRecipesRendered();
+      for (const article of articles()) {
+        const lines = Array.from(article.querySelectorAll('p.nutrition')).map(textOf);
+        const name = textOf(article.querySelector('h2')!);
+        expect(lines, `p.nutrition of "${name}"`).toHaveLength(1);
+        expect(lines[0], `p.nutrition of "${name}"`).toMatch(/^Per serving: /);
+      }
+
+      storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+      await reload();
+      const dal = cardOf('Quick Dal');
+      expect(textOf(dal.querySelector('p.servings')!)).toBe('4 servings');
+      expect(textOf(dal.querySelector('p.own')!)).toBe('Your recipe');
+      expect(dal.querySelector('p.nutrition'), 'p.nutrition of "Quick Dal"').toBeNull();
+      expect(nutritionLineOf('Plain Rice')).toBe(
+        'Per serving: 270 kcal · 5 g protein · 59 g carbs · 1 g fat',
+      );
+
+      await search('protein');
+      expect(statusText()).toBe('No recipe matches "protein".');
+      expect(articles()).toEqual([]);
+    });
+
+    it('shows "Per serving: 48 kcal · 0 g protein · 12 g carbs · 0 g fat" on the card of an own recipe of only 1 tbsp sugar for 1 (#60 7)', async () => {
+      storeOwnRecipes(SUGAR_SPOON);
+      await reload();
+      expect(nutritionLineOf('Sugar Spoon')).toBe(
+        'Per serving: 48 kcal · 0 g protein · 12 g carbs · 0 g fat',
+      );
+    });
+
+    it('shows "Pro Portion: 615 kcal · 21 g Eiweiß · 85 g Kohlenhydrate · 20 g Fett" on the card of "Spaghetti Pomodoro" in German (#60 6)', async () => {
+      localStorage.setItem(LANGUAGE_KEY, 'de');
+      await reload();
+      expect(nutritionLineOf('Spaghetti Pomodoro')).toBe(
+        'Pro Portion: 615 kcal · 21 g Eiweiß · 85 g Kohlenhydrate · 20 g Fett',
+      );
+    });
+
+    describe('edge cases', () => {
+      it('shows no "No nutrition data" anywhere on the card of the own "Quick Dal", while the own "Plain Rice" next to it has its line (#60 4a)', async () => {
+        storeOwnRecipes(QUICK_DAL, PLAIN_RICE);
+        await reload();
+        expect(nutritionLineOf('Plain Rice')).toMatch(/^Per serving: /);
+        expect(textOf(cardOf('Quick Dal'))).not.toContain('No nutrition data');
+        expect(textOf(cardOf('Quick Dal'))).not.toContain('Per serving');
+      });
+
+      it('puts p.nutrition between p.servings and p.own on the card of the own "Plain Rice", with p.suggest right after p.own (#60 4b)', async () => {
+        storeOwnRecipes(PLAIN_RICE);
+        await reload();
+        const line = cardOf('Plain Rice').querySelector('p.servings')?.nextElementSibling;
+        expect(line?.matches('p.nutrition'), 'p.nutrition after the servings').toBe(true);
+        const own = line!.nextElementSibling;
+        expect(own?.matches('p.own'), 'p.own after p.nutrition').toBe(true);
+        expect(own!.nextElementSibling?.matches('p.suggest'), 'p.suggest after p.own').toBe(true);
+      });
+
+      it('says that no recipe matches "kcal", "carbs" or "per serving", which only the nutrition lines contain (#60 4c)', async () => {
+        expect(nutritionLineOf('Spaghetti pomodoro')).toBe(POMODORO_LINE);
+        for (const text of ['kcal', 'carbs', 'per serving']) {
+          await search(text);
+          expect(statusText()).toBe(`No recipe matches "${text}".`);
+        }
+      });
+
+      it('styles p.nutrition like p.servings, var(--muted) at 14px, with the margin 0 0 0.75rem (12px), and gives p.servings a bottom margin of 0.25rem (4px) (#60 4d)', () => {
+        const card = cardOf('Spaghetti pomodoro');
+        const servings = getComputedStyle(card.querySelector('p.servings')!);
+        const line = card.querySelector('p.nutrition');
+        expect(line, 'p.nutrition').not.toBeNull();
+        const style = getComputedStyle(line!);
+        expect([style.color, style.fontSize]).toEqual([servings.color, servings.fontSize]);
+        expect([style.color, style.fontSize]).toEqual(['var(--muted)', '14px']);
+        expect([style.marginTop, style.marginBottom], 'p.nutrition').toEqual(['0px', '12px']);
+        expect(servings.marginBottom, 'p.servings').toBe('4px');
+      });
+
+      it('shows no p.nutrition and no "Keine Nährwerte" on the card of the own "Quick Dal" in German, while "Spaghetti Pomodoro" has its line (#60 6a)', async () => {
+        storeOwnRecipes(QUICK_DAL);
+        localStorage.setItem(LANGUAGE_KEY, 'de');
+        await reload();
+        expect(nutritionLineOf('Spaghetti Pomodoro')).toMatch(/^Pro Portion: /);
+        const dal = cardOf('Quick Dal');
+        expect(textOf(dal.querySelector('p.servings')!), 'German not shown').toBe('4 Portionen');
+        expect(dal.querySelector('p.nutrition')).toBeNull();
+        expect(textOf(dal)).not.toContain('Keine Nährwerte');
+      });
+    });
+
+    function nutritionLineOf(name: string): string {
+      const lines = cardOf(name).querySelectorAll('p.nutrition');
+      expect(lines, `p.nutrition of "${name}"`).toHaveLength(1);
+      return textOf(lines[0]);
+    }
+
+    function cardOf(name: string): HTMLElement {
+      const article = articles().find(
+        (candidate) => textOf(candidate.querySelector('h2')!) === name,
+      );
+      expect(article, `"${name}" not shown`).toBeDefined();
+      return article!;
     }
   });
 

@@ -3,6 +3,7 @@
   <article>
     <h1>{{ name() }}</h1>
     <p class="servings">{{ servingsLine() }}</p>
+    <p class="nutrition">{{ nutritionLine() }}</p>
     @if (recipe.own) {
       <p class="own">{{ language.t('recipes.own') }}</p>
     }
