@@ -136,6 +136,8 @@ const EN = {
   'recipes.matches': '{count} recipes match "{search}".',
   'servings.one': '1 serving',
   'servings.other': '{servings} servings',
+  'recipe.forPeople': 'For {people} {personWord} ({servings})',
+  'recipe.forPeopleExtra': "For {people} {personWord} incl. tomorrow's lunch ({servings})",
   'recipe.back': 'Back',
   'recipe.edit': 'Edit',
   'recipe.inPlan': 'This recipe is in your plan. Undo its pick or start a new plan to delete it.',
@@ -334,6 +336,8 @@ export const MESSAGES: Record<Language, Record<MessageId, string>> = {
     'recipes.matches': '{count} Rezepte passen zu „{search}“.',
     'servings.one': '1 Portion',
     'servings.other': '{servings} Portionen',
+    'recipe.forPeople': 'Für {people} {personWord} ({servings})',
+    'recipe.forPeopleExtra': 'Für {people} {personWord} inkl. Mittagessen morgen ({servings})',
     'recipe.back': 'Zurück',
     'recipe.edit': 'Bearbeiten',
     'recipe.inPlan':

@@ -3,6 +3,7 @@ import {
   addedKey,
   addItem,
   clearMeal,
+  cookedMeals,
   createPlan,
   DEFAULT_SETTINGS,
   dropSuggestion,
@@ -1952,6 +1953,23 @@ describe('plan', () => {
       expect(leftoversOf(cookExtraPlan(), 0)).toBeNull();
       expect(leftoversOf(cookExtraPlan(), 2)).toBeNull();
       expect(leftoversOf(cookExtraPlan(), -1)).toBeNull();
+    });
+  });
+
+  describe('cookedMeals', () => {
+    it("lists the picked meals for the plan's people, a dinner cooked extra for twice the people (#55)", () => {
+      expect(cookedMeals(cookExtraPlan())).toEqual([
+        { recipe: 'Chili', people: 2, cookExtra: false },
+        { recipe: 'Curry', people: 4, cookExtra: true },
+      ]);
+    });
+
+    it('leaves out open meals and meals eaten out (#55)', () => {
+      expect(cookedMeals(oneDayPlan(eatingOut(), open('Curry', 'Dal', 'Fajitas')))).toEqual([]);
+      expect(cookedMeals(storedPlan())).toEqual([
+        { recipe: 'Chili', people: 2, cookExtra: false },
+        { recipe: 'Curry', people: 2, cookExtra: false },
+      ]);
     });
   });
 

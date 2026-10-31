@@ -2,7 +2,15 @@ import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
-import { leaveSuggested, loadStoresOnce, seededRandom } from '../../plan/testing';
+import {
+  day,
+  leaveSuggested,
+  loadStoresOnce,
+  open,
+  picked,
+  planOf,
+  seededRandom,
+} from '../../plan/testing';
 import { displayAmount } from '../amount';
 import { Recipe } from '../recipe';
 import { RecipeStore } from '../recipe-store';
@@ -71,6 +79,34 @@ describe('RecipeList', () => {
         RECIPES[i].ingredients.length,
       );
     });
+  });
+
+  it('shows the card of "Spaghetti pomodoro" with "2 servings" and its own amounts while it is picked in a plan for 3, whose recipe page is scaled (#55 2a)', async () => {
+    const plan = planOf(
+      [
+        day(
+          '2026-10-24',
+          picked('Spaghetti pomodoro'),
+          open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos'),
+        ),
+      ],
+      { people: 3 },
+    );
+    localStorage.setItem('fooplan.plan', JSON.stringify(plan));
+    await reload();
+    expect(TestBed.inject(PlanStore).plan(), 'saved plan not loaded').toEqual(plan);
+    const card = articles().find(
+      (article) => textOf(article.querySelector('h2')!) === 'Spaghetti pomodoro',
+    );
+    expect(textOf(card!.querySelector('p.servings')!)).toBe('2 servings');
+    expect(ingredientLinesOf('Spaghetti pomodoro')).toEqual([
+      '200 g spaghetti',
+      '400 g canned tomatoes',
+      '2 pc garlic clove',
+      '2 tbsp olive oil',
+      '10 g basil',
+      '30 g parmesan',
+    ]);
   });
 
   it('shows the recipes in RECIPES order', () => {

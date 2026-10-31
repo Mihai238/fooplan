@@ -1,5 +1,5 @@
 import type { Language } from '../language-store';
-import { addedKey, Plan, sameItem } from '../plan/plan';
+import { addedKey, cookedMeals, Plan, sameItem } from '../plan/plan';
 import { englishIngredient } from '../recipes/german-names';
 import { Recipe, Unit } from '../recipes/recipe';
 import { PANTRY_STAPLES, Section, SECTIONS, sectionOf } from './sections';
@@ -136,20 +136,13 @@ export function itemKey(item: { name: string; unit: Unit } | AddedItem): string 
   return 'added' in item ? addedKey(item.name) : JSON.stringify([item.name, item.unit]);
 }
 
-// A lunch covered by leftovers has no recipe: the dinner before it is cooked for twice the people
 function cookedRecipes(
   plan: Plan,
   recipes: readonly Recipe[],
 ): { recipe: Recipe; people: number }[] {
-  return plan.days.flatMap((day) => {
-    const meals = [
-      { name: day.lunch.recipe, people: plan.people },
-      { name: day.dinner.recipe, people: plan.people * (day.cookExtra ? 2 : 1) },
-    ];
-    return meals.flatMap(({ name, people }) => {
-      const recipe = recipes.find((candidate) => candidate.name === name);
-      return recipe ? [{ recipe, people }] : [];
-    });
+  return cookedMeals(plan).flatMap(({ recipe: name, people }) => {
+    const recipe = recipes.find((candidate) => candidate.name === name);
+    return recipe ? [{ recipe, people }] : [];
   });
 }
 

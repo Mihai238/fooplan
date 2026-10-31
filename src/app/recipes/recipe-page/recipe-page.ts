@@ -14,8 +14,9 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink, UrlTree } from '@angular/router';
 import { map } from 'rxjs';
 import { LanguageStore } from '../../language-store';
-import { MIN_SUGGESTED } from '../../plan/plan';
+import { cookedMeals, MIN_SUGGESTED } from '../../plan/plan';
 import { PlanStore } from '../../plan/plan-store';
+import { scaleIngredients } from '../amount';
 import { servingsMessage } from '../recipe';
 import { recipeSlug } from '../recipe-slug';
 import { RecipeStore } from '../recipe-store';
@@ -52,9 +53,51 @@ export class RecipePage {
     const recipe = this.page().recipe;
     return recipe ? this.recipes.displayName(recipe) : '';
   });
+  // A recipe is picked at most once, so it has one scale wherever the page was opened from. Compared
+  // by value, so a plan change that leaves it as it was doesn't recompute the amounts
+  protected readonly scale = computed(
+    () => {
+      const recipe = this.page().recipe;
+      if (!recipe) {
+        return null;
+      }
+      const meal = cookedMeals(this.store.plan()).find((cooked) => cooked.recipe === recipe.name);
+      return meal
+        ? { factor: meal.people / recipe.servings, people: meal.people, cookExtra: meal.cookExtra }
+        : null;
+    },
+    {
+      equal: (a, b) =>
+        a?.factor === b?.factor && a?.people === b?.people && a?.cookExtra === b?.cookExtra,
+    },
+  );
+  protected readonly servingsLine = computed(() => {
+    const recipe = this.page().recipe;
+    if (!recipe) {
+      return '';
+    }
+    const { id, params } = servingsMessage(recipe.servings);
+    const servings = this.language.t(id, params);
+    const scale = this.scale();
+    if (!scale) {
+      return servings;
+    }
+    return this.language.t(scale.cookExtra ? 'recipe.forPeopleExtra' : 'recipe.forPeople', {
+      people: scale.people,
+      personWord: this.language.personWord(scale.people),
+      servings,
+    });
+  });
+  private readonly scaledIngredients = computed(() => {
+    const ingredients = this.page().recipe?.ingredients ?? [];
+    const scale = this.scale();
+    return scale ? scaleIngredients(ingredients, scale.factor) : ingredients;
+  });
   protected readonly ingredients = computed(() => {
     const recipe = this.page().recipe;
-    return recipe ? this.recipes.displayIngredients(recipe) : [];
+    return recipe
+      ? this.recipes.displayIngredients({ ...recipe, ingredients: this.scaledIngredients() })
+      : [];
   });
   // stepParts finds the German names of the stored ingredients itself
   protected readonly steps = computed(() => {
@@ -62,12 +105,13 @@ export class RecipePage {
     if (!recipe) {
       return undefined;
     }
+    const ingredients = this.scaledIngredients();
     return this.recipes
       .displaySteps(recipe)
       ?.map((step) =>
         stepParts(
           step,
-          recipe.ingredients,
+          ingredients,
           (amount) => this.language.amount(amount),
           this.language.language(),
         ),
@@ -97,11 +141,6 @@ export class RecipePage {
         void this.router.navigateByUrl('/recipes', { replaceUrl: true });
       }
     });
-  }
-
-  protected servingsText(servings: number): string {
-    const { id, params } = servingsMessage(servings);
-    return this.language.t(id, params);
   }
 
   protected showView(view: StepsView): void {

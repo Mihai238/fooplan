@@ -2,7 +2,7 @@
   <a class="back" [routerLink]="page().back">{{ language.t('recipe.back') }}</a>
   <article>
     <h1>{{ name() }}</h1>
-    <p class="servings">{{ servingsText(recipe.servings) }}</p>
+    <p class="servings">{{ servingsLine() }}</p>
     @if (recipe.own) {
       <p class="own">{{ language.t('recipes.own') }}</p>
     }

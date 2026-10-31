@@ -69,8 +69,12 @@ export class LanguageStore {
       days,
       dayWord: this.t(days === 1 ? 'day.one' : 'day.other'),
       people,
-      personWord: this.t(people === 1 ? 'person.one' : 'person.other'),
+      personWord: this.personWord(people),
     });
+  }
+
+  personWord(people: number): string {
+    return this.t(people === 1 ? 'person.one' : 'person.other');
   }
 
   t(id: MessageId, params: Record<string, string | number> = {}): string {

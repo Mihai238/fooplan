@@ -1,5 +1,5 @@
-import { displayAmount } from './amount';
-import { Unit } from './recipe';
+import { displayAmount, scaleIngredients } from './amount';
+import { Ingredient, Unit } from './recipe';
 
 describe('displayAmount', () => {
   it('shows 15, 30 and 45 ml as 1, 2 and 3 tbsp', () => {
@@ -83,5 +83,36 @@ describe('displayAmount', () => {
     for (const [amount, unit] of stored) {
       expect(displayAmount({ amount, unit }), `${amount} ${unit}`).toEqual({ amount, unit });
     }
+  });
+});
+
+describe('scaleIngredients', () => {
+  const INGREDIENTS: Ingredient[] = [
+    { name: 'onion', amount: 1, unit: 'pc' },
+    { name: 'rice', amount: 150, unit: 'g' },
+    { name: 'oil', amount: 10, unit: 'ml' },
+  ];
+
+  it('multiplies 1 pc onion, 150 g rice and 10 ml oil by 1.5 into 1.5 pc, 225 g and 15 ml with the names and units unchanged, rounds 1 pc by 2/3 to 0.67 pc, keeps the amounts at the factor 1 and returns [] for [] (#55 1)', () => {
+    expect(scaleIngredients(INGREDIENTS, 1.5)).toEqual([
+      { name: 'onion', amount: 1.5, unit: 'pc' },
+      { name: 'rice', amount: 225, unit: 'g' },
+      { name: 'oil', amount: 15, unit: 'ml' },
+    ]);
+    expect(scaleIngredients([{ name: 'onion', amount: 1, unit: 'pc' }], 2 / 3)).toEqual([
+      { name: 'onion', amount: 0.67, unit: 'pc' },
+    ]);
+    expect(scaleIngredients(INGREDIENTS, 1)).toEqual(INGREDIENTS);
+    expect(scaleIngredients([], 1.5)).toEqual([]);
+  });
+
+  describe('edge cases', () => {
+    it('leaves the given list and its ingredients unchanged, returning new ones (#55 1a)', () => {
+      const given = INGREDIENTS.map((ingredient) => ({ ...ingredient }));
+      const scaled = scaleIngredients(given, 0.75);
+      expect(given).toEqual(INGREDIENTS);
+      expect(scaled).not.toBe(given);
+      expect(scaled.map((ingredient) => ingredient.amount)).toEqual([0.75, 112.5, 7.5]);
+    });
   });
 });

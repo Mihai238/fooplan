@@ -4,7 +4,7 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../../app.routes';
 import { LanguageStore } from '../../language-store';
 import { PlanStore, RANDOM, TODAY } from '../../plan/plan-store';
-import { Plan } from '../../plan/plan';
+import { DEFAULT_SETTINGS, isPicked, Plan } from '../../plan/plan';
 import {
   covered,
   day,
@@ -875,18 +875,8 @@ describe('RecipePage', () => {
       });
     });
 
-    function stepParagraph(): HTMLElement {
-      const steps = page().querySelectorAll<HTMLElement>('p.step');
-      expect(steps, 'p.step').toHaveLength(1);
-      return steps[0];
-    }
-
     function allStepItems(): HTMLElement[] {
       return Array.from(page().querySelectorAll<HTMLElement>('ol.all > li'));
-    }
-
-    function amountsIn(element: HTMLElement): string[] {
-      return Array.from(element.querySelectorAll('span.amount')).map(textOf);
     }
   });
 
@@ -1426,7 +1416,7 @@ describe('RecipePage', () => {
         expect(ingredientLines()).toContain('2 EL Olivenöl');
       });
 
-      it('shows "Nicht vorschlagen", then "Nicht vorgeschlagen" and "Wieder vorschlagen", "1 Portion" for an own recipe for 1, and "Dieses Rezept ist in deinem Plan. Mach die Wahl rückgängig oder starte einen neuen Plan, um es zu löschen." while it is picked', async () => {
+      it('shows "Nicht vorschlagen", then "Nicht vorgeschlagen" and "Wieder vorschlagen", "Für 2 Personen (1 Portion)" for an own recipe for 1 picked in a plan for 2, and "Dieses Rezept ist in deinem Plan. Mach die Wahl rückgängig oder starte einen neuen Plan, um es zu löschen." while it is picked', async () => {
         storeOwnRecipes(ownRecipe('Solo Dal', 1));
         localStorage.setItem(
           'fooplan.plan',
@@ -1448,7 +1438,7 @@ describe('RecipePage', () => {
         expect(TestBed.inject(PlanStore).plan().days[0].lunch.recipe, 'plan not loaded').toBe(
           'Solo Dal',
         );
-        expect(textOf(page().querySelector('p.servings'))).toBe('1 Portion');
+        expect(textOf(page().querySelector('p.servings'))).toBe('Für 2 Personen (1 Portion)');
         expect(textOf(page().querySelector('div.manage p.note'))).toBe(
           'Dieses Rezept ist in deinem Plan. Mach die Wahl rückgängig oder starte einen neuen Plan, um es zu löschen.',
         );
@@ -1458,16 +1448,6 @@ describe('RecipePage', () => {
         );
       });
     });
-
-    function stepParagraph(): HTMLElement {
-      const steps = page().querySelectorAll<HTMLElement>('p.step');
-      expect(steps, 'p.step').toHaveLength(1);
-      return steps[0];
-    }
-
-    function amountsIn(element: HTMLElement): string[] {
-      return Array.from(element.querySelectorAll('span.amount')).map(textOf);
-    }
   });
 
   describe('German recipes (#36)', () => {
@@ -1583,20 +1563,349 @@ describe('RecipePage', () => {
       });
     });
 
-    function stepParagraph(): HTMLElement {
-      const steps = page().querySelectorAll<HTMLElement>('p.step');
-      expect(steps, 'p.step').toHaveLength(1);
-      return steps[0];
-    }
-
-    function amountsIn(element: HTMLElement): string[] {
-      return Array.from(element.querySelectorAll('span.amount')).map(textOf);
-    }
-
     function textWithoutAmounts(element: HTMLElement): string {
       const shown = element.cloneNode(true) as HTMLElement;
       shown.querySelectorAll('span.amount').forEach((amount) => amount.remove());
       return textOf(shown).replace(/ ([.,])/g, '$1');
+    }
+  });
+
+  describe('amounts for the plan (#55)', () => {
+    const DINNER_SUGGESTIONS = open('Spaghetti carbonara', 'Niçoise salad', 'Fish tacos');
+    const POMODORO_FOR_3 = [
+      '300 g spaghetti',
+      '600 g canned tomatoes',
+      '3 pc garlic clove',
+      '3 tbsp olive oil',
+      '15 g basil',
+      '45 g parmesan',
+    ];
+    // No built-in recipe uses 10 ml oil, whose 15 ml for 3 reads as a spoon only once scaled
+    const FRIED_RICE: Recipe = {
+      name: 'Fried Rice',
+      servings: 2,
+      ingredients: [
+        { name: 'rice', amount: 150, unit: 'g' },
+        { name: 'vegetable oil', amount: 10, unit: 'ml' },
+      ],
+      own: true,
+    };
+
+    it('shows "For 3 people (2 servings)", "300 g spaghetti", "3 pc garlic clove" and "(300 g)" in step 1 on the page of "Spaghetti pomodoro" picked for the lunch of a 1-day plan for 3, and "Für 3 Personen (2 Portionen)" in German (#55 2)', async () => {
+      const plan = planOf([day('2026-10-24', picked('Spaghetti pomodoro'), DINNER_SUGGESTIONS)], {
+        people: 3,
+      });
+      await openWithPlan('/recipes/spaghetti-pomodoro', plan);
+      expect(servingsLine()).toBe('For 3 people (2 servings)');
+      expect(ingredientLines()).toEqual(POMODORO_FOR_3);
+      expect(textOf(stepParagraph())).toBe(
+        'Bring a large pot of salted water to the boil for the spaghetti (300 g).',
+      );
+      expect(amountsIn(stepParagraph())).toEqual(['(300 g)']);
+
+      await reopenWithPlan('/recipes/spaghetti-pomodoro', plan, { language: 'de' });
+      expect(servingsLine()).toBe('Für 3 Personen (2 Portionen)');
+    });
+
+    it('shows "For 4 people incl. tomorrow\'s lunch (2 servings)" and "400 g spaghetti" for "Spaghetti pomodoro" as the dinner cooked extra of a 2-day plan for 2, and "For 1 person (2 servings)" and "100 g spaghetti" as the dinner of a plan for 1 (#55 3)', async () => {
+      await openWithPlan('/recipes/spaghetti-pomodoro', cookedExtraPlan());
+      expect(servingsLine()).toBe("For 4 people incl. tomorrow's lunch (2 servings)");
+      expect(ingredientLines()).toContain('400 g spaghetti');
+
+      await reopenWithPlan(
+        '/recipes/spaghetti-pomodoro',
+        planOf(
+          [
+            day(
+              '2026-10-24',
+              open('Shakshuka with bread', 'Niçoise salad', 'Fish tacos'),
+              picked('Spaghetti pomodoro'),
+            ),
+          ],
+          { people: 1 },
+        ),
+      );
+      expect(servingsLine()).toBe('For 1 person (2 servings)');
+      expect(ingredientLines()).toContain('100 g spaghetti');
+    });
+
+    // The issue's 4-serving recipe with 1 pc and 10 ml oil doesn't exist: "Beef stroganoff with
+    // rice" has 1 pc onion and 15 ml oil, and the 2-serving one with 10 ml oil is an own recipe
+    it('shows "0.75 pc onion" and "11.25 ml vegetable oil" for "Beef stroganoff with rice" (4 servings) picked in a plan for 3, and "1 tbsp vegetable oil" for a picked own recipe for 2 with 10 ml (#55 4)', async () => {
+      await openWithPlan(
+        '/recipes/beef-stroganoff-with-rice',
+        planOf([day('2026-10-24', DINNER_SUGGESTIONS, picked('Beef stroganoff with rice'))], {
+          people: 3,
+        }),
+      );
+      expect(servingsLine()).toBe('For 3 people (4 servings)');
+      expect(ingredientLines()).toEqual([
+        '450 g beef sirloin',
+        '0.75 pc onion',
+        '225 g mushroom',
+        '11.25 ml vegetable oil',
+        '22.5 g butter',
+        '0.75 tsp paprika',
+        '0.75 tbsp mustard',
+        '187.5 ml beef stock',
+        '150 g sour cream',
+        '7.5 g parsley',
+        '225 g rice',
+      ]);
+
+      await reopenWithPlan(
+        '/recipes/fried-rice',
+        planOf([day('2026-10-24', picked('Fried Rice'), DINNER_SUGGESTIONS)], { people: 3 }),
+        { own: [FRIED_RICE] },
+      );
+      expect(servingsLine()).toBe('For 3 people (2 servings)');
+      expect(ingredientLines()).toEqual(['225 g rice', '1 tbsp vegetable oil']);
+    });
+
+    it('shows "2 servings" and the own amounts of "Spaghetti carbonara" opened from its "Recipe" link as a suggestion of a plan for 3, and of "Niçoise salad" opened from the Recipes page, and "For 2 people (2 servings)" with the own amounts of "Spaghetti pomodoro" picked in a plan for 2 (#55 5)', async () => {
+      const plan = planOf([day('2026-10-24', picked('Spaghetti pomodoro'), DINNER_SUGGESTIONS)], {
+        people: 3,
+      });
+      await openWithPlan('/plan', plan, { heading: 'Plan' });
+      const recipeLink = page().querySelector<HTMLAnchorElement>(
+        'a.recipe-link[aria-label="Recipe for Spaghetti carbonara"]',
+      );
+      expect(recipeLink, 'no "Recipe" link of Spaghetti carbonara').not.toBeNull();
+      await click(recipeLink!);
+      expect(headings().map(textOf)).toEqual(['Spaghetti carbonara']);
+      expectUnscaled('Spaghetti carbonara');
+
+      await harness.navigateByUrl('/recipes');
+      await click(recipesPageLink('Niçoise salad'));
+      expect(headings().map(textOf)).toEqual(['Niçoise salad']);
+      expectUnscaled('Niçoise salad');
+
+      await reopenWithPlan(
+        '/recipes/spaghetti-pomodoro',
+        planOf([day('2026-10-24', picked('Spaghetti pomodoro'), DINNER_SUGGESTIONS)], {
+          people: 2,
+        }),
+      );
+      expect(servingsLine()).toBe('For 2 people (2 servings)');
+      expect(ingredientLines()).toEqual(linesOf(recipeNamed('Spaghetti pomodoro')));
+      expect(textOf(stepParagraph())).toBe(stepsOf('Spaghetti pomodoro')[0]);
+    });
+
+    it('shows "2 servings" and the own amounts again on the open page of "Spaghetti pomodoro", scaled for 3, once "Undo" on its lunch clears the pick through the store, and once a new plan is started (#55 6)', async () => {
+      const plan = planOf([day('2026-10-24', picked('Spaghetti pomodoro'), DINNER_SUGGESTIONS)], {
+        people: 3,
+      });
+      await openWithPlan('/recipes/spaghetti-pomodoro', plan);
+      expect(servingsLine(), 'before "Undo"').toBe('For 3 people (2 servings)');
+      const store = TestBed.inject(PlanStore);
+      store.clear(LUNCH);
+      await harness.fixture.whenStable();
+      expect(isPicked(store.plan(), 'Spaghetti pomodoro'), 'pick not undone').toBe(false);
+      expectUnscaled('Spaghetti pomodoro');
+
+      await reopenWithPlan('/recipes/spaghetti-pomodoro', plan);
+      expect(servingsLine(), 'before "New plan"').toBe('For 3 people (2 servings)');
+      expect(
+        TestBed.inject(PlanStore).newPlan({ ...DEFAULT_SETTINGS, days: 1, people: 3 }),
+        'new plan not started',
+      ).toBe(true);
+      await harness.fixture.whenStable();
+      expect(isPicked(TestBed.inject(PlanStore).plan(), 'Spaghetti pomodoro')).toBe(false);
+      expectUnscaled('Spaghetti pomodoro');
+    });
+
+    describe('edge cases', () => {
+      it('shows "Spaghetti pomodoro", picked in an accepted plan for 3 and opened from the Recipes page, scaled for 3 (#55 2c)', async () => {
+        await openWithPlan(
+          '/recipes',
+          planOf(
+            [day('2026-10-24', picked('Spaghetti pomodoro'), picked('Shakshuka with bread'))],
+            {
+              people: 3,
+              accepted: true,
+            },
+          ),
+          { heading: 'Recipes' },
+        );
+        await click(recipesPageLink('Spaghetti pomodoro'));
+        expect(headings().map(textOf)).toEqual(['Spaghetti pomodoro']);
+        expect(servingsLine()).toBe('For 3 people (2 servings)');
+        expect(ingredientLines()).toEqual(POMODORO_FOR_3);
+        expect(amountsIn(stepParagraph())).toEqual(['(300 g)']);
+      });
+
+      it('shows the own recipe "Quick Dal" (4 servings), picked in a plan for 3, as "For 3 people (4 servings)" with "150 g canned chickpeas", "1.5 pc onion" and "0.75 pc mystery spice", and no steps (#55 2d)', async () => {
+        await openWithPlan(
+          '/recipes/quick-dal',
+          planOf([day('2026-10-24', picked('Quick Dal'), DINNER_SUGGESTIONS)], { people: 3 }),
+          { own: [QUICK_DAL] },
+        );
+        expect(servingsLine()).toBe('For 3 people (4 servings)');
+        expect(ingredientLines()).toEqual([
+          '150 g canned chickpeas',
+          '1.5 pc onion',
+          '0.75 pc mystery spice',
+        ]);
+        expect(page().querySelector('.steps'), 'steps block').toBeNull();
+      });
+
+      it('shows the scaled amounts "(300 g)", "(3 pc)" and "(3 tbsp)" in the first three steps of "All steps", and "(3 pc)" at "Step 2 of 7" after "Step by step" and "Next", for "Spaghetti pomodoro" picked in a plan for 3 (#55 2e)', async () => {
+        localStorage.setItem(STEPS_VIEW_KEY, 'all');
+        await openWithPlan(
+          '/recipes/spaghetti-pomodoro',
+          planOf([day('2026-10-24', picked('Spaghetti pomodoro'), DINNER_SUGGESTIONS)], {
+            people: 3,
+          }),
+        );
+        const items = Array.from(page().querySelectorAll<HTMLElement>('ol.all > li'));
+        expect(items.slice(0, 3).map(amountsIn)).toEqual([['(300 g)'], ['(3 pc)'], ['(3 tbsp)']]);
+
+        await click(button('Step by step'));
+        await click(button('Next'));
+        expect(stepCounters()).toEqual(['Step 2 of 7']);
+        expect(textOf(stepParagraph())).toBe('Peel and thinly slice the garlic cloves (3 pc).');
+      });
+
+      it('shows "Spaghetti pomodoro" picked for the lunch of a day whose dinner is cooked extra, in a plan for 2, as "For 2 people (2 servings)" with "200 g spaghetti", and that dinner as "For 4 people incl. tomorrow\'s lunch (2 servings)" (#55 3a)', async () => {
+        await openWithPlan(
+          '/recipes/spaghetti-pomodoro',
+          planOf(
+            [
+              day('2026-10-24', picked('Spaghetti pomodoro'), picked('Shakshuka with bread'), true),
+              day('2026-10-25', covered(), DINNER_SUGGESTIONS),
+            ],
+            { people: 2 },
+          ),
+        );
+        expect(servingsLine()).toBe('For 2 people (2 servings)');
+        expect(ingredientLines()).toContain('200 g spaghetti');
+
+        await harness.navigateByUrl('/recipes/shakshuka-with-bread');
+        expect(headings().map(textOf)).toEqual(['Shakshuka with bread']);
+        expect(servingsLine()).toBe("For 4 people incl. tomorrow's lunch (2 servings)");
+      });
+
+      it('shows "Spaghetti pomodoro", opened from the "Leftovers:" link of the next day\'s lunch on the Plan page, for the dinner it is cooked for: "For 4 people incl. tomorrow\'s lunch (2 servings)" and "400 g spaghetti" (#55 3b)', async () => {
+        await openWithPlan('/plan', cookedExtraPlan(), { heading: 'Plan' });
+        const leftovers = Array.from(page().querySelectorAll('p.recipe')).filter((recipe) =>
+          textOf(recipe).startsWith('Leftovers:'),
+        );
+        expect(leftovers, '"Leftovers:" lines').toHaveLength(1);
+        await click(leftovers[0].querySelector<HTMLAnchorElement>('a.name')!);
+        expect(headings().map(textOf)).toEqual(['Spaghetti pomodoro']);
+        expect(servingsLine()).toBe("For 4 people incl. tomorrow's lunch (2 servings)");
+        expect(ingredientLines()).toContain('400 g spaghetti');
+        expect(backLink().getAttribute('href')).toBe('/plan');
+      });
+
+      it('shows "Für 3 Personen (4 Portionen)", "0,75 Stk. Zwiebel" and "11,25 ml Pflanzenöl" for "Beef stroganoff with rice" picked in a plan for 3 in German, "Für 4 Personen inkl. Mittagessen morgen (2 Portionen)" for a dinner cooked extra and "Für 1 Person (2 Portionen)" in a plan for 1 (#55 4a)', async () => {
+        await openWithPlan(
+          '/recipes/beef-stroganoff-with-rice',
+          planOf([day('2026-10-24', DINNER_SUGGESTIONS, picked('Beef stroganoff with rice'))], {
+            people: 3,
+          }),
+          { language: 'de' },
+        );
+        expect(servingsLine()).toBe('Für 3 Personen (4 Portionen)');
+        expect(ingredientLines()).toContain('0,75 Stk. Zwiebel');
+        expect(ingredientLines()).toContain('11,25 ml Pflanzenöl');
+
+        await reopenWithPlan('/recipes/spaghetti-pomodoro', cookedExtraPlan(), { language: 'de' });
+        expect(servingsLine()).toBe('Für 4 Personen inkl. Mittagessen morgen (2 Portionen)');
+        expect(ingredientLines()).toContain('400 g Spaghetti');
+
+        await reopenWithPlan(
+          '/recipes/spaghetti-pomodoro',
+          planOf([day('2026-10-24', picked('Spaghetti pomodoro'), DINNER_SUGGESTIONS)], {
+            people: 1,
+          }),
+          { language: 'de' },
+        );
+        expect(servingsLine()).toBe('Für 1 Person (2 Portionen)');
+        expect(ingredientLines()).toContain('100 g Spaghetti');
+      });
+
+      it('shows "Spaghetti carbonara", a suggestion opened after the scaled page of the picked "Spaghetti pomodoro", with "2 servings" and its own amounts, and "Spaghetti pomodoro" scaled again on "Back" (#55 5a)', async () => {
+        await openWithPlan(
+          '/recipes/spaghetti-pomodoro',
+          planOf([day('2026-10-24', picked('Spaghetti pomodoro'), DINNER_SUGGESTIONS)], {
+            people: 3,
+          }),
+        );
+        expect(servingsLine(), 'before').toBe('For 3 people (2 servings)');
+        await harness.navigateByUrl('/recipes/spaghetti-carbonara');
+        expect(headings().map(textOf)).toEqual(['Spaghetti carbonara']);
+        expectUnscaled('Spaghetti carbonara');
+
+        await click(backLink());
+        expect(headings().map(textOf)).toEqual(['Spaghetti pomodoro']);
+        expect(servingsLine(), 'after "Back"').toBe('For 3 people (2 servings)');
+        expect(ingredientLines()).toEqual(POMODORO_FOR_3);
+      });
+    });
+
+    // A 2-day plan for 2 with "Spaghetti pomodoro" as day 1's dinner cooked extra for day 2's lunch
+    function cookedExtraPlan(): Plan {
+      return planOf(
+        [
+          day('2026-10-24', picked('Shakshuka with bread'), picked('Spaghetti pomodoro'), true),
+          day('2026-10-25', covered(), DINNER_SUGGESTIONS),
+        ],
+        { people: 2 },
+      );
+    }
+
+    async function openWithPlan(
+      url: string,
+      plan: Plan,
+      {
+        own = [],
+        language,
+        heading,
+      }: { own?: Recipe[]; language?: 'en' | 'de'; heading?: string } = {},
+    ) {
+      if (own.length > 0) {
+        storeOwnRecipes(...own);
+      }
+      if (language) {
+        localStorage.setItem(LANGUAGE_KEY, language);
+      }
+      localStorage.setItem('fooplan.plan', JSON.stringify(plan));
+      harness = await createHarness(url);
+      expect(TestBed.inject(PlanStore).plan(), 'saved plan not loaded').toEqual(plan);
+      if (heading) {
+        expect(headings().map(textOf), `${heading} page not shown`).toEqual([heading]);
+      }
+    }
+
+    async function reopenWithPlan(
+      url: string,
+      plan: Plan,
+      saved: { own?: Recipe[]; language?: 'en' | 'de' } = {},
+    ) {
+      TestBed.resetTestingModule();
+      localStorage.clear();
+      configure();
+      await openWithPlan(url, plan, saved);
+    }
+
+    function expectUnscaled(name: string) {
+      const recipe = recipeNamed(name);
+      expect(servingsLine(), `servings of "${name}"`).toBe(`${recipe.servings} servings`);
+      expect(ingredientLines(), `ingredients of "${name}"`).toEqual(linesOf(recipe));
+      expect(textOf(stepParagraph()), `step 1 of "${name}"`).toBe(stepsOf(name)[0]);
+    }
+
+    function recipesPageLink(name: string): HTMLAnchorElement {
+      const links = Array.from(page().querySelectorAll<HTMLAnchorElement>('article h2 a')).filter(
+        (link) => textOf(link) === name,
+      );
+      expect(links, `links to "${name}" on the Recipes page`).toHaveLength(1);
+      return links[0];
+    }
+
+    function servingsLine(): string {
+      return textOf(page().querySelector('p.servings'));
     }
   });
 
@@ -1681,6 +1990,16 @@ describe('RecipePage', () => {
 
   function ingredientLines(): string[] {
     return Array.from(page().querySelectorAll('ul > li')).map(textOf);
+  }
+
+  function stepParagraph(): HTMLElement {
+    const steps = page().querySelectorAll<HTMLElement>('p.step');
+    expect(steps, 'p.step').toHaveLength(1);
+    return steps[0];
+  }
+
+  function amountsIn(element: HTMLElement): string[] {
+    return Array.from(element.querySelectorAll('span.amount')).map(textOf);
   }
 
   function stepCounters(): string[] {

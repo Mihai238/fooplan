@@ -29,3 +29,10 @@ export function displayAmount(item: Amount): Readonly<Amount> {
   const spoons = item.unit === 'ml' ? SPOONS.get(item.amount) : undefined;
   return spoons ?? { amount: item.amount, unit: item.unit };
 }
+
+export function scaleIngredients(ingredients: readonly Ingredient[], factor: number): Ingredient[] {
+  return ingredients.map((ingredient) => ({
+    ...ingredient,
+    amount: Math.round(ingredient.amount * factor * 100) / 100,
+  }));
+}

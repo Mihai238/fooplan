@@ -325,6 +325,31 @@ describe('groceries', () => {
       );
       expect(groceryList(eatingOutOnly, BUILT_IN_RECIPES)).toEqual([]);
     });
+
+    it('keeps its own scaling and rounding up for "Beef stroganoff with rice" (4 servings) in a plan for 3, which the recipe page shows to 2 decimals: 1 pc onion, 23 g butter and 188 ml beef stock, no vegetable oil (#55 2b)', () => {
+      const plan = acceptedPlanFor(
+        3,
+        day(
+          '2026-10-24',
+          eatingOut(['Fish tacos', 'Potato goulash', 'Penne arrabbiata']),
+          picked('Beef stroganoff with rice'),
+        ),
+      );
+      expect(sorted(groceryList(plan, BUILT_IN_RECIPES))).toEqual(
+        sorted([
+          item('beef sirloin', 450, 'g'),
+          item('onion', 1, 'pc'),
+          item('mushroom', 225, 'g'),
+          item('butter', 23, 'g'),
+          item('paprika', 1, 'tsp'),
+          item('mustard', 1, 'tbsp'),
+          item('beef stock', 188, 'ml'),
+          item('sour cream', 150, 'g'),
+          item('parsley', 8, 'g'),
+          item('rice', 225, 'g'),
+        ]),
+      );
+    });
   });
 
   describe('addedItems', () => {

@@ -40,6 +40,12 @@ export interface MealRef {
   kind: MealKind;
 }
 
+export interface CookedMeal {
+  recipe: string;
+  people: number;
+  cookExtra: boolean;
+}
+
 export interface PlanSettings {
   days: number;
   people: number;
@@ -386,6 +392,21 @@ export function leftoversOf(plan: Plan, day: number): string | null {
     return null;
   }
   return plan.days[day - 1].dinner.recipe;
+}
+
+// A lunch covered by leftovers has no recipe: the dinner before it is cooked for twice the people
+export function cookedMeals(plan: Plan): CookedMeal[] {
+  return plan.days.flatMap((day) => {
+    const meals = [
+      { recipe: day.lunch.recipe, people: plan.people, cookExtra: false },
+      {
+        recipe: day.dinner.recipe,
+        people: plan.people * (day.cookExtra ? 2 : 1),
+        cookExtra: day.cookExtra,
+      },
+    ];
+    return meals.filter((meal): meal is CookedMeal => meal.recipe !== null);
+  });
 }
 
 export function isPicked(plan: Plan, recipe: string): boolean {
