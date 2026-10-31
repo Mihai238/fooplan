@@ -1217,6 +1217,13 @@ describe('RecipePage', () => {
         expect(openDialogOrNull(), 'pressed on the backdrop').toBe(dialog);
         expect(TestBed.inject(RecipeStore).own()).toEqual([QUICK_DAL]);
       });
+
+      it('keeps "Delete recipe" in the delete dialog styled as the destructive action, with exactly the classes primary and danger, and "Keep recipe" as secondary (#54 2a)', async () => {
+        await openQuickDal();
+        const dialog = await openDeleteDialog();
+        expect(buttonIn(dialog, 'Delete recipe').className).toBe('primary danger');
+        expect(buttonIn(dialog, 'Keep recipe').className).toBe('secondary');
+      });
     });
 
     // Opens the page of "Quick Dal", saved as an own recipe, with this plan and these removed

@@ -386,11 +386,6 @@ button {
   cursor: not-allowed;
 }
 
-.primary.danger {
-  background: var(--danger);
-  color: var(--on-danger);
-}
-
 .secondary {
   padding: calc(0.5rem - 1px) calc(1rem - 1px);
 }

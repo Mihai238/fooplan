@@ -278,12 +278,7 @@
     <button type="button" class="secondary" (click)="newPlanDialog.close()">
       {{ language.t('newPlan.keep') }}
     </button>
-    <button
-      type="button"
-      class="primary"
-      [class.danger]="lost()"
-      (click)="startNewPlan(newPlanDialog)"
-    >
+    <button type="button" class="primary" (click)="startNewPlan(newPlanDialog)">
       {{ language.t('newPlan.start') }}
     </button>
   </div>

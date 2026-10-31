@@ -1960,7 +1960,7 @@ describe('PlanPage', () => {
       });
     });
 
-    it('says what is lost in #new-plan-lost between the heading and the settings, with "Start new plan" as danger: "The plan for Sat 24 Oct – Wed 28 Oct, with 3 of 10 meals picked, will be discarded." for 3 picks, and also "This plan is accepted.", "Your grocery list ticks will be cleared." and "Your added grocery items will be removed." for an accepted plan with ticks and added items', async () => {
+    it('says what is lost in #new-plan-lost between the heading and the settings: "The plan for Sat 24 Oct – Wed 28 Oct, with 3 of 10 meals picked, will be discarded." for 3 picks, and also "This plan is accepted.", "Your grocery list ticks will be cleared." and "Your added grocery items will be removed." for an accepted plan with ticks and added items (changed by #54)', async () => {
       for (const index of [0, 1, 2]) {
         await pickFirstSuggestion(index);
       }
@@ -1982,7 +1982,7 @@ describe('PlanPage', () => {
       expectLostDialog(dialog);
     });
 
-    it('says "Your added grocery items will be removed." for a plan that is not accepted with 1 pick and an added item, and also "Your grocery list ticks will be cleared." once it is ticked, but never "This plan is accepted." (#52 8a)', async () => {
+    it('says "Your added grocery items will be removed." for a plan that is not accepted with 1 pick and an added item, and also "Your grocery list ticks will be cleared." once it is ticked, but never "This plan is accepted." (#52 8a, changed by #54)', async () => {
       await pickFirstSuggestion(0);
       store.addItem('Toilet paper');
       await fixture.whenStable();
@@ -2001,7 +2001,7 @@ describe('PlanPage', () => {
       expectLostDialog(dialog);
     });
 
-    it('shows no #new-plan-lost for a plan with no meal picked, no added item and no tick, and with no meal picked shows it with "Start new plan" as danger, saying "Your added grocery items will be removed." for an added item and also "Your grocery list ticks will be cleared." once it is ticked (#52 8c)', async () => {
+    it('shows no #new-plan-lost for a plan with no meal picked, no added item and no tick, and with no meal picked shows it, saying "Your added grocery items will be removed." for an added item and also "Your grocery list ticks will be cleared." once it is ticked, with "Start new plan" primary throughout (#52 8c, changed by #54)', async () => {
       let dialog = await openNewPlan();
       expect(dialog.querySelector('#new-plan-lost'), 'nothing to lose').toBeNull();
       expect(button(dialog, 'Start new plan').className).toBe('primary');
@@ -2632,6 +2632,74 @@ describe('PlanPage', () => {
       }
     });
 
+    describe('"Start new plan" always primary (#54)', () => {
+      it('shows #new-plan-lost with "with 3 of 10 meals picked" and "Start new plan" with exactly the class primary, no danger, for a 5-day plan with 3 picked meals, and the same for an accepted plan with ticks and added items (#54 1)', async () => {
+        for (const index of [0, 1, 2]) {
+          await pickFirstSuggestion(index);
+        }
+        let dialog = await openNewPlan();
+        expect(textOf(dialog.querySelector('#new-plan-lost'))).toContain(
+          'with 3 of 10 meals picked',
+        );
+        expect(button(dialog, 'Start new plan').className, '3 picks').toBe('primary');
+        await click(button(dialog, 'Keep this plan'));
+
+        await openWith(pickedPlan(1, { accepted: true }));
+        store.toggleTicked(itemKey(groceryList(store.plan(), RECIPES)[0]));
+        store.addItem('Toilet paper');
+        await fixture.whenStable();
+        dialog = await openNewPlan();
+        expect(dialog.querySelector('#new-plan-lost'), 'accepted plan').not.toBeNull();
+        expect(button(dialog, 'Start new plan').className, 'accepted plan').toBe('primary');
+      });
+
+      it('shows no #new-plan-lost and "Start new plan" with exactly the class primary when the dialog opens on a fresh plan with nothing filled (#54 2)', async () => {
+        const dialog = await openNewPlan();
+        expect(dialog.querySelector('#new-plan-lost')).toBeNull();
+        expect(button(dialog, 'Start new plan').className).toBe('primary');
+      });
+
+      describe('edge cases', () => {
+        it('gives "Start new plan" exactly the class primary in every case #new-plan-lost is shown: a picked meal, a lunch eating out only, a dinner cooked extra for a leftovers lunch, an accepted plan of two meals eating out, only a lingering tick and only an added item (#54 1a)', async () => {
+          const fresh = store.plan();
+          const cases: [string, Plan][] = [
+            [
+              'a picked meal',
+              planOf([
+                planDay(DATES[0], picked(KID_FRIENDLY[0]), open(...KID_FRIENDLY.slice(3, 6))),
+              ]),
+            ],
+            [
+              'eating out only',
+              planOf([planDay(DATES[0], eatingOut(), open(...KID_FRIENDLY.slice(3, 6)))]),
+            ],
+            [
+              'leftovers',
+              planOf([
+                planDay(DATES[0], open(...KID_FRIENDLY.slice(0, 3)), picked(KID_FRIENDLY[3]), true),
+                planDay(DATES[1], covered(), open(...KID_FRIENDLY.slice(6, 9))),
+              ]),
+            ],
+            [
+              'accepted, eating out only',
+              planOf([planDay(DATES[0], eatingOut(), eatingOut())], { accepted: true }),
+            ],
+            ['only a tick', { ...fresh, ticked: [addedKey('Toilet paper')] }],
+            ['only an added item', { ...fresh, added: ['Toilet paper'] }],
+          ];
+          for (const [name, plan] of cases) {
+            await openWith(plan);
+            const dialog = await openNewPlan();
+            expect(
+              dialog.querySelector('#new-plan-lost'),
+              `${name}: no #new-plan-lost`,
+            ).not.toBeNull();
+            expect(button(dialog, 'Start new plan').className, name).toBe('primary');
+          }
+        });
+      });
+    });
+
     // Resolves to the names of the elements focused after each of `count` presses
     async function tabs(count: number, shiftKey = false): Promise<string[]> {
       const focused: string[] = [];
@@ -2660,7 +2728,7 @@ describe('PlanPage', () => {
         'p#new-plan-next',
         'div.actions',
       ]);
-      expect(button(dialog, 'Start new plan').className).toBe('primary danger');
+      expect(button(dialog, 'Start new plan').className).toBe('primary');
     }
 
     // Open days from today, each meal suggesting three kid-friendly recipes no other meal suggests
